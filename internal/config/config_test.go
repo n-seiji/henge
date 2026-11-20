@@ -927,3 +927,80 @@ func TestLoadReadsLegacyEnvNamesWithoutOverridingNewOnes(t *testing.T) {
 		}
 	}
 }
+
+func writeSettingsFile(t *testing.T, dir, content string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, FileName), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLoadReadsHengeYAMLUnderTheEnvironment(t *testing.T) {
+	workingDir := t.TempDir()
+	withWorkingDir(t, workingDir)
+	clearConfigEnv(t)
+	t.Setenv("SLACK_BOT_TOKEN", "xoxb-test")
+	t.Setenv("SLACK_APP_TOKEN", "xapp-test")
+	t.Setenv("CODEX_TIMEOUT", "5m")
+	repo := filepath.Join(workingDir, "repo")
+	if err := os.Mkdir(repo, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeSettingsFile(t, workingDir, `
+slack:
+  approval_channel: C1
+  approvers: [U1, U2]
+codex:
+  timeout: 10m
+  max_parallel_work: 5
+sandbox:
+  writable_roots: [repo]
+`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if cfg.ApprovalChannelID != "C1" || !reflect.DeepEqual(cfg.ApproverUserIDs, []string{"U1", "U2"}) {
+		t.Errorf("approval = %q %v, want C1 [U1 U2]", cfg.ApprovalChannelID, cfg.ApproverUserIDs)
+	}
+	if cfg.AdminUserID != "U1" {
+		t.Errorf("AdminUserID = %q, want the first approver", cfg.AdminUserID)
+	}
+	if cfg.MaxParallelWork != 5 {
+		t.Errorf("MaxParallelWork = %d, want 5", cfg.MaxParallelWork)
+	}
+	if cfg.CodexTimeout != 5*time.Minute {
+		t.Errorf("CodexTimeout = %v, want the environment's 5m", cfg.CodexTimeout)
+	}
+	if want, _ := canonicalPath(repo); !reflect.DeepEqual(cfg.WritableRoots, []string{want}) {
+		t.Errorf("WritableRoots = %v, want [%s]", cfg.WritableRoots, want)
+	}
+	if want, _ := canonicalPath(filepath.Join(workingDir, FileName)); !slices.Contains(cfg.ProtectedPaths, want) {
+		t.Errorf("ProtectedPaths = %v, want to contain %q", cfg.ProtectedPaths, want)
+	}
+}
+
+func TestLoadRejectsUnknownHengeYAMLKeys(t *testing.T) {
+	workingDir := t.TempDir()
+	withWorkingDir(t, workingDir)
+	clearConfigEnv(t)
+	setRequiredEnv(t)
+	writeSettingsFile(t, workingDir, "sandbox:\n  writable_root: [repo]\n")
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "writable_root") {
+		t.Fatalf("Load() error = %v, want one naming writable_root", err)
+	}
+}
+
+func TestLoadNamesTheHengeYAMLKeyOfAnInvalidValue(t *testing.T) {
+	workingDir := t.TempDir()
+	withWorkingDir(t, workingDir)
+	clearConfigEnv(t)
+	setRequiredEnv(t)
+	writeSettingsFile(t, workingDir, "codex:\n  timeout: soon\n")
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "henge.yaml codex.timeout") {
+		t.Fatalf("Load() error = %v, want one naming henge.yaml codex.timeout", err)
+	}
+}

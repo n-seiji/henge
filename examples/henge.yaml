@@ -1,0 +1,60 @@
+# henge.yaml: settings that are not secrets. henge reads it from the
+# directory it starts in, next to .env. Codex can neither read nor write it.
+# A variable of the old name in the environment or .env still wins.
+# Unknown keys are rejected.
+
+slack:
+  # Channel where people, channels and workflows outside the lists below are
+  # approved by mentioning the bot. Invite the bot to it. Allowed users may
+  # also ask for work there; it is the only channel whose work may change
+  # playbooks, global memory and data/channel-rules/.
+  approval_channel: ""
+  # Who may approve (required with approval_channel).
+  approvers: []
+  # Always allowed, without approval. Each needs at least one entry unless
+  # approval_channel is set.
+  allowed_users: []
+  allowed_channels: []
+  # Accept mentions sent by Slack workflows listed here or approved in the
+  # approval channel.
+  allow_workflows: false
+  allowed_workflows: []
+  # Mentioned when an unauthorized mention is rejected. Default: the first
+  # approver.
+  admin: ""
+  # Emoji (without colons) that makes henge answer replies in a thread
+  # without a mention. Empty turns it off.
+  thread_subscription_reaction: ""
+  thread_subscription_ttl: 336h
+
+codex:
+  # Executable path, without arguments.
+  command: codex
+  # Empty uses the Codex default.
+  model: ""
+  # Longest run of one Codex turn.
+  timeout: 30m
+  # Threads that may run work at once (at least 1).
+  max_parallel_work: 3
+  # Environment variables passed to Codex on top of the built-in allowlist.
+  pass_env: []
+
+sandbox:
+  # Directories Codex may write, such as repositories to work on. Git
+  # repositories are worked on through per-thread checkouts.
+  writable_roots: []
+  # Extra paths Codex may neither read nor write, such as ~/.aws.
+  denied_read_paths: []
+  # Credential stores hidden by default that the work needs, such as
+  # ~/.config/gcloud.
+  allowed_read_paths: []
+  # Per-thread checkouts unused for this long are removed.
+  checkout_idle_ttl: 120h
+
+github:
+  # Empty for github.com. GitHub Enterprise Server: https://<host>/api/v3
+  api_url: ""
+  # The GitHub App that authenticates the work; its key is in .env.
+  app_id: ""
+  # Needed only when the App has several installations.
+  app_installation_id: ""

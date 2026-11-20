@@ -67,12 +67,22 @@ type Config struct {
 	CodexHome          string
 }
 
-// Values already in the process environment win over .env.
+// Values already in the process environment win over .env, and both win
+// over henge.yaml.
 func Load() (*Config, error) {
 	if err := loadDotEnv(".env"); err != nil {
 		return nil, fmt.Errorf("load .env: %w", err)
 	}
 	renameLegacyEnv()
+	logSettingsInEnvironment()
+	if err := applySettingsFile(FileName); err != nil {
+		return nil, err
+	}
+	cfg, err := load()
+	return cfg, fileError(err)
+}
+
+func load() (*Config, error) {
 
 	botToken, err := requiredEnv("SLACK_BOT_TOKEN")
 	if err != nil {
@@ -146,6 +156,9 @@ func Load() (*Config, error) {
 	adminUserID := strings.TrimSpace(os.Getenv("SLACK_ADMIN_USER_ID"))
 	if adminUserID != "" && !strings.HasPrefix(adminUserID, "U") {
 		return nil, fmt.Errorf("SLACK_ADMIN_USER_ID: invalid user ID %q: %w", adminUserID, errors.New("must start with U"))
+	}
+	if adminUserID == "" && len(approverIDs) > 0 {
+		adminUserID = approverIDs[0]
 	}
 
 	codexCommand := os.Getenv("CODEX_COMMAND")
@@ -357,6 +370,8 @@ func resolveProtectedPaths(home, memoryDir, stateDir, extraDenied string) ([]str
 		stateDir,
 		".env",
 		filepath.Join(home, ".env"),
+		FileName,
+		filepath.Join(home, FileName),
 		filepath.Join(home, ".codex"),
 	}
 	for _, item := range splitList(extraDenied) {
