@@ -1,4 +1,7 @@
 .env
+# The agent's own settings and GitHub App key, when it runs from a clone
+/henge.yaml
+/github-app.pem
 /scripts/
 /henge
 *.exe
