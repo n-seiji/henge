@@ -111,7 +111,7 @@ func (b *Bot) publishHome(ctx context.Context, userID string) {
 	sections = append(sections, b.homeSection(ctx, links, "🔔 リマインダー", reminders, func(item homeThread) string {
 		return formatFollowUpTime(item.at) + ": " + clipText(item.detail, 100)
 	}))
-	sections = append(sections, b.homeSection(ctx, links, "✅ :done: の監視", doneWatches, func(item homeThread) string {
+	sections = append(sections, b.homeSection(ctx, links, "✅ リアクションの監視", doneWatches, func(item homeThread) string {
 		return item.detail
 	}))
 	sections = append(sections, homeUserSettings(b.readUserSettings(userID)))

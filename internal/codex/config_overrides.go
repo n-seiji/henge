@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/n-seiji/ebi-x/internal/sqlguard"
 )
 
 type Access struct {
@@ -21,6 +23,10 @@ type Access struct {
 	MCPServers   []string
 	NoGitHub     bool
 	Instructions string
+	// MCP servers whose SQL may write; every other stdio server runs behind
+	// the SQL guard.
+	SQLWriters []string
+	sqlGuard   string
 }
 
 func (access Access) disabledServers(servers map[string]any) []string {
@@ -59,7 +65,7 @@ func loadConfigOverrides(path string, access Access) ([]string, error) {
 		return nil, fmt.Errorf("encode local Codex config %q: %w", path, err)
 	}
 	servers, _ := config["mcp_servers"].(map[string]any)
-	overrides = append(overrides, bigQueryReadOnlyOverrides(servers)...)
+	overrides = guardServers(overrides, servers, access)
 	overrides = disableServers(overrides, access.disabledServers(servers))
 	sort.Strings(overrides)
 	return overrides, nil
@@ -123,47 +129,44 @@ func disableServers(overrides, names []string) []string {
 	return kept
 }
 
-// Toolbox's execute_sql allows any statement unless its write mode says
-// otherwise, so a server without an explicit BIGQUERY_WRITE_MODE or
-// BIGQUERY_READONLY runs in "blocked" mode.
-func bigQueryReadOnlyOverrides(servers map[string]any) []string {
-	var overrides []string
+// Every stdio server is wrapped, not only ones that look like databases: the
+// guard passes through calls without SQL, and guessing by name would miss a
+// renamed server. Servers reached by url cannot be wrapped.
+func guardServers(overrides []string, servers map[string]any, access Access) []string {
+	if access.sqlGuard == "" {
+		return overrides
+	}
+	replaced := make(map[string]bool)
+	var added []string
 	for _, name := range slices.Sorted(maps.Keys(servers)) {
 		server, _ := servers[name].(map[string]any)
-		env, _ := server["env"].(map[string]any)
-		_, writeMode := env["BIGQUERY_WRITE_MODE"]
-		_, readOnly := env["BIGQUERY_READONLY"]
-		if writeMode || readOnly || !isToolboxBigQuery(server) || !exposesTool(server, "execute_sql") {
+		command, ok := server["command"].(string)
+		if !ok || slices.Contains(access.SQLWriters, name) {
 			continue
 		}
-		path := []string{"mcp_servers", name, "env", "BIGQUERY_WRITE_MODE"}
-		overrides = append(overrides, encodeDottedKey(path)+`="blocked"`)
+		args := append([]string{sqlguard.Arg, "--", command}, stringList(server["args"])...)
+		commandKey := encodeDottedKey([]string{"mcp_servers", name, "command"})
+		argsKey := encodeDottedKey([]string{"mcp_servers", name, "args"})
+		replaced[commandKey], replaced[argsKey] = true, true
+		encodedArgs, _ := encodeTOMLValue(toAny(args))
+		added = append(added, commandKey+"="+strconv.Quote(access.sqlGuard), argsKey+"="+encodedArgs)
 	}
-	return overrides
-}
-
-func isToolboxBigQuery(server map[string]any) bool {
-	env, _ := server["env"].(map[string]any)
-	if _, ok := env["BIGQUERY_PROJECT"]; ok {
-		return true
-	}
-	args := stringList(server["args"])
-	for i, arg := range args {
-		if arg == "--prebuilt=bigquery" || (arg == "--prebuilt" && i+1 < len(args) && args[i+1] == "bigquery") {
-			return true
+	kept := overrides[:0:0]
+	for _, override := range overrides {
+		key, _, _ := strings.Cut(override, "=")
+		if !replaced[key] {
+			kept = append(kept, override)
 		}
 	}
-	return false
+	return append(kept, added...)
 }
 
-func exposesTool(server map[string]any, tool string) bool {
-	if enabled, ok := server["enabled"].(bool); ok && !enabled {
-		return false
+func toAny(values []string) []any {
+	items := make([]any, len(values))
+	for i, value := range values {
+		items[i] = value
 	}
-	if _, ok := server["enabled_tools"]; ok && !slices.Contains(stringList(server["enabled_tools"]), tool) {
-		return false
-	}
-	return !slices.Contains(stringList(server["disabled_tools"]), tool)
+	return items
 }
 
 func stringList(value any) []string {

@@ -18,11 +18,10 @@ import (
 )
 
 const (
-	defaultCodexTimeout               = 30 * time.Minute
-	defaultThreadSubscriptionReaction = "thread-subete"
-	defaultThreadSubscriptionTTL      = 336 * time.Hour
-	defaultMaxParallelWork            = 3
-	defaultCheckoutIdleTTL            = 120 * time.Hour
+	defaultCodexTimeout          = 30 * time.Minute
+	defaultThreadSubscriptionTTL = 336 * time.Hour
+	defaultMaxParallelWork       = 3
+	defaultCheckoutIdleTTL       = 120 * time.Hour
 )
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
@@ -60,6 +59,7 @@ type Config struct {
 	TurnCredentialsDir string
 	ActionRulesFile    string
 	ChannelRulesFile   string
+	SettingsFile       string
 	WritableRoots      []string
 	ProtectedPaths     []string
 	CredentialPaths    []string
@@ -181,10 +181,7 @@ func Load() (*Config, error) {
 			return nil, fmt.Errorf("EBIX_CHECKOUT_IDLE_TTL %q: %w", value, errors.New("must be positive"))
 		}
 	}
-	threadSubscriptionReaction := defaultThreadSubscriptionReaction
-	if value, exists := os.LookupEnv("SLACK_THREAD_SUBSCRIPTION_REACTION"); exists {
-		threadSubscriptionReaction = strings.TrimSpace(value)
-	}
+	threadSubscriptionReaction := strings.TrimSpace(os.Getenv("SLACK_THREAD_SUBSCRIPTION_REACTION"))
 	threadSubscriptionTTL := defaultThreadSubscriptionTTL
 	if value := strings.TrimSpace(os.Getenv("SLACK_THREAD_SUBSCRIPTION_TTL")); value != "" {
 		threadSubscriptionTTL, err = time.ParseDuration(value)
@@ -224,6 +221,7 @@ func Load() (*Config, error) {
 	actionRulesFile := filepath.Join(home, "data", "rules.md")
 	channelRulesDir := filepath.Join(home, "data", "channel-rules")
 	channelRulesFile := filepath.Join(channelRulesDir, "channels.yaml")
+	settingsFile := filepath.Join(channelRulesDir, "settings.yaml")
 	codexHome, err := resolveCodexHome()
 	if err != nil {
 		return nil, err
@@ -300,6 +298,7 @@ func Load() (*Config, error) {
 		TurnCredentialsDir:         turnCredentialsDir,
 		ActionRulesFile:            actionRulesFile,
 		ChannelRulesFile:           channelRulesFile,
+		SettingsFile:               settingsFile,
 		WritableRoots:              writableRoots,
 		ProtectedPaths:             protectedPaths,
 		CredentialPaths:            credentialPaths,

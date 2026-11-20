@@ -71,7 +71,7 @@ func TestDoneWatchStartsWithoutTurn(t *testing.T) {
 	want := state.DoneWatch{
 		Channel: "C1", ThreadTS: "100.1", MessageTS: "100.1", AuthorID: "U1",
 		Targets: []string{"U2", "U3"}, IntervalDays: 1,
-		NextAt: nextDoneWatchReminder(followUpNow, 1), CreatedAt: followUpNow,
+		NextAt: nextDoneWatchReminder(followUpNow, 1, defaultDoneWatchHour), CreatedAt: followUpNow,
 	}
 	got, ok := store.doneWatches["C1:100.1"]
 	if !ok || got.ThreadTS != want.ThreadTS || got.MessageTS != want.MessageTS || got.AuthorID != want.AuthorID ||
@@ -139,7 +139,7 @@ func TestCheckDoneWatchRemindsPendingWhenDue(t *testing.T) {
 		t.Fatalf("posts = %#v, want one reminder to U2 only", api.posts)
 	}
 	got := store.doneWatches["C1:100.1"]
-	if got.Reminders != 1 || !got.NextAt.Equal(nextDoneWatchReminder(followUpNow, 2)) {
+	if got.Reminders != 1 || !got.NextAt.Equal(nextDoneWatchReminder(followUpNow, 2, defaultDoneWatchHour)) {
 		t.Fatalf("watch after reminder = %#v", got)
 	}
 }
@@ -395,7 +395,7 @@ func TestNextDoneWatchReminderSkipsWeekends(t *testing.T) {
 		{"every three weekdays from Thursday night", at(22, 20), 3, at(27, 19)},
 	}
 	for _, test := range tests {
-		if got := nextDoneWatchReminder(test.after, test.days); !got.Equal(test.want) {
+		if got := nextDoneWatchReminder(test.after, test.days, defaultDoneWatchHour); !got.Equal(test.want) {
 			t.Errorf("%s: nextDoneWatchReminder(%v, %d) = %v, want %v", test.name, test.after, test.days, got, test.want)
 		}
 	}

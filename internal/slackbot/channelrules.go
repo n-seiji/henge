@@ -134,32 +134,38 @@ func (b *Bot) channelRulesNotice() string {
 }
 
 func readChannelRules(path string) (channelRulesFile, error) {
+	var rules channelRulesFile
+	err := readYAMLFile(path, "channel rules", &rules)
+	return rules, err
+}
+
+// A missing file leaves out unchanged.
+func readYAMLFile(path, label string, out any) error {
 	if path == "" {
-		return channelRulesFile{}, nil
+		return nil
 	}
 	file, err := os.Open(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return channelRulesFile{}, nil
+		return nil
 	}
 	if err != nil {
-		return channelRulesFile{}, fmt.Errorf("read channel rules %q: %w", path, err)
+		return fmt.Errorf("read %s %q: %w", label, path, err)
 	}
 	defer file.Close()
 	data, err := io.ReadAll(io.LimitReader(file, maxChannelRulesBytes+1))
 	if err != nil {
-		return channelRulesFile{}, fmt.Errorf("read channel rules %q: %w", path, err)
+		return fmt.Errorf("read %s %q: %w", label, path, err)
 	}
 	if len(data) > maxChannelRulesBytes {
-		return channelRulesFile{}, fmt.Errorf("channel rules %q exceed %d bytes", path, maxChannelRulesBytes)
+		return fmt.Errorf("%s %q exceed %d bytes", label, path, maxChannelRulesBytes)
 	}
-	var rules channelRulesFile
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	// Unknown fields are rejected, not ignored: a misspelled limit would silently do nothing.
 	decoder.KnownFields(true)
-	if err := decoder.Decode(&rules); err != nil && !errors.Is(err, io.EOF) {
-		return channelRulesFile{}, fmt.Errorf("parse channel rules %q: %w", path, err)
+	if err := decoder.Decode(out); err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("parse %s %q: %w", label, path, err)
 	}
-	return rules, nil
+	return nil
 }
 
 func ValidateChannelRules(path string) error {

@@ -40,7 +40,7 @@ Slack App の作成画面で「From a manifest」を選び、`ebi-x init` が書
 | Interactivity & Shortcuts | Interactivity をオン、Message Shortcut「ebi-x に頼む」（Callback ID `ebix_request`） | メッセージから依頼する |
 | Agents & AI Apps | Agent App に切り替え（manifest では `features.agent_view`） | サイドバーと Messages タブでのエージェント表示 |
 
-- `:done:` の監視（[usage.md](usage.md#done-の監視)）で `@channel` を使うときは `channels:read` と `users:read`（プライベートチャンネルでは `groups:read` も）を、`@dev_team` のようなユーザーグループを使うときはさらに `usergroups:read` を追加します。manifest には入っています。
+- リアクションの監視（[usage.md](usage.md#リアクションの監視)）で `@channel` を使うときは `channels:read` と `users:read`（プライベートチャンネルでは `groups:read` も）を、`@dev_team` のようなユーザーグループを使うときはさらに `usergroups:read` を追加します。manifest には入っています。
 - プライベートチャンネルと Slack Connect チャンネルには `groups:read`・`groups:history`・`message.groups` が要ります（manifest に入っています）。
 - Agent App への切り替えは元に戻せません。Slack の有料プランが必要です。
 - scope を変えたらワークスペースへ再インストールします。Bot Token が変わった場合は `.env` も更新します。
@@ -57,8 +57,8 @@ Slack App の作成画面で「From a manifest」を選び、`ebi-x init` が書
 | `SLACK_ALLOWED_USER_IDS` / `SLACK_ALLOWED_CHANNEL_IDS` | なし | 常に許可する user と channel。承認チャンネルを使わないときは、それぞれ1件以上必須 |
 | `SLACK_APPROVAL_CHANNEL_ID` / `SLACK_APPROVER_USER_IDS` | なし | 承認チャンネルと承認者（後述） |
 | `SLACK_ALLOW_WORKFLOWS` / `SLACK_ALLOWED_WORKFLOW_IDS` | `false` / なし | Workflow Builder からの mention を受けるか、受ける Workflow |
-| `SLACK_ADMIN_USER_ID` | なし | 権限がない人に「許可を頼む相手」として示す user。未設定なら `@seiji` という文字列 |
-| `SLACK_THREAD_SUBSCRIPTION_REACTION` / `SLACK_THREAD_SUBSCRIPTION_TTL` | `thread-subete` / `336h` | mention なしの返信も処理するスレッド購読。リアクションを空にすると無効 |
+| `SLACK_ADMIN_USER_ID` | なし | 権限がない人に「許可を頼む相手」として示す user。未設定なら「ebi-x の管理者」という言葉 |
+| `SLACK_THREAD_SUBSCRIPTION_REACTION` / `SLACK_THREAD_SUBSCRIPTION_TTL` | なし / `336h` | mention なしの返信も処理するスレッド購読に使うリアクション名と期間。リアクションがなければ無効 |
 | `CODEX_COMMAND` | `codex` | Codex の実行ファイル（引数は書けません） |
 | `CODEX_MODEL` | Codex の既定 | 使うモデル |
 | `CODEX_TIMEOUT` | `30m` | 1回の Codex 実行の上限時間 |
@@ -92,7 +92,7 @@ ebi-x を使えるかは、`.env` の固定の許可と、承認チャンネル�
 権限のない人・チャンネル・Workflow から mention されると、何に権限がないかと、`SLACK_ADMIN_USER_ID` に許可を頼むよう同じスレッドに返します。
 
 ```text
-🔒 あなたには ebi-x を使う権限がありません。使いたい場合は @seiji に許可を頼んでください。
+🔒 あなたには ebi-x を使う権限がありません。使いたい場合は @yamada に許可を頼んでください。
 ```
 
 ### 承認チャンネル
@@ -107,8 +107,8 @@ ebi-x を使えるかは、`.env` の固定の許可と、承認チャンネル�
 
 #ebi-x-owner
 @ebi-x    🔐 ebi-x の利用許可の依頼 / 対象: チャンネル #sales
-  └ @seiji   @ebi-x 許可
-  └ @ebi-x  ✅ チャンネル #sales: @seiji が許可しました。
+  └ @yamada   @ebi-x 許可
+  └ @ebi-x  ✅ チャンネル #sales: @yamada が許可しました。
 
 #sales（元のスレッド）
   └ @ebi-x  ✅ チャンネル #sales が許可されました。依頼を始めます。
@@ -163,6 +163,17 @@ Codex がどの操作の前に依頼者へ確認するかは、既定で次の�
 | `repositories` | 読めるリポジトリ（ディレクトリ名かパス）。ほかのリポジトリと、そのクローンは読めない |
 | `mcp_servers` | 使える MCP サーバーの名前。`[]` で全部止める |
 
+### 全体の設定
+
+`$EBIX_HOME/data/channel-rules/settings.yaml` に書きます（例は `examples/settings.yaml`）。承認チャンネルで `@ebi-x 監視のリアクションは ok_hand、時刻は9時にして` のように頼めば、ebi-x が変更内容を見せてから書き換えます。手で書いてもかまいません。
+
+| 項目 | 内容 |
+| --- | --- |
+| `done_watch.reaction` / `done_watch.hour` | 「監視して」で待つリアクションと、通知する時刻（[usage.md](usage.md#リアクションの監視)） |
+| `sql_write_servers` | 更新やロックを伴う SQL を許す MCP サーバーの名前 |
+
+ファイルを読めないときは既定の設定で動き、承認チャンネルの回答でそのことを伝えます。
+
 - 依頼のたびに読み直すので、再起動は要りません。
 - 書き換えられるのは承認チャンネルからの依頼だけです。
 - ファイルが読めないとき（YAML の誤りや、知らない項目名）は、承認チャンネル以外の依頼を始めません（[design.md](design.md#チャンネルごとの設定)）。
@@ -174,7 +185,7 @@ playbook は、特定の作業の手順を書いた Markdown です。`data/play
 
 ```markdown
 ---
-name: slides
+name: release-notes
 description: どんな依頼のときに使うかを具体的に書く
 ---
 
@@ -186,11 +197,8 @@ description: どんな依頼のときに使うかを具体的に書く
 
 | 例 | 内容 |
 | --- | --- |
-| `slides.md` | Markdown の原稿から画像・PDF・pptx を作る slides リポジトリで、スライドを作成・修正・納品する |
 | `playbook-from-thread.md` | スレッドの対応を playbook にする、既存の playbook を直す |
 | `request-discovery.md` | 改善要望を1問ずつ聞き取ってまとめる |
-
-`slides.md` を使うには、slides を clone して `EBIX_WRITABLE_ROOTS` に加え、ビルドに必要な Node・pnpm・Python・Chrome・LibreOffice・日本語フォントを用意して `pnpm install` を済ませておきます。
 
 Slack から playbook を書き換えられるのは承認チャンネルだけです。`data/` は Git の管理外なので、playbook は運用環境で保管します。
 
@@ -215,20 +223,13 @@ Slack から playbook を書き換えられるのは承認チャンネルだけ�
   - ビルドし直すと、Keychain からは別のアプリに見えます。そのため、reload 後の起動時に「ebi-x がキーチェーンの機密情報を使用しようとしています」と聞かれるので、「常に許可」を押します。鍵を読むのは起動時の1回だけで、それまで起動は待ちます（ログに出ます）。
   - `mise run build` は macOS で hardened runtime（`codesign --sign - --options runtime`）を付けます。デバッガ、つまり Codex の作業から ebi-x にアタッチして、メモリ上の鍵を読まれないようにするためです。`go build` で直接ビルドしたときは、同じ `codesign` を実行します。
 
-## 8. MCP（BigQuery など）
+## 8. MCP
 
 Codex の MCP サーバーは `$EBIX_HOME/.codex/config.toml` に書きます。`~/.codex/config.toml` は読みません。
 
-[MCP Toolbox](https://github.com/googleapis/genai-toolbox) の prebuilt BigQuery サーバーで SQL を使うときは、`enabled_tools` を書かずに全ツールを公開します。
+`command` で起動する MCP サーバーは、ebi-x の SQL ガードを挟んで起動します。ツールの呼び出しに SQL（引数 `sql`、`statement`、または名前に sql・query・execute を含むツールの `query`）があれば、SELECT・WITH・SHOW・EXPLAIN などの読み取りで、更新やロックを伴わない1文だけを通し、ほかはツールのエラーとして返します。書き込みが必要なサーバーは `settings.yaml` の `sql_write_servers` に名前を書きます。
 
-```toml
-[mcp_servers.bigquery]
-# command / args / env はそのまま。enabled_tools は書かない
-```
-
-Toolbox の `execute_sql` はどんな文でも実行できるため、ebi-x は Toolbox の BigQuery サーバー（`env` に `BIGQUERY_PROJECT` がある、または `--prebuilt bigquery` で起動するもの）に `BIGQUERY_WRITE_MODE` も `BIGQUERY_READONLY` もなければ、`BIGQUERY_WRITE_MODE="blocked"` を付けて起動します。この状態では SELECT だけが実行できます。ラッパースクリプトで起動していてこの条件に当たらない場合は、自分で `env` に書きます。
-
-Google Cloud のリモート BigQuery MCP（`https://bigquery.googleapis.com/mcp`）では、`disabled_tools = ["execute_sql"]` で更新できるツールを外し、`execute_sql_readonly` を使います。
+`url` で接続する MCP サーバーにはガードを挟めません。更新できるツールは `enabled_tools` や `disabled_tools`、サーバー自身の読み取り専用の設定で外します。
 
 必要なツールが公開されていないとき、Codex は「接続できない」ではなく「公開されていない」と依頼者に伝えます。
 

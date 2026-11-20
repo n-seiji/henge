@@ -77,7 +77,7 @@ func TestDirectMessageFromUnallowedUserIsForbidden(t *testing.T) {
 	if runner.calls != 0 {
 		t.Fatalf("runner calls = %d, want 0", runner.calls)
 	}
-	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "@seiji") {
+	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "ebi-x の管理者") {
 		t.Fatalf("posts = %q, want forbidden response", got)
 	}
 }
