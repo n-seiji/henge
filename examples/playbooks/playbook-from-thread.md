@@ -1,80 +1,80 @@
 ---
 name: playbook-from-thread
-description: スレッドの会話内容をplaybook化する — 「この対応をplaybookにして」「playbook化して」等の依頼で、そのスレッドや依頼内容から再利用可能なplaybook案を作成し、必ず内容確認と承認を経て保存・更新する。「案だけ」は下書きに留める
+description: Turn a thread's conversation into a playbook — for requests such as "make this into a playbook" or "playbook this", draft a reusable playbook from the thread and the request, and save or update it only after the content is reviewed and approved. "Just a draft" stays a draft
 ---
 
-# スレッドの会話を playbook 化する
+# Turn a thread's conversation into a playbook
 
-スレッドで行った対応（調査手順・判断基準・確定した仕様・修正した誤り）を、次回から再利用できる playbook のドラフトに落とし込む。
+Distill what was done in the thread (investigation steps, criteria, settled specifications, corrected mistakes) into a playbook draft that can be reused from next time.
 
-## 1. 目的
+## 1. Purpose
 
-- 同じ質問・同じ調査を毎回ゼロからやり直さない
-- スレッド中に人間から受けた訂正・指摘を恒久ルール化する
-- 「このスレッドでしか通用しない話」と「一般化できる手順」を分離する
+- Stop redoing the same question or investigation from scratch every time
+- Turn corrections and remarks people made in the thread into lasting rules
+- Separate what only holds for this thread from steps that generalize
 
-## 2. 抽出するもの（スレッドを読み返して整理する）
+## 2. What to extract (reread the thread and organize)
 
-1. **トリガー**: どんな依頼文・キーワードでこの手順を発動すべきか（description に書く判定条件になる）
-2. **手順**: 実際にやった調査・作業のうち、再現可能なステップ。試行錯誤や失敗した経路は除外し、最短経路だけ残す
-3. **判断基準**: どのカラム・どの条件で判定したか。人間に訂正された箇所は「誤: 〜 / 正: 〜」の形で必ず取り込む
-4. **確定した仕様・事実**: スレッドで確定した未文書化仕様。既存ドキュメントに属する内容は、そのドキュメントへの追記案として分離する
-5. **出力フォーマット**: 依頼者が満足した回答の構造
+1. **Trigger**: which request wording or keywords should start this procedure (this becomes the condition in the description)
+2. **Steps**: the reproducible steps of the investigation or work actually done. Drop trial and error and failed paths; keep only the shortest path
+3. **Criteria**: which columns and conditions decided things. Always include places where people corrected you, in the form "Wrong: … / Right: …"
+4. **Settled specifications and facts**: undocumented specifications settled in the thread. Content that belongs in existing documentation is split out as a proposed addition to that document
+5. **Output format**: the structure of the answer the requester was happy with
 
-## 3. 除外するもの
+## 3. What to leave out
 
-- 個別の ID・社名・個人名・具体的な調査結果の値（例として必要な場合は `<user_id>` 等のプレースホルダに置換）
-- 一度きりの事象への言及（一般化できないもの）
-- 内部独白・エラーログ・謝罪等の会話ノイズ
+- Specific IDs, company names, personal names and concrete investigation results (replace with placeholders such as `<user_id>` when an example is needed)
+- Mentions of one-off events (things that do not generalize)
+- Conversational noise such as inner monologue, error logs and apologies
 
-## 4. ドラフトの形式
+## 4. Draft format
 
-既存 playbook と同じ形式で、そのまま `playbooks/` に置けば動く完成形にする:
+Use the same format as existing playbooks, complete enough to work as soon as it is placed in `playbooks/`:
 
 ```markdown
 ---
-name: <kebab-caseの短い名前>
-description: <一覧から選ばれるための具体的な説明。トリガーとなるキーワード・依頼文の型を含める>
+name: <short kebab-case name>
+description: <a specific description for being picked from the list, including trigger keywords and the kinds of requests>
 ---
 
-# <タイトル>
+# <Title>
 
-<目的 1〜2 行>
+<Purpose in one or two lines>
 
-## 手順
+## Steps
 ...
 
-## 判断基準
+## Criteria
 ...
 
-## 出力フォーマット
+## Output format
 ...
 ```
 
-- description はルーティングの唯一の手がかりなので、「どんな依頼のときに使うか」を具体的に書く
-- 既存 playbook と重複する内容は書かず、該当する playbook への参照で済ませる
-- 既存 playbook の**修正**で足りる場合は、新規作成せず「どのファイルのどこに何を追記するか」の差分提案にする
-- 既存 playbook を修正するときは、一覧でその playbook の下に表示された「最新メモ」を本文に取り込む。メモは本文の更新後に作業で分かった事実で、本文を保存すると取り込んだメモは表示されなくなる。取り込まないメモがあれば、その理由を案と一緒に伝える
+- The description is the only routing clue, so state concretely which requests it is for
+- Do not repeat content of existing playbooks; refer to the relevant playbook instead
+- If a **fix** to an existing playbook is enough, do not create a new one; propose a diff saying what to add where in which file
+- When fixing an existing playbook, fold in the "Latest notes" shown under it in the list. Notes are facts learned from work since the body was last updated, and folded notes stop being shown once the body is saved. If you leave a note out, give the reason with the draft
 
-## 5. 対話・保存・反映
+## 5. Conversation, saving and applying
 
-- フォーム・依頼・スレッドにある情報は聞き直さない。不足事項があれば1回に1問だけ聞き、回答を待って次に進む。
-- 新規作成・既存の修正とも、必ず完成した案をSlackで提示し、「この内容でいいですか？ OKなら保存して反映します」と確認して、そのターンを終える。「作って」「playbookにして」「修正して」という最初の依頼だけを完成案の承認として扱わない。
-- 提示する内容は、対象名・新規か更新か・目的・起動条件・手順・判断基準・完了条件・出力と、保存する本文全文。更新時は変更点も添える。長ければ省略せず分割して提示する。承認待ちの案はworkspace内の `playbook-drafts/` に保存し、本番ディレクトリにはまだ書き込まない。
-- 提示した最新版に対する依頼者の明示的な承認（「OK」「この内容で保存して」など）を受けて初めて保存・反映する。無回答・時間経過・修正依頼は承認とみなさない。修正を求められたら案を直し、再度内容を提示して確認する。
-- 承認は提示した対象と本文にだけ適用する。保存時に独自の変更を追加しない。「案だけ」「ドラフトだけ」と指定された場合はworkspace内の `playbook-drafts/` に保存し、本番playbookを変更しない。
-- 本番の保存先は、この作成用playbook自身があるディレクトリ。一覧に載った自身の絶対パスから特定し、作業ターンにそのパスと変更内容を渡す。推測した別ディレクトリやmemoryへ保存しない。
-- 新規作成の前に既存playbookのname・descriptionを確認する。重複なら既存を更新する。作成・更新する対象が曖昧な場合のみ1問で確認する。
-- 現在の要件に沿った完成形を作り、トリガー、入力、手順、判断基準、完了条件、出力を明記する。ユーザーが指定していない送信・起票・削除等を勝手に自動化しない。
-- ファイル名は小文字英数字とハイフンのみの名前に `.md` を付ける。既存ファイルがある場合は全文を読み、依頼範囲だけ更新する。
-- 保存直前に対象ファイルを再読し、ドラフト作成時から変更されていた場合は保存を止め、その変更を取り込んだ案を改めて提示して承認を待つ。既存版は同じディレクトリの `.history/` 配下に日時付きで退避する。新規作成時は同名ファイルを上書きしない。
-- UTF-8、64KB以内、先頭のfrontmatterに空でないnameとdescriptionがあることを検証する。同じディレクトリに `.tmp` 拡張子の一時ファイルを書き、完成後にrenameで置き換える。
-- 保存後に読み直し、依頼内容が反映されたことを確認する。失敗したら保存済みと報告せず、下書きの場所と失敗内容を伝える。
-- Slackには保存した名前、何をするplaybookか、呼び出し例、保存先を短く返す。承認前に提示済みの全文を完了報告で再掲する必要はない。
-- 一覧は新しいスレッドの最初の依頼で読み込まれるため、保存したplaybookは次に始まるスレッドから使える。botの再起動は行わない。
+- Do not ask again for information in the form, request or thread. If something is missing, ask one question at a time and wait for the answer before moving on.
+- For both new playbooks and fixes, always present the complete draft in Slack, ask "Is this content OK? If so, I'll save and apply it", and end the turn. Do not treat the first request alone ("make it", "turn it into a playbook", "fix it") as approval of the finished draft.
+- Present the target name, whether it is new or an update, the purpose, trigger, steps, criteria, completion conditions and output, plus the full body to be saved. For updates, add the changes too. If it is long, split it rather than abbreviate. Keep drafts awaiting approval in `playbook-drafts/` in the workspace, and do not write to the live directory yet.
+- Save and apply only after the requester explicitly approves the latest version presented ("OK", "save it like this", and so on). No answer, time passing and change requests are not approval. When changes are asked for, fix the draft and present it again for confirmation.
+- Approval applies only to the target and body presented. Do not add your own changes when saving. If "just a proposal" or "just a draft" was specified, save to `playbook-drafts/` in the workspace and do not change live playbooks.
+- The live location is the directory this playbook itself is in. Find it from this playbook's absolute path in the list, and pass that path and the changes to the work turn. Do not save to another directory you guessed, or to memory.
+- Before creating a new one, check the name and description of existing playbooks. If it duplicates one, update the existing one. Ask in one question only when the target to create or update is unclear.
+- Make a complete version that fits the current requirements, stating the trigger, inputs, steps, criteria, completion conditions and output. Do not automate sending, filing, deleting and the like on your own when the user did not ask for it.
+- The file name is lowercase letters, digits and hyphens only, plus `.md`. If the file exists, read all of it and update only what was asked.
+- Reread the target file right before saving; if it changed since the draft was made, stop, present a draft that takes the change in, and wait for approval again. Move the existing version to `.history/` in the same directory with a timestamp. When creating a new one, do not overwrite a file with the same name.
+- Check that it is UTF-8, within 64KB, and starts with frontmatter with a non-empty name and description. Write a temporary file with a `.tmp` extension in the same directory and replace the target with rename once done.
+- Reread after saving and confirm the request is reflected. If it failed, do not report it as saved; say where the draft is and what failed.
+- In Slack, reply briefly with the saved name, what the playbook does, an example of calling it, and where it is saved. There is no need to repeat the full text already presented before approval.
+- The list is loaded at the first request of a new thread, so a saved playbook is available from the next thread that starts. Do not restart the bot.
 
-## 6. 禁止事項
+## 6. Do not
 
-- スレッドに登場した個人情報・認証情報をドラフトに含めない
-- スレッドで確定していない推測を手順・判断基準として書かない
-- 依頼されていないのに勝手に playbook 化を始めない（明示的な依頼があったときだけ発動する）
+- Include personal information or credentials that appeared in the thread in the draft
+- Write guesses that the thread did not settle as steps or criteria
+- Start making a playbook unasked (act only on an explicit request)

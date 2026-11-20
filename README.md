@@ -1,56 +1,56 @@
 # ebi-x
 
-ebi-x は、Slack で頼まれた作業を Codex に実行させ、結果を同じスレッドへ返す常駐ボットです。
+ebi-x is a resident bot that hands work requested in Slack to Codex and posts the result back to the same thread.
 
 ```text
-@tanaka  @ebi-x CI が落ちている原因を調べて
-  └ ebi-x がコマンドを実行しています（go test）… 1/3 完了
-  └ @ebi-x  原因はタイムゾーンの扱いでした。修正して PR を作成しました。…
-            👀 次の PR を見守ります。CI の失敗やレビューがあれば、このスレッドで対応します。
+@alice  @ebi-x find out why CI is failing
+  └ ebi-x is running a command (go test)… 1/3 done
+  └ @ebi-x  The cause was time zone handling. I fixed it and opened a PR. …
+            👀 Watching the PR below. I'll handle CI failures and reviews in this thread.
 ```
 
-## できること
+## What it does
 
-- **依頼**：mention、ebi-x との DM、メッセージの「…」メニューから頼めます。スレッドに返信すれば、同じ Codex セッションで続きを頼めます。
-- **作業の見える化**：作業中は Codex がいま何をしているかを表示し、「停止」で止められます。Home タブに自分の依頼の状況が並びます。
-- **会話が止まった後の作業**：後で確認するフォローアップ、曜日と時刻を決めた定期実行、指定の時刻に1回知らせるリマインダー、作った PR の CI やレビューへの対応ができます。
-- **成果物**：PDF・画像・pptx・CSV をスレッドに添付します。スライドの作成から納品までを playbook で扱えます。
-- **安全な実行**：使える人とチャンネルを許可制にし、Codex はスレッドごとの作業場所とサンドボックスの中で動きます。外部への送信など確認が必要な操作の前には、依頼者に聞きます。
+- **Requests**: ask with a mention, a DM to ebi-x, or the "…" menu on a message. Reply in the thread to continue in the same Codex session.
+- **Visible progress**: while working, it shows what Codex is doing now, and "stop" stops it. The Home tab lists the state of your requests.
+- **Work after the conversation ends**: follow-ups that check again later, schedules on given weekdays and times, one-time reminders at a given time, and handling CI and reviews on the PRs it opened.
+- **Deliverables**: it attaches PDFs, images, pptx and CSV files to the thread. Playbooks can cover slide decks from draft to delivery.
+- **Safe execution**: only approved people and channels can use it, and Codex runs in a per-thread working area inside a sandbox. Before actions that need confirmation, such as sending something outside, it asks the requester.
 
-## はじめかた
+## Getting started
 
-必要なもの：Go（`mise install` で揃います）、Codex CLI 0.149.0 以上（ログイン済み）、Slack App を作れるワークスペース。
+You need Go (`mise install` sets it up), Codex CLI 0.149.0 or later (signed in), and a Slack workspace where you can create apps.
 
-1. `examples/slack-app-manifest.json` から Slack App を作り、ワークスペースにインストールします。Bot Token（`xoxb-`）と Socket Mode 用の App Token（`xapp-`）を取得します。
-2. `.env` を作り、トークンと許可する user・channel の ID を書きます。
+1. Create a Slack app from `examples/slack-app-manifest.json` and install it in your workspace. Get the Bot Token (`xoxb-`) and the App Token for Socket Mode (`xapp-`).
+2. Create `.env` and write the tokens and the IDs of the users and channels to allow.
 
    ```sh
    cp .env.example .env
    ```
 
-3. ビルドして起動します。
+3. Build and start it.
 
    ```sh
-   mise run build   # または go build -o ebi-x ./cmd/ebi-x
+   mise run build   # or go build -o ebi-x ./cmd/ebi-x
    TZ=Asia/Tokyo ./ebi-x
    ```
 
-4. 許可したチャンネルに ebi-x を招待し、`@ebi-x 生きてる？` と mention して応答を確かめます。
+4. Invite ebi-x to an allowed channel and mention it with `@ebi-x alive?` to check that it answers.
 
-## ドキュメント
+## Documentation
 
-| ファイル | 内容 |
+| File | Contents |
 | --- | --- |
-| [docs/setup.md](docs/setup.md) | 導入と設定（Slack App、`.env`、許可、運用） |
-| [docs/usage.md](docs/usage.md) | Slack での使い方と、各機能の動き |
-| [docs/design.md](docs/design.md) | 設計の決めごとと理由 |
-| [examples/](examples/) | Slack App の manifest、操作ルールと playbook の例 |
+| [docs/setup.md](docs/setup.md) | Installation and settings (Slack app, `.env`, permissions, operations) |
+| [docs/usage.md](docs/usage.md) | How to use it in Slack, and how each feature behaves |
+| [docs/design.md](docs/design.md) | Design decisions and their reasons |
+| [examples/](examples/) | The Slack app manifest, and example action rules and playbooks |
 
-## 開発
+## Development
 
 ```sh
 mise run test   # go test -race ./...
-mise run lint   # go vet ./... と gofmt の確認
+mise run lint   # go vet ./... and a gofmt check
 ```
 
-動いている ebi-x にコードの変更を反映するときは `mise run reload` を使います。実行中の作業を止めずに入れ替えます（[docs/setup.md](docs/setup.md#9-運用)）。
+To apply code changes to a running ebi-x, use `mise run reload`. It swaps the process without stopping work in progress ([docs/setup.md](docs/setup.md#9-operations)).

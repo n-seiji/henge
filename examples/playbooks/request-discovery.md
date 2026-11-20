@@ -1,38 +1,38 @@
 ---
 name: request-discovery
-description: 改善要望について既知情報を聞き直さず、不足事項を1問ずつ確認し、課題と対応の方向性をまとめる
+description: For an improvement request, ask about missing details one at a time without asking again for what is known, and summarize the problem and the direction to take
 ---
 
-# 改善要望のヒアリング
+# Improvement request discovery
 
-## 利用条件
+## When to use
 
-改善要望の深掘りを依頼されたスレッドで使う。対象チャンネルや起票先は運用者が指定する。未指定の外部サービスには書き込まない。
+Use in a thread where you are asked to dig into an improvement request. The operator names the target channel and where to file issues. Do not write to external services that were not named.
 
-## 手順
+## Steps
 
-1. 元投稿とスレッド全体を読み、確認済みの事実・仮説・不足情報を分ける。自由記述にある情報も拾い、書かれていることは聞き直さない。
-2. 次の観点で、不足事項だけを1問ずつ聞く。回答を待ってから次の質問に進み、一度の回答で複数項目が埋まった場合はすべて反映する。
-   - 誰が、どの作業で困っているか。
-   - 直近の具体例と実際の影響は何か。
-   - どの期間に何回起き、どの範囲に影響するか。
-   - 現在の回避策とその負担は何か。
-   - 期限と、その期限が必要な理由は何か。
-   - どうなれば解決したと判断できるか。
-3. 要望された機能と解決したい課題を分け、既存機能の案内・運用改善・開発・追加調査を比較する。必要性と緊急性を別々に評価し、根拠を残す。
-4. 誰のどんな課題か、影響、頻度、回避策、期限、望ましい結果が判断できたら質問を終え、下記の形式でまとめる。判断に不可欠な情報が不明なら確認待ちとする。無回答を承認や完了とみなさない。
-5. Issue作成を依頼済みで、起票先も指定されている場合は、既存Issueとの重複を確認し、現在のテンプレートに合わせて作成する。同一課題のIssueがあれば重複作成せずURLを返す。起票先が不明なら1問で確認する。要約のみの依頼では起票しない。
-6. 作成結果のURLを返す。成否不明の場合は再作成前に存在確認し、失敗を成功と報告しない。
+1. Read the original post and the whole thread, and separate confirmed facts, hypotheses and missing information. Pick up information from free-form text too, and do not ask again for what is already written.
+2. Ask only about missing details, one question at a time, from these angles. Wait for each answer before the next question, and when one answer fills several items, record them all.
+   - Who is struggling, and in which work?
+   - What is a recent concrete example, and what was the actual impact?
+   - How many times did it happen in what period, and how far does it reach?
+   - What is the current workaround, and how heavy is it?
+   - What is the deadline, and why is that deadline needed?
+   - What would count as solved?
+3. Separate the feature requested from the problem to solve, and compare pointing to existing features, improving operations, development, and further investigation. Assess need and urgency separately, and keep the reasons.
+4. Once you can judge whose problem it is, the impact, frequency, workaround, deadline and desired outcome, stop asking and summarize in the format below. If information essential to the judgment is unknown, mark it as waiting for confirmation. Do not treat no answer as approval or completion.
+5. If an issue was requested and where to file it was named, check for duplicates of existing issues and create it following the current template. If an issue for the same problem exists, do not create a duplicate; return its URL. If where to file is unknown, ask in one question. Do not file when only a summary was requested.
+6. Return the URL of what you created. If you cannot tell whether it succeeded, check that it exists before creating it again, and never report a failure as a success.
 
-## 出力
+## Output
 
-- 対象者と現在の作業
-- 解決したい課題と具体例
-- 影響・頻度・対象期間
-- 回避策と負担
-- 期限と理由
-- 望ましい結果
-- 対応の方向性と根拠
-- 未確認事項と参考リンク
+- Who is affected and their current work
+- The problem to solve, with a concrete example
+- Impact, frequency and period
+- Workaround and its burden
+- Deadline and reason
+- Desired outcome
+- Direction to take and the reasons
+- Unconfirmed points and reference links
 
-個人情報・認証情報は転記しない。概算は概算と明記し、未知の値をゼロとして扱わない。Issue作成は実装の採択や納期の約束を意味しない。
+Do not copy personal information or credentials. Mark estimates as estimates, and do not treat unknown values as zero. Filing an issue does not mean the implementation is accepted or a delivery date is promised.
