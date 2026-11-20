@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"unicode"
 
 	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/secretref"
 )
 
 const (
@@ -26,7 +28,7 @@ const (
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-var botSecretEnvNames = []string{"SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "HENGE_GITHUB_TOKEN", "HENGE_GITHUB_APP_PRIVATE_KEY"}
+var botSecretEnvNames = []string{"SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "HENGE_GITHUB_TOKEN", "HENGE_GITHUB_APP_PRIVATE_KEY", "OP_SERVICE_ACCOUNT_TOKEN", "OP_CONNECT_TOKEN"}
 
 type Config struct {
 	SlackBotToken              string
@@ -231,6 +233,11 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	for _, name := range append(slices.Clone(codexEnv), "SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "HENGE_GITHUB_TOKEN") {
+		if err := secretref.Check(name, strings.TrimSpace(os.Getenv(name))); err != nil {
+			return nil, err
+		}
+	}
 	protectedPaths, err := resolveProtectedPaths(home, memoryDir, stateDir, os.Getenv("HENGE_DENIED_READ_PATHS"))
 	if err != nil {
 		return nil, err
@@ -306,6 +313,41 @@ func Load() (*Config, error) {
 		CodexEnv:                   codexEnv,
 		CodexHome:                  codexHome,
 	}, nil
+}
+
+// Kept out of Load so that a configuration check, which a reload runs
+// first, does not prompt for the Keychain or 1Password a second time.
+// Codex variables are read through the process environment, so their values
+// replace the references there.
+func (c *Config) ResolveSecrets(ctx context.Context) error {
+	for _, field := range []struct {
+		name  string
+		value *string
+	}{
+		{"SLACK_BOT_TOKEN", &c.SlackBotToken},
+		{"SLACK_APP_TOKEN", &c.SlackAppToken},
+		{"HENGE_GITHUB_TOKEN", &c.GitHubToken},
+	} {
+		secret, err := secretref.Resolve(ctx, field.name, *field.value)
+		if err != nil {
+			return err
+		}
+		*field.value = secret
+	}
+	for _, name := range c.CodexEnv {
+		value := strings.TrimSpace(os.Getenv(name))
+		if !secretref.IsReference(value) {
+			continue
+		}
+		secret, err := secretref.Resolve(ctx, name, value)
+		if err != nil {
+			return err
+		}
+		if err := os.Setenv(name, secret); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 func resolveCodexHome() (string, error) {

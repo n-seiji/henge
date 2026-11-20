@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/n-seiji/henge/internal/github"
+	"github.com/n-seiji/henge/internal/secretref"
 )
 
 type GitHubApp struct {
@@ -38,9 +38,11 @@ func loadGitHubApp() (*GitHubApp, error) {
 		}
 		app.InstallationID = value
 	}
-	if service, ok := strings.CutPrefix(location, github.KeychainPrefix); ok {
-		if strings.TrimSpace(service) == "" {
-			return nil, fmt.Errorf("HENGE_GITHUB_APP_PRIVATE_KEY %q: names no Keychain service", location)
+	// Read when the App's tokens are set up, not here, so a configuration
+	// check does not prompt for the Keychain or 1Password.
+	if secretref.IsReference(location) {
+		if err := secretref.Check("HENGE_GITHUB_APP_PRIVATE_KEY", location); err != nil {
+			return nil, err
 		}
 		return app, nil
 	}

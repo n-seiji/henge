@@ -19,9 +19,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
 
-const KeychainPrefix = "keychain:"
+	"github.com/n-seiji/henge/internal/secretref"
+)
 
 // Only the bot holds the App's private key; work turns get the short-lived
 // tokens.
@@ -232,9 +232,9 @@ func parsePrivateKey(keyPEM []byte) (*rsa.PrivateKey, error) {
 	return key, nil
 }
 
-func LoadPrivateKey(location string) ([]byte, error) {
-	if service, keychain := strings.CutPrefix(location, KeychainPrefix); keychain {
-		return readKeychain(service)
+func LoadPrivateKey(ctx context.Context, location string) ([]byte, error) {
+	if secretref.IsReference(location) {
+		return secretref.ResolveBytes(ctx, "HENGE_GITHUB_APP_PRIVATE_KEY", location)
 	}
 	key, err := os.ReadFile(location)
 	if err != nil {
