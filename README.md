@@ -19,23 +19,32 @@ ebi-x は、Slack で頼まれた作業を Codex に実行させ、結果を同�
 
 ## はじめかた
 
-必要なもの：Go（`mise install` で揃います）、Codex CLI 0.149.0 以上（ログイン済み）、Slack App を作れるワークスペース。
+必要なもの：Codex CLI 0.149.0 以上（`codex login` 済み）、Slack App を作れるワークスペース、常時動かしておける macOS か Linux。
 
-1. `examples/slack-app-manifest.json` から Slack App を作り、ワークスペースにインストールします。Bot Token（`xoxb-`）と Socket Mode 用の App Token（`xapp-`）を取得します。
-2. `.env` を作り、トークンと許可する user・channel の ID を書きます。
-
-   ```sh
-   cp .env.example .env
-   ```
-
-3. ビルドして起動します。
+1. インストールします。
 
    ```sh
-   mise run build   # または go build -o ebi-x ./cmd/ebi-x
-   TZ=Asia/Tokyo ./ebi-x
+   curl -fsSL https://raw.githubusercontent.com/n-seiji/henge/main/install.sh | sh
    ```
 
-4. 許可したチャンネルに ebi-x を招待し、`@ebi-x 生きてる？` と mention して応答を確かめます。
+2. エージェント用のディレクトリを作り、`ebi-x init` を実行します。`.env` と `data/` はこのディレクトリから読みます。
+
+   ```sh
+   mkdir ~/ebi-x && cd ~/ebi-x && ebi-x init
+   ```
+
+   書き出された `slack-app-manifest.json` を Slack App の作成画面の「From a manifest」に貼り付けてワークスペースにインストールし、続く質問に Bot Token（`xoxb-`）、Socket Mode 用の App Token（`xapp-`）、自分の member ID、bot と話すチャンネルの ID を答えると、`.env` ができます。そのチャンネルが承認チャンネルになり、ほかの人やチャンネルはそこで Slack から許可します。
+
+3. Codex にログインして起動します。
+
+   ```sh
+   codex login
+   TZ=Asia/Tokyo ebi-x
+   ```
+
+4. 答えたチャンネルに ebi-x を招待し、`@ebi-x 生きてる？` と mention して応答を確かめます。
+
+常駐させる方法と、ソースからのビルドは [docs/setup.md](docs/setup.md#0-インストール) にあります。
 
 ## ドキュメント
 
@@ -44,7 +53,7 @@ ebi-x は、Slack で頼まれた作業を Codex に実行させ、結果を同�
 | [docs/setup.md](docs/setup.md) | 導入と設定（Slack App、`.env`、許可、運用） |
 | [docs/usage.md](docs/usage.md) | Slack での使い方と、各機能の動き |
 | [docs/design.md](docs/design.md) | 設計の決めごとと理由 |
-| [examples/](examples/) | Slack App の manifest、操作ルールと playbook の例 |
+| [examples/](examples/) | Slack App の manifest、常駐の雛形、操作ルールと playbook の例 |
 
 ## 開発
 

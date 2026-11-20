@@ -1,0 +1,20 @@
+# systemd user unit. Copy to ~/.config/systemd/user/ebi-x.service, then:
+#   systemctl --user enable --now ebi-x
+#   loginctl enable-linger "$USER"   # keep it running after logout
+# After installing a new binary: systemctl --user reload ebi-x
+[Unit]
+Description=ebi-x
+After=network-online.target
+
+[Service]
+# .env and data/ are read from the working directory.
+WorkingDirectory=%h/ebi-x
+ExecStart=%h/.local/bin/ebi-x
+ExecReload=/bin/kill -HUP $MAINPID
+Environment=TZ=Asia/Tokyo
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
