@@ -746,7 +746,7 @@ func TestAllowlistRejectsUserAndChannel(t *testing.T) {
 			if store.claimCalls != 0 {
 				t.Fatalf("ClaimEvent called %d times, want 0", store.claimCalls)
 			}
-			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "@seiji") {
+			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "ebi-x の管理者") {
 				t.Fatalf("posts = %q, want forbidden response", got)
 			}
 		})
@@ -788,7 +788,7 @@ func TestBotMentionWithoutWorkflowIDIsForbidden(t *testing.T) {
 	if store.claimCalls != 0 {
 		t.Fatalf("ClaimEvent called %d times, want 0", store.claimCalls)
 	}
-	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("この Workflow", "@seiji") {
+	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("この Workflow", "ebi-x の管理者") {
 		t.Fatalf("posts = %q, want forbidden response", got)
 	}
 }
@@ -803,7 +803,7 @@ func TestUnauthorizedBareMentionIsForbidden(t *testing.T) {
 
 	bot.HandleMention(context.Background(), event)
 
-	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "@seiji") {
+	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "ebi-x の管理者") {
 		t.Fatalf("posts = %q, want forbidden response", got)
 	}
 }
@@ -840,7 +840,7 @@ func TestWorkflowAuthorizationBoundaries(t *testing.T) {
 			if store.claimCalls != 0 {
 				t.Fatalf("ClaimEvent called %d times, want 0", store.claimCalls)
 			}
-			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "@seiji") {
+			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "ebi-x の管理者") {
 				t.Fatalf("posts = %q, want forbidden response", got)
 			}
 		})
@@ -884,7 +884,7 @@ func TestDuplicateEventWithEnabledSubscriptionSkipsMarkerLookup(t *testing.T) {
 	runner := &fakeRunner{}
 	api := &fakeSlack{hasReaction: true}
 	bot := newTestBot(t, store, api, runner)
-	bot.config.ThreadSubscriptionReaction = "thread-subete"
+	bot.config.ThreadSubscriptionReaction = "subscribe"
 	bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 
 	bot.HandleMention(context.Background(), mention())
@@ -919,7 +919,7 @@ func TestMarkedMentionStartsThreadSubscription(t *testing.T) {
 			api := &fakeSlack{hasReaction: true}
 			runner := successfulTurnRunner()
 			bot := newTestBot(t, store, api, runner)
-			bot.config.ThreadSubscriptionReaction = "thread-subete"
+			bot.config.ThreadSubscriptionReaction = "subscribe"
 			bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 			bot.now = func() time.Time { return now }
 
@@ -929,7 +929,7 @@ func TestMarkedMentionStartsThreadSubscription(t *testing.T) {
 			if got, ok := store.GetSubscription("C1:" + test.wantThread); !ok || got != want {
 				t.Fatalf("subscription = (%+v, %v), want (%+v, true)", got, ok, want)
 			}
-			if api.reactionCalls != 1 || api.reactionChannel != "C1" || api.reactionTimestamp != test.wantThread || api.reactionName != "thread-subete" {
+			if api.reactionCalls != 1 || api.reactionChannel != "C1" || api.reactionTimestamp != test.wantThread || api.reactionName != "subscribe" {
 				t.Fatalf("reaction lookup = %d calls with (%q, %q, %q), want one parent lookup", api.reactionCalls, api.reactionChannel, api.reactionTimestamp, api.reactionName)
 			}
 			if runner.calls != 1 {
@@ -944,7 +944,7 @@ func TestUnmarkedMentionDoesNotStartThreadSubscription(t *testing.T) {
 	api := &fakeSlack{}
 	runner := successfulTurnRunner()
 	bot := newTestBot(t, store, api, runner)
-	bot.config.ThreadSubscriptionReaction = "thread-subete"
+	bot.config.ThreadSubscriptionReaction = "subscribe"
 	bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 
 	bot.HandleMention(context.Background(), mention())
@@ -968,7 +968,7 @@ func TestRepeatedMarkedMentionRenewsThreadSubscription(t *testing.T) {
 		successfulTurnRunner().responses...,
 	)}
 	bot := newTestBot(t, store, api, runner)
-	bot.config.ThreadSubscriptionReaction = "thread-subete"
+	bot.config.ThreadSubscriptionReaction = "subscribe"
 	bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 	bot.now = func() time.Time { return currentNow }
 
@@ -1001,7 +1001,7 @@ func TestSubscriptionStartFailuresDoNotBlockMentionTurn(t *testing.T) {
 			store := &fakeStore{claim: true, subscriptionErr: test.storeErr}
 			runner := successfulTurnRunner()
 			bot := newTestBot(t, store, test.api, runner)
-			bot.config.ThreadSubscriptionReaction = "thread-subete"
+			bot.config.ThreadSubscriptionReaction = "subscribe"
 			bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 
 			bot.HandleMention(context.Background(), mention())
@@ -1036,7 +1036,7 @@ func TestSubscriptionMarkerLookupRetriesTransientSlackErrors(t *testing.T) {
 			api := &fakeSlack{hasReaction: true, reactionErrs: []error{test.firstError, nil}}
 			runner := successfulTurnRunner()
 			bot := newTestBot(t, store, api, runner)
-			bot.config.ThreadSubscriptionReaction = "thread-subete"
+			bot.config.ThreadSubscriptionReaction = "subscribe"
 			bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 			var waits []time.Duration
 			bot.sleep = func(ctx context.Context, duration time.Duration) error {
@@ -1078,7 +1078,7 @@ func TestSubscriptionMarkerLookupSecondFailureSkipsSubscriptionAndContinuesMenti
 	}}
 	runner := successfulTurnRunner()
 	bot := newTestBot(t, store, api, runner)
-	bot.config.ThreadSubscriptionReaction = "thread-subete"
+	bot.config.ThreadSubscriptionReaction = "subscribe"
 	bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 
 	bot.HandleMention(context.Background(), mention())
@@ -1101,7 +1101,7 @@ func TestSubscriptionMarkerLookupDoesNotRetryPermanent4xx(t *testing.T) {
 	}}
 	runner := successfulTurnRunner()
 	bot := newTestBot(t, store, api, runner)
-	bot.config.ThreadSubscriptionReaction = "thread-subete"
+	bot.config.ThreadSubscriptionReaction = "subscribe"
 	bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 
 	bot.HandleMention(context.Background(), mention())
@@ -1128,7 +1128,7 @@ func TestSubscriptionMarkerLookupRequiresEnabledAuthorizedMention(t *testing.T) 
 		{
 			name: "unauthorized",
 			configure: func(bot *Bot) {
-				bot.config.ThreadSubscriptionReaction = "thread-subete"
+				bot.config.ThreadSubscriptionReaction = "subscribe"
 				bot.config.ThreadSubscriptionTTL = 48 * time.Hour
 			},
 			event: func() *slackevents.AppMentionEvent {
@@ -1174,13 +1174,13 @@ func TestWebAPIHasReactionUsesReactionsGet(t *testing.T) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Header:     http.Header{"Content-Type": []string{"application/json"}},
-			Body:       io.NopCloser(strings.NewReader(`{"ok":true,"type":"message","message":{"reactions":[{"name":"eyes"},{"name":"thread-subete"}]}}`)),
+			Body:       io.NopCloser(strings.NewReader(`{"ok":true,"type":"message","message":{"reactions":[{"name":"eyes"},{"name":"subscribe"}]}}`)),
 			Request:    r,
 		}, nil
 	})}
 
 	api := &webAPI{client: slack.New("token", slack.OptionAPIURL("https://slack.test/"), slack.OptionHTTPClient(httpClient))}
-	marked, err := api.HasReaction(context.Background(), "C1", "100.1", "thread-subete")
+	marked, err := api.HasReaction(context.Background(), "C1", "100.1", "subscribe")
 	if err != nil {
 		t.Fatalf("HasReaction() error = %v, want nil", err)
 	}

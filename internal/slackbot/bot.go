@@ -868,7 +868,7 @@ func (w sharedWorkspaces) Denied(workspace.Area) ([]string, error) { return nil,
 
 // Names who lacks access so the author asks the admin rather than retrying.
 func (b *Bot) forbidden(ctx context.Context, event *slackevents.AppMentionEvent, missing []approvalSubject) {
-	contact := "@seiji"
+	contact := "ebi-x の管理者"
 	if b.config.AdminUserID != "" {
 		contact = "<@" + b.config.AdminUserID + ">"
 	}

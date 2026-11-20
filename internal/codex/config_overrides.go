@@ -59,7 +59,6 @@ func loadConfigOverrides(path string, access Access) ([]string, error) {
 		return nil, fmt.Errorf("encode local Codex config %q: %w", path, err)
 	}
 	servers, _ := config["mcp_servers"].(map[string]any)
-	overrides = append(overrides, bigQueryReadOnlyOverrides(servers)...)
 	overrides = disableServers(overrides, access.disabledServers(servers))
 	sort.Strings(overrides)
 	return overrides, nil
@@ -121,49 +120,6 @@ func disableServers(overrides, names []string) []string {
 		kept = append(kept, encodeDottedKey([]string{"mcp_servers", name, "enabled"})+"=false")
 	}
 	return kept
-}
-
-// Toolbox's execute_sql allows any statement unless its write mode says
-// otherwise, so a server without an explicit BIGQUERY_WRITE_MODE or
-// BIGQUERY_READONLY runs in "blocked" mode.
-func bigQueryReadOnlyOverrides(servers map[string]any) []string {
-	var overrides []string
-	for _, name := range slices.Sorted(maps.Keys(servers)) {
-		server, _ := servers[name].(map[string]any)
-		env, _ := server["env"].(map[string]any)
-		_, writeMode := env["BIGQUERY_WRITE_MODE"]
-		_, readOnly := env["BIGQUERY_READONLY"]
-		if writeMode || readOnly || !isToolboxBigQuery(server) || !exposesTool(server, "execute_sql") {
-			continue
-		}
-		path := []string{"mcp_servers", name, "env", "BIGQUERY_WRITE_MODE"}
-		overrides = append(overrides, encodeDottedKey(path)+`="blocked"`)
-	}
-	return overrides
-}
-
-func isToolboxBigQuery(server map[string]any) bool {
-	env, _ := server["env"].(map[string]any)
-	if _, ok := env["BIGQUERY_PROJECT"]; ok {
-		return true
-	}
-	args := stringList(server["args"])
-	for i, arg := range args {
-		if arg == "--prebuilt=bigquery" || (arg == "--prebuilt" && i+1 < len(args) && args[i+1] == "bigquery") {
-			return true
-		}
-	}
-	return false
-}
-
-func exposesTool(server map[string]any, tool string) bool {
-	if enabled, ok := server["enabled"].(bool); ok && !enabled {
-		return false
-	}
-	if _, ok := server["enabled_tools"]; ok && !slices.Contains(stringList(server["enabled_tools"]), tool) {
-		return false
-	}
-	return !slices.Contains(stringList(server["disabled_tools"]), tool)
 }
 
 func stringList(value any) []string {

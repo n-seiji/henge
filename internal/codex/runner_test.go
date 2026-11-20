@@ -203,11 +203,11 @@ func TestLoadConfigOverrides(t *testing.T) {
 	path := filepath.Join(dir, "config.toml")
 	content := `model = "local-model"
 
-[mcp_servers.bigquery]
+[mcp_servers.analytics]
 command = "npx"
-args = ["-y", "@toolbox-sdk/server"]
+args = ["-y", "@example/db-server"]
 enabled = true
-env = { BIGQUERY_PROJECT = "example-project" }
+env = { DB_PROJECT = "example-project" }
 enabled_tools = ["list_dataset_ids", "get_table_info"]
 `
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
@@ -219,98 +219,15 @@ enabled_tools = ["list_dataset_ids", "get_table_info"]
 		t.Fatalf("loadConfigOverrides() error = %v", err)
 	}
 	want := []string{
-		`mcp_servers.bigquery.args=["-y","@toolbox-sdk/server"]`,
-		`mcp_servers.bigquery.command="npx"`,
-		`mcp_servers.bigquery.enabled=true`,
-		`mcp_servers.bigquery.enabled_tools=["list_dataset_ids","get_table_info"]`,
-		`mcp_servers.bigquery.env.BIGQUERY_PROJECT="example-project"`,
+		`mcp_servers.analytics.args=["-y","@example/db-server"]`,
+		`mcp_servers.analytics.command="npx"`,
+		`mcp_servers.analytics.enabled=true`,
+		`mcp_servers.analytics.enabled_tools=["list_dataset_ids","get_table_info"]`,
+		`mcp_servers.analytics.env.DB_PROJECT="example-project"`,
 		`model="local-model"`,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("loadConfigOverrides() = %#v, want %#v", got, want)
-	}
-}
-
-func TestLoadConfigOverridesKeepsBigQuerySQLReadOnly(t *testing.T) {
-	tests := []struct {
-		name    string
-		content string
-		want    bool
-	}{
-		{
-			name: "execute_sql enabled without write mode",
-			content: `[mcp_servers.bigquery]
-command = "npx"
-args = ["-y", "@toolbox-sdk/server", "--prebuilt", "bigquery", "--stdio"]
-env = { BIGQUERY_PROJECT = "example-project" }
-enabled_tools = ["list_dataset_ids", "execute_sql"]
-`,
-			want: true,
-		},
-		{
-			name: "all tools exposed",
-			content: `[mcp_servers.bigquery]
-command = "toolbox"
-args = ["--prebuilt=bigquery", "--stdio"]
-`,
-			want: true,
-		},
-		{
-			name: "execute_sql not enabled",
-			content: `[mcp_servers.bigquery]
-env = { BIGQUERY_PROJECT = "example-project" }
-enabled_tools = ["list_dataset_ids"]
-`,
-		},
-		{
-			name: "execute_sql disabled",
-			content: `[mcp_servers.bigquery]
-env = { BIGQUERY_PROJECT = "example-project" }
-disabled_tools = ["execute_sql"]
-`,
-		},
-		{
-			name: "write mode chosen by operator",
-			content: `[mcp_servers.bigquery]
-env = { BIGQUERY_PROJECT = "example-project", BIGQUERY_WRITE_MODE = "protected" }
-enabled_tools = ["execute_sql"]
-`,
-		},
-		{
-			name: "readonly chosen by operator",
-			content: `[mcp_servers.bigquery]
-env = { BIGQUERY_PROJECT = "example-project", BIGQUERY_READONLY = "true" }
-enabled_tools = ["execute_sql"]
-`,
-		},
-		{
-			name: "other server",
-			content: `[mcp_servers.sql]
-command = "sql"
-enabled_tools = ["execute_sql"]
-`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "config.toml")
-			if err := os.WriteFile(path, []byte(tt.content), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			got, err := loadConfigOverrides(path, Access{})
-			if err != nil {
-				t.Fatalf("loadConfigOverrides() error = %v", err)
-			}
-			forced := false
-			for _, override := range got {
-				if strings.HasSuffix(override, `.env.BIGQUERY_WRITE_MODE="blocked"`) {
-					forced = true
-				}
-			}
-			if forced != tt.want {
-				t.Fatalf("loadConfigOverrides() = %#v, want blocked write mode %v", got, tt.want)
-			}
-		})
 	}
 }
 
@@ -995,9 +912,9 @@ func TestShellEnvPolicyOverrides(t *testing.T) {
 
 func TestLoadConfigOverridesWithoutSlack(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")
-	content := `[mcp_servers.bigquery]
+	content := `[mcp_servers.analytics]
 command = "npx"
-args = ["-y", "@toolbox-sdk/server"]
+args = ["-y", "@example/db-server"]
 enabled_tools = ["list_dataset_ids"]
 
 [mcp_servers.slack]
@@ -1017,9 +934,9 @@ args = ["-y", "@modelcontextprotocol/server-slack"]
 		t.Fatalf("loadConfigOverrides() error = %v", err)
 	}
 	want := []string{
-		`mcp_servers.bigquery.args=["-y","@toolbox-sdk/server"]`,
-		`mcp_servers.bigquery.command="npx"`,
-		`mcp_servers.bigquery.enabled_tools=["list_dataset_ids"]`,
+		`mcp_servers.analytics.args=["-y","@example/db-server"]`,
+		`mcp_servers.analytics.command="npx"`,
+		`mcp_servers.analytics.enabled_tools=["list_dataset_ids"]`,
 		`mcp_servers.chat.args=["-y","@modelcontextprotocol/server-slack"]`,
 		`mcp_servers.chat.command="npx"`,
 		`mcp_servers.chat.enabled=false`,
@@ -1045,7 +962,7 @@ args = ["-y", "@modelcontextprotocol/server-slack"]
 
 func TestLoadConfigOverridesMCPAllowlist(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")
-	content := "[mcp_servers.bigquery]\ncommand = \"npx\"\nenabled = true\n\n[mcp_servers.example]\nurl = \"https://example.com/mcp\"\n"
+	content := "[mcp_servers.analytics]\ncommand = \"npx\"\nenabled = true\n\n[mcp_servers.example]\nurl = \"https://example.com/mcp\"\n"
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -1053,8 +970,8 @@ func TestLoadConfigOverridesMCPAllowlist(t *testing.T) {
 		allowed []string
 		off     []string
 	}{
-		{allowed: []string{}, off: []string{"bigquery", "example"}},
-		{allowed: []string{"bigquery"}, off: []string{"example"}},
+		{allowed: []string{}, off: []string{"analytics", "example"}},
+		{allowed: []string{"analytics"}, off: []string{"example"}},
 	}
 	for _, test := range tests {
 		got, err := loadConfigOverrides(path, Access{MCPServers: test.allowed})

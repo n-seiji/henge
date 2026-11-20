@@ -18,11 +18,10 @@ import (
 )
 
 const (
-	defaultCodexTimeout               = 30 * time.Minute
-	defaultThreadSubscriptionReaction = "thread-subete"
-	defaultThreadSubscriptionTTL      = 336 * time.Hour
-	defaultMaxParallelWork            = 3
-	defaultCheckoutIdleTTL            = 120 * time.Hour
+	defaultCodexTimeout          = 30 * time.Minute
+	defaultThreadSubscriptionTTL = 336 * time.Hour
+	defaultMaxParallelWork       = 3
+	defaultCheckoutIdleTTL       = 120 * time.Hour
 )
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
@@ -181,10 +180,7 @@ func Load() (*Config, error) {
 			return nil, fmt.Errorf("EBIX_CHECKOUT_IDLE_TTL %q: %w", value, errors.New("must be positive"))
 		}
 	}
-	threadSubscriptionReaction := defaultThreadSubscriptionReaction
-	if value, exists := os.LookupEnv("SLACK_THREAD_SUBSCRIPTION_REACTION"); exists {
-		threadSubscriptionReaction = strings.TrimSpace(value)
-	}
+	threadSubscriptionReaction := strings.TrimSpace(os.Getenv("SLACK_THREAD_SUBSCRIPTION_REACTION"))
 	threadSubscriptionTTL := defaultThreadSubscriptionTTL
 	if value := strings.TrimSpace(os.Getenv("SLACK_THREAD_SUBSCRIPTION_TTL")); value != "" {
 		threadSubscriptionTTL, err = time.ParseDuration(value)
