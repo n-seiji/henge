@@ -1,0 +1,45 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  schedule:
+    - cron: "0 0 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  leaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          install_args: gitleaks
+      - run: printf '%s\n' "$DENYLIST" > .denylist
+        env:
+          DENYLIST: ${{ secrets.DENYLIST }}
+      - run: mise run scan
+      # PR text was where internal names leaked before, and it is not in git.
+      - if: github.event_name == 'pull_request'
+        run: printf '%s\n\n%s\n' "$TITLE" "$BODY" > "$RUNNER_TEMP/pr.txt" && .githooks/scan --message "$RUNNER_TEMP/pr.txt"
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+
+  vulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          install_args: go
+      - run: mise run vulncheck
