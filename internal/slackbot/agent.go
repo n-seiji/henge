@@ -17,12 +17,6 @@ type suggestedPrompt struct {
 	message string
 }
 
-var agentSuggestedPrompts = []suggestedPrompt{
-	{title: "できること", message: "ebi-x にできることと、依頼の仕方を教えて"},
-	{title: "リポジトリの説明", message: "作業できるリポジトリの構成と主な機能を説明して"},
-	{title: "最近の変更", message: "作業できるリポジトリの最近の変更をまとめて"},
-}
-
 func isDirectMessage(channel string) bool {
 	return strings.HasPrefix(channel, "D")
 }
@@ -91,7 +85,7 @@ func (b *Bot) HandleAppHomeOpened(ctx context.Context, event *slackevents.AppHom
 	if event.Tab != appHomeMessagesTab || event.Channel == "" || !b.userAllowed(event.User) {
 		return
 	}
-	if err := b.api.SetSuggestedPrompts(ctx, event.Channel, agentSuggestedPrompts); err != nil {
+	if err := b.api.SetSuggestedPrompts(ctx, event.Channel, b.text().suggestedPrompts); err != nil {
 		log.Printf("slackbot: set suggested prompts for %q: %v", event.Channel, err)
 	}
 }

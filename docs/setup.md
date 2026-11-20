@@ -114,7 +114,7 @@ Set `SLACK_APPROVAL_CHANNEL_ID` and `SLACK_APPROVER_USER_IDS` and invite the bot
   └ @ebi-x  ✅ Channel #sales was approved. Starting the request.
 ```
 
-- The approver mentions `@ebi-x 許可` (allow) or `@ebi-x 拒否` (deny) in the request's thread. Only people in `SLACK_APPROVER_USER_IDS` can do this, and the first decision wins. Those denied are turned away without asking from then on.
+- The approver mentions `@ebi-x 許可` or `@ebi-x allow`, or `@ebi-x 拒否` or `@ebi-x deny`, in the request's thread. Only people in `SLACK_APPROVER_USER_IDS` can do this, and the first decision wins. Those denied are turned away without asking from then on.
 - Once the needed permissions are in place, waiting requests start automatically. Requests older than 24 hours do not start; ebi-x asks for a new mention instead.
 - In the approval channel, mentions in a request's thread, and `@ebi-x 許可`, `@ebi-x 拒否` and `@ebi-x 残り` (usage) outside threads, are approval operations. Other mentions are taken as work requests from someone allowed to use ebi-x.
 - Only requests in the approval channel can change playbooks and global memory. Requests in every channel read them, so changes are kept where approvers can see them.
@@ -169,7 +169,8 @@ Write them in `$EBIX_HOME/data/channel-rules/settings.yaml` (see `examples/setti
 
 | Item | Contents |
 | --- | --- |
-| `done_watch.reaction` / `done_watch.hour` | the reaction "監視して" (watch this) waits for, and the hour to notify ([usage.md](usage.md#reaction-watches)) |
+| `language` | `ja` (default) or `en`: the language of ebi-x's own fixed Slack messages, such as notices, buttons and the Home tab. Codex still replies in the requester's language |
+| `done_watch.reaction` / `done_watch.hour` | the reaction a reaction watch waits for, and the hour to notify ([usage.md](usage.md#reaction-watches)) |
 | `sql_write_servers` | the names of MCP servers allowed to run SQL that writes or locks |
 
 If the file cannot be read, ebi-x runs with the defaults and says so in its replies in the approval channel.

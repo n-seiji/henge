@@ -7,11 +7,7 @@ import (
 	"github.com/n-seiji/ebi-x/internal/usersettings"
 )
 
-const (
-	userSettingsSavedNotice   = "⚙️ あなたの個人設定を更新しました（%d件）。内容は ebi-x のアプリのホームで確認できます。このメッセージはあなたにだけ表示されています。"
-	userSettingsClearedNotice = "⚙️ あなたの個人設定をすべて消しました。このメッセージはあなたにだけ表示されています。"
-	userSettingsFailedNotice  = "⚠️ 個人設定を保存できませんでした。もう一度お試しください。このメッセージはあなたにだけ表示されています。"
-)
+const ()
 
 func (b *Bot) readUserSettings(userID string) []string {
 	if b.config.MemoryDir == "" || !usersettings.ValidUserID(userID) {
@@ -42,10 +38,10 @@ func (b *Bot) saveUserSettings(eventKey string, trigger processingTrigger, setti
 	b.memoryMu.Unlock()
 	if err != nil {
 		log.Printf("slackbot: write user settings %q: %v", eventKey, err)
-		return userSettingsFailedNotice
+		return b.text().userSettingsFailedNotice
 	}
 	if len(written) == 0 {
-		return userSettingsClearedNotice
+		return b.text().userSettingsClearedNotice
 	}
-	return fmt.Sprintf(userSettingsSavedNotice, len(written))
+	return fmt.Sprintf(b.text().userSettingsSavedNotice, len(written))
 }

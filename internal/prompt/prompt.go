@@ -314,7 +314,7 @@ func stripClosingTags(value string, tags ...string) string {
 func SettingsRules(channelsFile, settingsFile string) string {
 	return fmt.Sprintf(`If the requester asks to change the settings of ebi-x itself, edit the YAML files below. An unknown item makes the whole file unreadable, so use only the items listed here. Before editing, show the requester the change and get their approval.
 - %[1]s: limits per channel ID. Under channels.<channel ID>: system_prompt (extra instructions for that channel), read_only (true stops file changes and the network), github (false stops pushes and PRs), repositories (the repository names that can be read), mcp_servers (the MCP server names that can be used)
-- %[2]s: global settings. done_watch.reaction (the reaction name "監視して" waits for, without colons; default done), done_watch.hour (the hour to notify, 0-23; default 19), sql_write_servers (the MCP server names allowed to run SQL that writes or locks; by default every MCP server may run only read-only SQL)
+- %[2]s: global settings. language (ja or en: the language of ebi-x's fixed Slack messages, such as notices, buttons and the Home tab; default ja. It does not change the language Codex replies in), done_watch.reaction (the reaction name a reaction watch waits for, without colons; default done), done_watch.hour (the hour to notify, 0-23; default 19), sql_write_servers (the MCP server names allowed to run SQL that writes or locks; by default every MCP server may run only read-only SQL)
 - A change that lets more MCP servers write can lead to actions that cannot be undone, so ask the requester for the reason.
 
 `, channelsFile, settingsFile)

@@ -10,10 +10,6 @@ import (
 	"github.com/n-seiji/ebi-x/internal/state"
 )
 
-const deferredMessage = "🔄 ebi-x を更新しています。いま動いている作業が終わり次第再起動し、この依頼は再起動後に自動で始めます。"
-
-const deferredStoppedMessage = "再起動後に始める予定だった依頼を取り消しました。"
-
 var errDraining = errors.New("ebi-x is draining for a restart")
 
 var triggerSourceNames = map[triggerSource]string{
@@ -96,13 +92,13 @@ func (b *Bot) deferRequest(ctx context.Context, trigger processingTrigger) {
 	}
 	if err := b.store.AddDeferred(deferred); err != nil {
 		log.Printf("slackbot: defer request %q: %v", deferred.Key(), err)
-		if postErr := b.post(ctx, trigger.channel, trigger.threadTS, workStartFailureMessage); postErr != nil {
+		if postErr := b.post(ctx, trigger.channel, trigger.threadTS, b.text().workStartFailureMessage); postErr != nil {
 			log.Printf("slackbot: post defer failure: %v", postErr)
 		}
 		return
 	}
 	log.Printf("slackbot: deferred request %q until restart", deferred.Key())
-	if err := b.post(ctx, trigger.channel, trigger.threadTS, deferredMessage); err != nil {
+	if err := b.post(ctx, trigger.channel, trigger.threadTS, b.text().deferredMessage); err != nil {
 		log.Printf("slackbot: post deferred notice %q: %v", deferred.Key(), err)
 	}
 }

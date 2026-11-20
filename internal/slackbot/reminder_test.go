@@ -55,7 +55,7 @@ func TestReminderRejectsBadTimeLimitAndUnattendedTurns(t *testing.T) {
 	store.reminders = nil
 	store.threadIDs = map[string]string{"v5:C1:100.1": "codex-thread"}
 	bot.fireFollowUp(context.Background(), state.FollowUp{Channel: "C1", ThreadTS: "100.1", AuthorID: "U1", Task: "確認する", DueAt: followUpNow, Chain: 1})
-	if len(store.reminders) != 0 || !strings.Contains(api.postTexts[len(api.postTexts)-1], reminderSourceNotice) {
+	if len(store.reminders) != 0 || !strings.Contains(api.postTexts[len(api.postTexts)-1], japanese.reminderSourceNotice) {
 		t.Fatalf("reminders = %#v, post = %q; want none from a follow-up", store.reminders, api.postTexts[len(api.postTexts)-1])
 	}
 }
@@ -80,7 +80,7 @@ func TestReminderCancelRequestAndStopCommand(t *testing.T) {
 
 	pending()
 	bot.HandleMention(context.Background(), &slackevents.AppMentionEvent{User: "U1", Channel: "C1", TimeStamp: "100.3", ThreadTimeStamp: "100.1", Text: "<@UBOT> 停止"})
-	if len(store.reminders) != 1 || api.postTexts[len(api.postTexts)-1] != reminderStoppedMsg {
+	if len(store.reminders) != 1 || api.postTexts[len(api.postTexts)-1] != japanese.reminderStoppedMsg {
 		t.Fatalf("reminders = %#v, posts = %q; want the stop command to cancel them", store.reminders, api.postTexts)
 	}
 }

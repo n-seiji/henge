@@ -79,24 +79,24 @@ func (b *Bot) stopThread(ctx context.Context, channel, threadTS, timestamp strin
 	}
 	var stoppedParts []string
 	if cancelledFollowUp {
-		stoppedParts = append(stoppedParts, followUpStoppedMessage)
+		stoppedParts = append(stoppedParts, b.text().followUpStoppedMessage)
 	}
 	if stoppedWatches {
-		stoppedParts = append(stoppedParts, pullWatchStoppedMessage)
+		stoppedParts = append(stoppedParts, b.text().pullWatchStoppedMessage)
 	}
 	if stoppedSchedule {
-		stoppedParts = append(stoppedParts, scheduleStoppedMsg)
+		stoppedParts = append(stoppedParts, b.text().scheduleStoppedMsg)
 	}
 	if stoppedReminders {
-		stoppedParts = append(stoppedParts, reminderStoppedMsg)
+		stoppedParts = append(stoppedParts, b.text().reminderStoppedMsg)
 	}
 	if stoppedDoneWatches {
-		stoppedParts = append(stoppedParts, doneWatchStoppedMessage)
+		stoppedParts = append(stoppedParts, b.text().doneWatchStoppedMessage)
 	}
 	if stoppedDeferred {
-		stoppedParts = append(stoppedParts, deferredStoppedMessage)
+		stoppedParts = append(stoppedParts, b.text().deferredStoppedMessage)
 	}
-	message := nothingToStopMessage
+	message := b.text().nothingToStopMessage
 	if len(stoppedParts) > 0 {
 		message = strings.Join(stoppedParts, "\n")
 	}

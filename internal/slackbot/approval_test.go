@@ -88,7 +88,7 @@ func TestUnknownUserMentionRequestsApprovalOnce(t *testing.T) {
 	if approval.Status != state.Pending || approval.RequestMessageTS != "top-1" || approval.RequestThreadTS != "100.1" {
 		t.Fatalf("approval = %+v, want pending with request message and origin thread", approval)
 	}
-	queuedText := fmt.Sprintf(approvalQueuedMessage, "あなた", "（<https://slack.test/archives/COWNER/ptop-1|承認依頼>）")
+	queuedText := fmt.Sprintf(japanese.approvalQueuedMessage, "あなた", "（<https://slack.test/archives/COWNER/ptop-1|承認依頼>）")
 	var origin []string
 	for _, post := range api.posts {
 		if post.channel == "C1" {
@@ -163,8 +163,8 @@ func TestApprovalDoesNotStartOldOrEmptyMentions(t *testing.T) {
 		now       time.Time
 		wantReply string
 	}{
-		{name: "older than a day", text: "<@UBOT> do it", now: time.Unix(100, 0).Add(25 * time.Hour), wantReply: fmt.Sprintf(approvalQueuedMessage, "あなた", "（<https://slack.test/archives/COWNER/ptop-1|承認依頼>）")},
-		{name: "empty mention", text: "<@UBOT>", now: time.Unix(100, 0), wantReply: fmt.Sprintf(approvalRequestedMessage, "あなた", "（<https://slack.test/archives/COWNER/ptop-1|承認依頼>）")},
+		{name: "older than a day", text: "<@UBOT> do it", now: time.Unix(100, 0).Add(25 * time.Hour), wantReply: fmt.Sprintf(japanese.approvalQueuedMessage, "あなた", "（<https://slack.test/archives/COWNER/ptop-1|承認依頼>）")},
+		{name: "empty mention", text: "<@UBOT>", now: time.Unix(100, 0), wantReply: fmt.Sprintf(japanese.approvalRequestedMessage, "あなた", "（<https://slack.test/archives/COWNER/ptop-1|承認依頼>）")},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -209,7 +209,7 @@ func TestUnknownUserAndChannelRequestBothApprovals(t *testing.T) {
 		approvals.ApprovalStatus(state.ApprovalChannel, "C2") != state.Pending {
 		t.Fatal("want user and channel pending")
 	}
-	if got, want := api.posts[len(api.posts)-1].text, fmt.Sprintf(approvalQueuedMessage, "あなたとこのチャンネル", "（<https://slack.test/archives/COWNER/ptop-1|あなたの承認依頼>・<https://slack.test/archives/COWNER/ptop-2|このチャンネルの承認依頼>）"); got != want {
+	if got, want := api.posts[len(api.posts)-1].text, fmt.Sprintf(japanese.approvalQueuedMessage, "あなたとこのチャンネル", "（<https://slack.test/archives/COWNER/ptop-1|あなたの承認依頼>・<https://slack.test/archives/COWNER/ptop-2|このチャンネルの承認依頼>）"); got != want {
 		t.Fatalf("reply = %q, want %q", got, want)
 	}
 }
@@ -343,11 +343,11 @@ func TestApprovalChannelAcceptsOnlyDecisionsInRequestThreads(t *testing.T) {
 		text     string
 		want     string
 	}{
-		{name: "non-approver", user: "U1", threadTS: "top-1", text: "許可", want: notApproverMessage},
-		{name: "other word", user: "UOWNER", threadTS: "top-1", text: "OK", want: approvalUsageMessage},
-		{name: "extra words", user: "UOWNER", threadTS: "top-1", text: "許可 お願いします", want: approvalUsageMessage},
-		{name: "not a request thread", user: "UOWNER", threadTS: "555.5", text: "許可", want: approvalUsageMessage},
-		{name: "top level", user: "UOWNER", text: "許可", want: approvalUsageMessage},
+		{name: "non-approver", user: "U1", threadTS: "top-1", text: "許可", want: japanese.notApproverMessage},
+		{name: "other word", user: "UOWNER", threadTS: "top-1", text: "OK", want: japanese.approvalUsageMessage},
+		{name: "extra words", user: "UOWNER", threadTS: "top-1", text: "許可 お願いします", want: japanese.approvalUsageMessage},
+		{name: "not a request thread", user: "UOWNER", threadTS: "555.5", text: "許可", want: japanese.approvalUsageMessage},
+		{name: "top level", user: "UOWNER", text: "許可", want: japanese.approvalUsageMessage},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -393,7 +393,7 @@ func TestAllowedUserWorksInApprovalChannelWithSharedWrites(t *testing.T) {
 	if !slices.Contains(runner.roots[0], bot.config.PlaybooksDir) {
 		t.Errorf("work roots = %v, want playbooks writable", runner.roots[0])
 	}
-	if !strings.Contains(reply, "直しました。") || strings.Contains(reply, approvalUsageMessage) {
+	if !strings.Contains(reply, "直しました。") || strings.Contains(reply, japanese.approvalUsageMessage) {
 		t.Errorf("reply = %q, want the work result", reply)
 	}
 	data, err := os.ReadFile(filepath.Join(bot.config.MemoryDir, "MEMORY.md"))

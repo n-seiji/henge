@@ -19,22 +19,6 @@ const (
 	maxPullWatchesPerTurn = 5
 	maxPullActivityItems  = 10
 	maxPullActivityRunes  = 300
-
-	pullWatchStartedNotice  = "👀 次の PR を見守ります。CI の失敗やレビュー・コメントがあれば、このスレッドで対応して報告します。止める場合は、このスレッドで「停止」と mention してください。"
-	pullWatchDisabledNotice = "⚠️ GitHub の見守りが設定されていないため、PR は見守っていません。"
-	pullWatchInvalidNotice  = "⚠️ 次の URL は見守れる PR として読み取れなかったため、見守っていません。"
-	pullWatchFailedNotice   = "⚠️ 次の PR の状態を GitHub から読めなかったため、見守っていません。"
-	pullWatchClosedNotice   = "次の PR はマージ済みか閉じられているため、見守っていません。"
-	pullWatchRepoNotice     = "⚠️ 次の PR は ebi-x が作業するリポジトリのものではないため、見守っていません。"
-	pullWatchTakenNotice    = "⚠️ 次の PR は別のスレッドで見守っているため、ここでは見守っていません。"
-	pullWatchTooManyNotice  = "⚠️ 一度に見守れる PR は%d件までのため、残りは見守っていません。"
-	pullWatchWakeMessage    = "🔔 PR に動きがありました（%s）: %s。対応を始めます。"
-	pullMergedMessage       = "🎉 PR がマージされました: %s\nPR の見守りを終了します。"
-	pullClosedMessage       = "PR がマージされずに閉じられました: %s\nPR の見守りを終了します。"
-	pullChecksPassedMessage = "✅ PR の CI が通りました: %s"
-	pullWatchExpiredMessage = "⌛ 7日間動きがなかったため、PR の見守りを終了しました: %s"
-	pullWatchLimitMessage   = "⚠️ 人の発言なしで PR に対応できる回数の上限（%d回）に達したため、見守りを終了しました: %s\n続ける場合は、このスレッドで依頼してください。"
-	pullWatchStoppedMessage = "PR の見守りを終了しました。"
 )
 
 type GitHub interface {
@@ -55,7 +39,7 @@ func (b *Bot) watchPulls(ctx context.Context, trigger processingTrigger, urls []
 		return ""
 	}
 	if !b.pullWatchEnabled() {
-		return pullWatchDisabledNotice
+		return b.text().pullWatchDisabledNotice
 	}
 	var started, invalid, foreign, taken, failed, closed []string
 	tooMany := false
@@ -124,25 +108,25 @@ func (b *Bot) watchPulls(ctx context.Context, trigger processingTrigger, urls []
 	}
 	var notices []string
 	if len(started) > 0 {
-		notices = append(notices, pullWatchStartedNotice+bulletList(started))
+		notices = append(notices, b.text().pullWatchStartedNotice+bulletList(started))
 	}
 	if len(invalid) > 0 {
-		notices = append(notices, pullWatchInvalidNotice+bulletList(invalid))
+		notices = append(notices, b.text().pullWatchInvalidNotice+bulletList(invalid))
 	}
 	if len(foreign) > 0 {
-		notices = append(notices, pullWatchRepoNotice+bulletList(foreign))
+		notices = append(notices, b.text().pullWatchRepoNotice+bulletList(foreign))
 	}
 	if len(taken) > 0 {
-		notices = append(notices, pullWatchTakenNotice+bulletList(taken))
+		notices = append(notices, b.text().pullWatchTakenNotice+bulletList(taken))
 	}
 	if len(failed) > 0 {
-		notices = append(notices, pullWatchFailedNotice+bulletList(failed))
+		notices = append(notices, b.text().pullWatchFailedNotice+bulletList(failed))
 	}
 	if len(closed) > 0 {
-		notices = append(notices, pullWatchClosedNotice+bulletList(closed))
+		notices = append(notices, b.text().pullWatchClosedNotice+bulletList(closed))
 	}
 	if tooMany {
-		notices = append(notices, fmt.Sprintf(pullWatchTooManyNotice, maxPullWatchesPerTurn))
+		notices = append(notices, fmt.Sprintf(b.text().pullWatchTooManyNotice, maxPullWatchesPerTurn))
 	}
 	return strings.Join(notices, "\n\n")
 }
@@ -191,7 +175,7 @@ func (b *Bot) checkPullWatch(ctx, turnCtx context.Context, wg *sync.WaitGroup, w
 		return
 	}
 	if !b.now().Before(watch.ExpiresAt) {
-		b.endPullWatch(ctx, watch, fmt.Sprintf(pullWatchExpiredMessage, watch.URL))
+		b.endPullWatch(ctx, watch, fmt.Sprintf(b.text().pullWatchExpiredMessage, watch.URL))
 		return
 	}
 	ref := github.PullRef{Owner: watch.Owner, Repo: watch.Repo, Number: watch.Number}
@@ -202,10 +186,10 @@ func (b *Bot) checkPullWatch(ctx, turnCtx context.Context, wg *sync.WaitGroup, w
 	}
 	switch {
 	case pull.Merged:
-		b.endPullWatch(ctx, watch, fmt.Sprintf(pullMergedMessage, watch.URL))
+		b.endPullWatch(ctx, watch, fmt.Sprintf(b.text().pullMergedMessage, watch.URL))
 		return
 	case pull.State != "open":
-		b.endPullWatch(ctx, watch, fmt.Sprintf(pullClosedMessage, watch.URL))
+		b.endPullWatch(ctx, watch, fmt.Sprintf(b.text().pullClosedMessage, watch.URL))
 		return
 	}
 	checks, err := b.config.GitHub.Checks(ctx, ref, pull.HeadSHA)
@@ -224,21 +208,16 @@ func (b *Bot) checkPullWatch(ctx, turnCtx context.Context, wg *sync.WaitGroup, w
 		// A new commit's checks start over; its earlier failure was handled.
 		previousChecks = ""
 	}
-	var events []string
-	if checks.State == github.ChecksFailure && previousChecks != github.ChecksFailure {
-		events = append(events, "CI が失敗しました（失敗したチェック: "+strings.Join(checks.Failed, "、")+"）")
-	}
+	failed := checks.State == github.ChecksFailure && previousChecks != github.ChecksFailure
+	events := pullEvents(&english, failed, checks, activity)
 	passed := checks.State == github.ChecksSuccess && watch.Checks == github.ChecksFailure
-	if len(activity) > 0 {
-		events = append(events, fmt.Sprintf("レビュー・コメントが%d件付きました", len(activity)))
-	}
 	changed := pull.HeadSHA != watch.HeadSHA || checks.State != watch.Checks || github.Cursor(watch.Cursor) != cursor
 	watch.HeadSHA = pull.HeadSHA
 	watch.Checks = checks.State
 	watch.Cursor = state.PullCursor(cursor)
 
 	if passed {
-		if err := b.post(ctx, watch.Channel, watch.ThreadTS, fmt.Sprintf(pullChecksPassedMessage, watch.URL)); err != nil {
+		if err := b.post(ctx, watch.Channel, watch.ThreadTS, fmt.Sprintf(b.text().pullChecksPassedMessage, watch.URL)); err != nil {
 			log.Printf("slackbot: post checks passed %s: %v", key, err)
 		}
 	}
@@ -251,7 +230,7 @@ func (b *Bot) checkPullWatch(ctx, turnCtx context.Context, wg *sync.WaitGroup, w
 		return
 	}
 	if watch.Wakes >= maxPullWatchWakes {
-		b.endPullWatch(ctx, watch, fmt.Sprintf(pullWatchLimitMessage, maxPullWatchWakes, watch.URL))
+		b.endPullWatch(ctx, watch, fmt.Sprintf(b.text().pullWatchLimitMessage, maxPullWatchWakes, watch.URL))
 		return
 	}
 	watch.Wakes++
@@ -262,7 +241,7 @@ func (b *Bot) checkPullWatch(ctx, turnCtx context.Context, wg *sync.WaitGroup, w
 		log.Printf("slackbot: save pull request watch %s: %v", key, err)
 		return
 	}
-	summary := strings.Join(events, "、")
+	summary := strings.Join(pullEvents(b.text(), failed, checks, activity), b.text().pullEventSeparator)
 	task := describePullEvent(pull, checks, activity, events)
 	wg.Go(func() { b.firePullWatch(turnCtx, watch, summary, task) })
 }
@@ -271,7 +250,7 @@ func (b *Bot) firePullWatch(ctx context.Context, watch state.PullWatch, summary,
 	var timestamp string
 	if err := b.retrySlack(ctx, func() error {
 		var err error
-		timestamp, err = b.api.PostMessage(ctx, watch.Channel, watch.ThreadTS, fmt.Sprintf(pullWatchWakeMessage, watch.URL, summary))
+		timestamp, err = b.api.PostMessage(ctx, watch.Channel, watch.ThreadTS, fmt.Sprintf(b.text().pullWatchWakeMessage, watch.URL, summary))
 		return err
 	}); err != nil {
 		log.Printf("slackbot: announce pull request event %s: %v", watch.Key(), err)
@@ -286,6 +265,18 @@ func (b *Bot) firePullWatch(ctx context.Context, watch state.PullWatch, summary,
 		message:     task,
 		threadReply: true,
 	})
+}
+
+// The session reads the English events; people read the configured language.
+func pullEvents(text *messages, failed bool, checks github.Checks, activity []github.Activity) []string {
+	var events []string
+	if failed {
+		events = append(events, fmt.Sprintf(text.pullEventCIFailed, strings.Join(checks.Failed, text.pullEventSeparator)))
+	}
+	if len(activity) > 0 {
+		events = append(events, fmt.Sprintf(text.pullEventActivity, len(activity)))
+	}
+	return events
 }
 
 // Bodies are clipped; the session can read them in full on GitHub.

@@ -21,47 +21,50 @@ const (
 type progress struct {
 	action string
 	plan   codex.Activity
+	text   *messages
 }
 
 func (p *progress) observe(activity codex.Activity) string {
+	text := p.text
 	switch activity.Kind {
 	case codex.ActivityPlan:
 		p.plan = activity
 	case codex.ActivityCommand:
 		if label := commandLabel(activity.Command); label != "" {
-			p.action = "がコマンドを実行しています（" + label + "）…"
+			p.action = fmt.Sprintf(text.statusCommand, label)
 		} else {
-			p.action = "がコマンドを実行しています…"
+			p.action = text.statusCommandPlain
 		}
 	case codex.ActivityFileChange:
 		label := filepath.Base(activity.Paths[0])
 		if len(activity.Paths) > 1 {
-			label += fmt.Sprintf(" ほか%d件", len(activity.Paths)-1)
+			label += fmt.Sprintf(text.statusMoreFiles, len(activity.Paths)-1)
 		}
-		p.action = "がファイルを編集しています（" + shortDetail(label) + "）…"
+		p.action = fmt.Sprintf(text.statusEditing, shortDetail(label))
 	case codex.ActivityWebSearch:
-		p.action = "がWebを検索しています（" + shortDetail(activity.Query) + "）…"
+		p.action = fmt.Sprintf(text.statusSearching, shortDetail(activity.Query))
 	case codex.ActivityToolCall:
-		p.action = "がツールを使っています（" + shortDetail(activity.Tool) + "）…"
+		p.action = fmt.Sprintf(text.statusTool, shortDetail(activity.Tool))
 	}
 	return p.status()
 }
 
 func (p *progress) status() string {
+	text := p.text
 	if p.plan.Total == 0 {
 		if p.action == "" {
-			return workingStatus
+			return text.workingStatus
 		}
 		return p.action
 	}
-	count := fmt.Sprintf("%d/%d 完了", p.plan.Done, p.plan.Total)
+	count := fmt.Sprintf(text.statusCount, p.plan.Done, p.plan.Total)
 	if p.action != "" {
 		return p.action + " " + count
 	}
 	if p.plan.Current == "" {
-		return "が作業をまとめています… " + count
+		return fmt.Sprintf(text.statusSummarizing, count)
 	}
-	return "が「" + shortDetail(p.plan.Current) + "」を進めています… " + count
+	return fmt.Sprintf(text.statusStep, shortDetail(p.plan.Current), count)
 }
 
 func shortDetail(text string) string {

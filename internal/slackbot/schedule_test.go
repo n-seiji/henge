@@ -47,7 +47,7 @@ func TestUnattendedTurnCannotSetSchedule(t *testing.T) {
 	if len(store.schedules) != 0 {
 		t.Fatalf("schedules = %#v, want none from a follow-up", store.schedules)
 	}
-	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, scheduleSourceNotice) {
+	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, japanese.scheduleSourceNotice) {
 		t.Fatalf("result post = %q, want the refusal", post)
 	}
 }
@@ -84,7 +84,7 @@ func TestScheduleStopRequestAndCommand(t *testing.T) {
 
 	store.schedules = map[string]state.Schedule{"C1:100.1": {Channel: "C1", ThreadTS: "100.1", AuthorID: "U1", Spec: "平日 09:00"}}
 	bot.HandleMention(context.Background(), &slackevents.AppMentionEvent{User: "U1", Channel: "C1", TimeStamp: "100.3", ThreadTimeStamp: "100.1", Text: "<@UBOT> 停止"})
-	if _, ok := store.schedules["C1:100.1"]; ok || api.postTexts[len(api.postTexts)-1] != scheduleStoppedMsg {
+	if _, ok := store.schedules["C1:100.1"]; ok || api.postTexts[len(api.postTexts)-1] != japanese.scheduleStoppedMsg {
 		t.Fatalf("schedules = %#v, posts = %q; want the stop command to stop it", store.schedules, api.postTexts)
 	}
 }

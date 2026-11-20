@@ -29,21 +29,10 @@ const (
 	// Slack renders at most 12,000 characters in one markdown block. The
 	// margin covers characters that count as more than one and the fence
 	// lines Split repeats across a cut, and keeps one reply readable.
-	maxSlackMessageRunes    = 8000
-	maxThreadContextRunes   = 12000
-	claimFailureMessage     = "受付に失敗しました。お手数ですが、もう一度 mention してください。"
-	threadFailureMessage    = "⚠️ スレッドの読み込みに失敗したため、作業は開始していません。もう一度 mention してください。"
-	workStartFailureMessage = "⚠️ 作業を開始できなかったため、作業は行っていません。もう一度 mention してください。"
-	workFailureMessage      = "⚠️ 作業が完了したことを確認できませんでした。状況を確認し、新しい mention で依頼し直してください。"
-	forbiddenMessage        = "🔒 %sには ebi-x を使う権限がありません。使いたい場合は %s に許可を頼んでください。"
-	attachmentFailureNotice = "⚠️ 次のファイルを添付できませんでした。生成済みのファイルは作業領域に残しています。再送する場合は「添付を再送して」と依頼してください。"
-	attachmentOutputNotice  = "⚠️ 添付ファイルの指定を読み取れなかったため、ファイルは添付していません。再送する場合は「添付を再送して」と依頼してください。"
-	workingStatus           = "が作業を進めています…"
-	queuedStatus            = "が作業の順番を待っています…"
-	stoppedMessage          = "⏹️ 依頼により作業を停止しました。途中までの変更が作業領域に残っている場合があります。続ける場合は、新しい mention で依頼してください。"
-	nothingToStopMessage    = "停止する作業はありません。"
-	statusRefreshDelay      = 80 * time.Second
-	statusMinInterval       = 3 * time.Second
+	maxSlackMessageRunes  = 8000
+	maxThreadContextRunes = 12000
+	statusRefreshDelay    = 80 * time.Second
+	statusMinInterval     = 3 * time.Second
 )
 
 var errStoppedByUser = errors.New("stopped by user")
@@ -66,7 +55,7 @@ type SlackAPI interface {
 	SetSuggestedPrompts(ctx context.Context, channel string, prompts []suggestedPrompt) error
 	PublishHome(ctx context.Context, userID string, sections []string) error
 	Permalink(ctx context.Context, channel, timestamp string) (string, error)
-	OpenRequestModal(ctx context.Context, triggerID, metadata, quoted string) error
+	OpenRequestModal(ctx context.Context, text *messages, triggerID, metadata, quoted string) error
 	PostEphemeral(ctx context.Context, channel, user, text string) error
 }
 
@@ -386,7 +375,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	claimed, err := b.store.ClaimEvent(eventKey)
 	if err != nil {
 		log.Printf("slackbot: claim %q: %v", eventKey, err)
-		if postErr := b.post(ctx, channel, threadTS, claimFailureMessage); postErr != nil {
+		if postErr := b.post(ctx, channel, threadTS, b.text().claimFailureMessage); postErr != nil {
 			log.Printf("slackbot: post claim failure: %v", postErr)
 		}
 		return
@@ -407,7 +396,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	defer untrack()
 	failure := func(message string) string {
 		if errors.Is(context.Cause(stopCtx), errStoppedByUser) {
-			return stoppedMessage
+			return b.text().stoppedMessage
 		}
 		return message
 	}
@@ -419,7 +408,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	workspaceID, err := workspace.ThreadID(channel, threadTS)
 	if err != nil {
 		log.Printf("slackbot: prepare thread workspace %q: %v", eventKey, err)
-		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, workStartFailureMessage)
+		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, b.text().workStartFailureMessage)
 		return
 	}
 
@@ -431,7 +420,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	lock.Lock()
 	defer lock.Unlock()
 	if err := stopCtx.Err(); err != nil {
-		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, failure(workStartFailureMessage))
+		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, failure(b.text().workStartFailureMessage))
 		return
 	}
 	defer b.clearStatus(ctx, channel, threadTS)
@@ -443,7 +432,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 		threadMessages, err = b.api.GetThreadMessages(ctx, channel, threadTS, timestamp)
 		if err != nil {
 			log.Printf("slackbot: read thread context %q: %v", eventKey, err)
-			b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, threadFailureMessage)
+			b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, b.text().threadFailureMessage)
 			return
 		}
 		slackThread = formatThreadContext(threadMessages, timestamp)
@@ -452,7 +441,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	// model provider's logs and the session history, beyond the bot's reach.
 	if containsPastedSecret(trigger.message, slackThread) {
 		log.Printf("slackbot: %q holds what looks like a token; not sent to Codex", eventKey)
-		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, pastedSecretMessage)
+		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, b.text().pastedSecret)
 		return
 	}
 	files := b.sharedFiles(ctx, trigger, threadMessages)
@@ -465,12 +454,12 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	if !started {
 		log.Printf("slackbot: start work %q: %v", eventKey, workErr)
 		b.noteWorkFailure(ctx, workErr)
-		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, failure(workStartFailureMessage))
+		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, failure(b.text().workStartFailureMessage))
 		return
 	}
 	if workErr != nil {
 		log.Printf("slackbot: work turn %q: %v", eventKey, workErr)
-		message := workFailureMessage
+		message := b.text().workFailureMessage
 		switch {
 		case errors.Is(workErr, codex.ErrUsageLimit):
 			message = b.usageLimitFailure(ctx)
@@ -485,16 +474,16 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	}
 	resultText := output.text
 	if resultText == "" {
-		resultText = "作業が完了しました。"
+		resultText = b.text().workDone
 	}
 	if output.memoryUpdated {
-		resultText += "\n\n📝 全体メモリを更新しました。"
+		resultText += "\n\n" + b.text().memoryUpdated
 	}
 	if output.playbookNoteNotice != "" {
 		resultText += "\n\n" + output.playbookNoteNotice
 	}
 	if output.playbookFold != nil {
-		resultText += "\n" + output.playbookFold.notice()
+		resultText += "\n" + output.playbookFold.notice(b.text())
 	}
 	if notice := b.scheduleFollowUp(trigger, output); notice != "" {
 		resultText += "\n\n" + notice
@@ -511,7 +500,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	// The deliverable that did not reach Slack must not look successful. The
 	// files stay in the work area for a resend request.
 	final := state.Done
-	if notice := output.attachmentNotice(); notice != "" {
+	if notice := output.attachmentNotice(b.text()); notice != "" {
 		resultText += "\n\n" + notice
 		final = state.Interrupted
 	}
@@ -520,7 +509,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	}
 	if err := b.post(ctx, channel, threadTS, resultText); err != nil {
 		log.Printf("slackbot: post work result %q: %v", eventKey, err)
-		b.fail(ctx, eventKey, state.Working, state.Interrupted, channel, threadTS, timestamp, workFailureMessage)
+		b.fail(ctx, eventKey, state.Working, state.Interrupted, channel, threadTS, timestamp, b.text().workFailureMessage)
 		return
 	}
 	b.recordPlaybookFold(ctx, output.playbookFold, channel, threadTS)
@@ -531,7 +520,7 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 	}
 	if err := b.store.Transition(eventKey, state.Working, final); err != nil {
 		log.Printf("slackbot: finish work %q: %v", eventKey, err)
-		b.fail(ctx, eventKey, state.Working, state.Interrupted, channel, threadTS, timestamp, workFailureMessage)
+		b.fail(ctx, eventKey, state.Working, state.Interrupted, channel, threadTS, timestamp, b.text().workFailureMessage)
 		return
 	}
 	reaction := finishedReaction
@@ -565,17 +554,17 @@ type workOutput struct {
 
 // Without it the posted result would read as a complete delivery when it was
 // not.
-func (o workOutput) attachmentNotice() string {
+func (o workOutput) attachmentNotice(text *messages) string {
 	if o.attachmentOutputInvalid {
-		return attachmentOutputNotice
+		return text.attachmentOutputNotice
 	}
 	if len(o.failedAttachments) == 0 {
 		return ""
 	}
 	var builder strings.Builder
-	builder.WriteString(attachmentFailureNotice)
+	builder.WriteString(text.attachmentFailureNotice)
 	for _, failed := range o.failedAttachments {
-		fmt.Fprintf(&builder, "\n- `%s`: %s", failed.Path, failed.Reason)
+		fmt.Fprintf(&builder, "\n- `%s`: %s", failed.Path, text.attachmentReasons[failed.Reason])
 	}
 	return builder.String()
 }
@@ -651,9 +640,9 @@ func (b *Bot) work(ctx, stopCtx context.Context, eventKey, channel, threadTS, th
 	if err := b.store.Transition(eventKey, state.Received, state.Working); err != nil {
 		return workOutput{}, false, err
 	}
-	status := b.startStatus(ctx, channel, threadTS, workingStatus)
+	status := b.startStatus(ctx, channel, threadTS, b.text().workingStatus)
 	defer status.Stop()
-	tracker := &progress{}
+	tracker := &progress{text: b.text()}
 	onActivity := func(activity codex.Activity) {
 		status.Update(tracker.observe(activity))
 	}
@@ -808,7 +797,7 @@ func (b *Bot) runWorkTurn(ctx context.Context, threadID string, lease *workspace
 func (b *Bot) uploadAttachments(ctx context.Context, eventKey, channel, threadTS string, lease *workspace.Lease, paths []string) []attachment.Rejection {
 	files, failed := attachment.Resolve(lease.ThreadAreas(), lease.Dir, paths)
 	for _, rejection := range failed {
-		log.Printf("slackbot: reject attachment %q for %q: %s", rejection.Path, eventKey, rejection.Reason)
+		log.Printf("slackbot: reject attachment %q for %q: %s", rejection.Path, eventKey, english.attachmentReasons[rejection.Reason])
 	}
 	for _, file := range files {
 		upload := func() error {
@@ -829,7 +818,7 @@ func (b *Bot) uploadAttachments(ctx context.Context, eventKey, channel, threadTS
 		}
 		if err != nil {
 			log.Printf("slackbot: upload attachment %q for %q: %v", file.Path, eventKey, err)
-			failed = append(failed, attachment.Rejection{Path: file.Path, Reason: "Slackへのアップロードに失敗しました"})
+			failed = append(failed, attachment.Rejection{Path: file.Path, Reason: attachment.UploadFailed})
 		}
 	}
 	return failed
@@ -850,7 +839,7 @@ func (b *Bot) acquireWork(ctx context.Context, threadKey, channel, threadTS stri
 		}
 	}
 
-	defer b.startStatus(ctx, channel, threadTS, queuedStatus).Stop()
+	defer b.startStatus(ctx, channel, threadTS, b.text().queuedStatus).Stop()
 	lock.Lock()
 	// Prefer cancellation over a slot that frees up at the same moment, so a
 	// shutdown does not start queued work.
@@ -882,7 +871,7 @@ func (w sharedWorkspaces) Denied(workspace.Area) ([]string, error) { return nil,
 
 // Names who lacks access so the author asks the admin rather than retrying.
 func (b *Bot) forbidden(ctx context.Context, event *slackevents.AppMentionEvent, missing []approvalSubject) {
-	contact := "ebi-x の管理者"
+	contact := b.text().defaultContact
 	if b.config.AdminUserID != "" {
 		contact = "<@" + b.config.AdminUserID + ">"
 	}
@@ -890,7 +879,7 @@ func (b *Bot) forbidden(ctx context.Context, event *slackevents.AppMentionEvent,
 	if threadTS == "" {
 		threadTS = event.TimeStamp
 	}
-	if err := b.post(ctx, event.Channel, threadTS, fmt.Sprintf(forbiddenMessage, missingSubjects(missing), contact)); err != nil {
+	if err := b.post(ctx, event.Channel, threadTS, fmt.Sprintf(b.text().forbiddenMessage, missingSubjects(b.text(), missing), contact)); err != nil {
 		log.Printf("slackbot: post forbidden response: %v", err)
 	}
 }
