@@ -56,7 +56,7 @@ channels:
 	if !reflect.DeepEqual(access.MCPServers, []string{"manual"}) || !access.NoGitHub || access.WithoutSlack {
 		t.Fatalf("access = %+v, want only the manual server and no GitHub", access)
 	}
-	if !strings.Contains(access.Instructions, "仕様の言葉で答えてください。") || !strings.Contains(access.Instructions, "push や PR の作成はできません") || strings.Contains(access.Instructions, "ほかのチャンネル") {
+	if !strings.Contains(access.Instructions, "仕様の言葉で答えてください。") || !strings.Contains(access.Instructions, "cannot push to GitHub or open PRs") || strings.Contains(access.Instructions, "ほかのチャンネル") {
 		t.Fatalf("instructions = %q, want only C1's system prompt and limits", access.Instructions)
 	}
 	if strings.Contains(runner.prompts[0], "- /src/app") || !reflect.DeepEqual(workspaces.creates, []bool{false}) {

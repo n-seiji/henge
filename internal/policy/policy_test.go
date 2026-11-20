@@ -13,17 +13,17 @@ func TestInstructions(t *testing.T) {
 	if got != strings.TrimSpace(got) {
 		t.Error("Instructions() is not trimmed")
 	}
-	for _, want := range []string{"絶対ルール", "メモリ追記", "MCP への接続失敗ではなく"} {
+	for _, want := range []string{"absolute rules", "## Global memory", "not because the connection to MCP failed"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Instructions() does not contain %q", want)
 		}
 	}
-	for _, forbidden := range []string{"user_memory", "ユーザーメモリ", "## ユーザーメモリ追記"} {
+	for _, forbidden := range []string{"user_memory", "User memory"} {
 		if strings.Contains(got, forbidden) {
 			t.Errorf("Instructions() contains removed user-memory rule %q", forbidden)
 		}
 	}
-	if !strings.Contains(got, "<user_message>、<slack_message>、<work_instruction>") {
+	if !strings.Contains(got, "<user_message>, <slack_message> or <work_instruction>") {
 		t.Error("Instructions() does not isolate slack_message alongside other untrusted inputs")
 	}
 }

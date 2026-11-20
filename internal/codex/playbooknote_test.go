@@ -17,31 +17,31 @@ func TestSplitPlaybookNote(t *testing.T) {
 		},
 		{
 			name:     "note",
-			text:     "回答です。\n\n## playbook メモ追記\n- 対象: slides\n- 内容: 納品は3週後から2週後に変わった\n\n## チャンネルメモリ追記\n用語",
-			wantRest: "回答です。\n\n## チャンネルメモリ追記\n用語",
+			text:     "回答です。\n\n## Playbook note\n- Playbook: slides\n- Text: 納品は3週後から2週後に変わった\n\n## Channel memory\n用語",
+			wantRest: "回答です。\n\n## Channel memory\n用語",
 			wantNote: &PlaybookNote{Target: "slides", Body: "納品は3週後から2週後に変わった"},
 		},
 		{
 			name:     "full-width colon and backquoted name",
-			text:     "## playbook メモ追記\n- 対象：`slides`\n- 内容：締切は金曜",
+			text:     "## Playbook note\n- Playbook：`slides`\n- Text：締切は金曜",
 			wantNote: &PlaybookNote{Target: "slides", Body: "締切は金曜"},
 		},
 		{
 			name:        "missing body",
-			text:        "回答です。\n## playbook メモ追記\n- 対象: slides",
+			text:        "回答です。\n## Playbook note\n- Playbook: slides",
 			wantRest:    "回答です。",
 			wantInvalid: true,
 		},
 		{
 			name:        "repeated section",
-			text:        "回答です。\n## playbook メモ追記\n- 対象: a\n- 内容: x\n## playbook メモ追記\n- 対象: b\n- 内容: y",
+			text:        "回答です。\n## Playbook note\n- Playbook: a\n- Text: x\n## Playbook note\n- Playbook: b\n- Text: y",
 			wantRest:    "回答です。",
 			wantInvalid: true,
 		},
 		{
 			name:     "heading inside a code block is prose",
-			text:     "```\n## playbook メモ追記\n- 対象: a\n```",
-			wantRest: "```\n## playbook メモ追記\n- 対象: a\n```",
+			text:     "```\n## Playbook note\n- Playbook: a\n```",
+			wantRest: "```\n## Playbook note\n- Playbook: a\n```",
 		},
 	}
 	for _, tt := range tests {

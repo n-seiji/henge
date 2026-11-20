@@ -11,7 +11,7 @@ import (
 
 const (
 	channelScopeTTL   = 30 * 24 * time.Hour
-	closedChannelNote = "[ebi-x からの注意: このチャンネルは%sです。このチャンネルの内容をほかのチャンネルへ持ち出さないよう、Slack の検索・読み取りツールは使えません。Slack の情報が必要なら、推測せず依頼者に貼ってもらってください]"
+	closedChannelNote = "[Note from ebi-x: this channel is %s. Slack search and read tools are unavailable so that this channel's content does not leave it. If you need information from Slack, ask the requester to paste it instead of guessing]"
 )
 
 type ChannelInfo struct {
@@ -52,14 +52,14 @@ func (b *Bot) channelScope(ctx context.Context, channel string) channelScope {
 	if err != nil {
 		log.Printf("slackbot: look up channel %q: %v; treating it as closed", channel, err)
 		// Closed rather than open: a wrong open guess would expose the channel.
-		return channelScope{area: workspace.Closed(channel), slackLimited: true, kind: "種類を確認できなかったチャンネル"}
+		return channelScope{area: workspace.Closed(channel), slackLimited: true, kind: "a channel whose type could not be checked"}
 	}
 	scope := channelScope{}
 	switch {
 	case info.External:
-		scope = channelScope{area: workspace.Closed(channel), slackLimited: true, kind: "外部の組織と共有しているチャンネル"}
+		scope = channelScope{area: workspace.Closed(channel), slackLimited: true, kind: "a channel shared with an external organization"}
 	case info.Private:
-		scope = channelScope{area: workspace.Closed(channel), slackLimited: true, kind: "プライベートチャンネル"}
+		scope = channelScope{area: workspace.Closed(channel), slackLimited: true, kind: "a private channel"}
 	}
 	b.scopeMu.Lock()
 	if b.scopes == nil {

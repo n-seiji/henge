@@ -17,7 +17,7 @@ const (
 
 func FollowUpRange() string {
 	minimum := strings.TrimSuffix(FollowUpMinDelay.String(), "0s")
-	return fmt.Sprintf("%s後から%d日後まで", minimum, int(FollowUpMaxDelay/(24*time.Hour)))
+	return fmt.Sprintf("%s to %d days ahead", minimum, int(FollowUpMaxDelay/(24*time.Hour)))
 }
 
 func FollowUpDueAt(when string, now time.Time) (time.Time, error) {
@@ -32,7 +32,7 @@ const (
 )
 
 func ReminderRange() string {
-	return fmt.Sprintf("%d分後から%d日後まで", int(ReminderMinDelay/time.Minute), int(ReminderMaxDelay/(24*time.Hour)))
+	return fmt.Sprintf("%dm to %d days ahead", int(ReminderMinDelay/time.Minute), int(ReminderMaxDelay/(24*time.Hour)))
 }
 
 func ReminderDueAt(when string, now time.Time) (time.Time, error) {
@@ -62,25 +62,57 @@ func dueAt(when string, now time.Time, minDelay, maxDelay time.Duration) (time.T
 }
 
 const (
-	memoryHeading       = "## メモリ追記"
-	globalMemoryHeading = "## 全体メモリ追記"
+	memoryHeading       = "## Memory"
+	globalMemoryHeading = "## Global memory"
 	// retiredChannelMemoryHeading is still recognized so a turn that writes
 	// it has the section stripped from its result, but nothing is saved.
-	retiredChannelMemoryHeading = "## チャンネルメモリ追記"
-	forbiddenUserMemoryHeading  = "## ユーザーメモリ追記"
-	attachmentsHeading          = "## 添付ファイル"
-	followUpHeading             = "## フォローアップ"
-	followUpWhenKey             = "いつ"
-	followUpTaskKey             = "やること"
-	reminderHeading             = "## リマインダー"
-	reminderTextKey             = "内容"
-	ReminderStopWord            = "停止"
-	questionsHeading            = "## 回答待ち"
-	pullWatchHeading            = "## PR の見守り"
-	UserSettingsHeading         = "## 個人設定"
-	userSettingsClear           = "なし"
-	CheckoutRequestHeading      = "## 作業用クローン要求"
+	retiredChannelMemoryHeading = "## Channel memory"
+	forbiddenUserMemoryHeading  = "## User memory"
+	attachmentsHeading          = "## Attachments"
+	followUpHeading             = "## Follow-up"
+	followUpWhenKey             = "When"
+	followUpTaskKey             = "Task"
+	reminderHeading             = "## Reminder"
+	reminderTextKey             = "Text"
+	ReminderStopWord            = "stop"
+	questionsHeading            = "## Questions"
+	pullWatchHeading            = "## Watch PRs"
+	UserSettingsHeading         = "## Personal settings"
+	userSettingsClear           = "none"
+	CheckoutRequestHeading      = "## Checkout request"
 )
+
+// A session started before the contract was in English keeps following its
+// first turn's Japanese contract when resumed, so those spellings still count.
+var legacyContractWords = map[string]string{
+	"## メモリ追記":         memoryHeading,
+	"## 全体メモリ追記":       globalMemoryHeading,
+	"## チャンネルメモリ追記":    retiredChannelMemoryHeading,
+	"## ユーザーメモリ追記":     forbiddenUserMemoryHeading,
+	"## 添付ファイル":        attachmentsHeading,
+	"## フォローアップ":       followUpHeading,
+	"いつ":               followUpWhenKey,
+	"やること":             followUpTaskKey,
+	"## リマインダー":        reminderHeading,
+	"内容":               reminderTextKey,
+	"停止":               ReminderStopWord,
+	"## 回答待ち":          questionsHeading,
+	"## PR の見守り":       pullWatchHeading,
+	"## 個人設定":          UserSettingsHeading,
+	"なし":               userSettingsClear,
+	"## 作業用クローン要求":     CheckoutRequestHeading,
+	"## playbook メモ追記": playbookNoteHeading,
+	"対象":               playbookNoteTargetKey,
+	"## 定期実行":          scheduleHeading,
+}
+
+func contractWord(text string) string {
+	text = strings.TrimSpace(text)
+	if word, ok := legacyContractWords[text]; ok {
+		return word
+	}
+	return text
+}
 
 type MemoryAppends struct {
 	Global string
@@ -89,7 +121,12 @@ type MemoryAppends struct {
 // Truncating at the first occurrence, not just the section, keeps fenced,
 // inline, and malformed variants from exposing the private payload after it.
 func SanitizeSlackOutput(text string) string {
-	index := strings.Index(text, forbiddenUserMemoryHeading)
+	index := -1
+	for _, heading := range []string{forbiddenUserMemoryHeading, "## ユーザーメモリ追記"} {
+		if at := strings.Index(text, heading); at >= 0 && (index < 0 || at < index) {
+			index = at
+		}
+	}
 	if index < 0 {
 		return text
 	}
@@ -98,8 +135,8 @@ func SanitizeSlackOutput(text string) string {
 
 // Ambiguous output writes no memory rather than guessing which entry was meant.
 func SplitMemoryAppends(text string) (rest string, appends MemoryAppends, valid bool) {
-	if strings.Contains(text, forbiddenUserMemoryHeading) {
-		return SanitizeSlackOutput(text), MemoryAppends{}, false
+	if sanitized := SanitizeSlackOutput(text); sanitized != text {
+		return sanitized, MemoryAppends{}, false
 	}
 	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
 	type section struct {
@@ -116,7 +153,7 @@ func SplitMemoryAppends(text string) (rest string, appends MemoryAppends, valid 
 		}
 		trimmed := strings.TrimSpace(line)
 		scope := -1
-		switch trimmed {
+		switch contractWord(trimmed) {
 		case memoryHeading, globalMemoryHeading:
 			scope = 0
 		case retiredChannelMemoryHeading:
@@ -168,7 +205,7 @@ func SplitCheckoutRequest(text string) (rest string, requested bool) {
 	prose := proseLines(lines)
 	kept := make([]string, 0, len(lines))
 	for i, line := range lines {
-		if prose[i] && strings.TrimSpace(line) == CheckoutRequestHeading {
+		if prose[i] && contractWord(line) == CheckoutRequestHeading {
 			requested = true
 			continue
 		}
@@ -187,7 +224,7 @@ func SplitAttachments(text string) (rest string, paths []string, valid bool) {
 	prose := proseLines(lines)
 	var starts []int
 	for i, line := range lines {
-		if prose[i] && strings.TrimSpace(line) == attachmentsHeading {
+		if prose[i] && contractWord(line) == attachmentsHeading {
 			starts = append(starts, i)
 		}
 	}
@@ -307,7 +344,7 @@ func SplitReminder(text string) (rest string, request *ReminderRequest, invalid 
 	if invalid {
 		return rest, nil, true
 	}
-	if fields[followUpWhenKey] == ReminderStopWord {
+	if strings.EqualFold(contractWord(fields[followUpWhenKey]), ReminderStopWord) {
 		return rest, &ReminderRequest{Stop: true}, false
 	}
 	if fields[followUpWhenKey] == "" || fields[reminderTextKey] == "" {
@@ -321,7 +358,7 @@ func splitFieldSection(text, heading string, keys ...string) (rest string, field
 	prose := proseLines(lines)
 	start, count := -1, 0
 	for i, line := range lines {
-		if prose[i] && strings.TrimSpace(line) == heading {
+		if prose[i] && contractWord(line) == heading {
 			if count == 0 {
 				start = i
 			}
@@ -360,7 +397,7 @@ func splitFieldSection(text, heading string, keys ...string) (rest string, field
 func cutField(item string, keys []string) (key, value string, ok bool) {
 	for _, separator := range []string{":", "："} {
 		if key, value, ok = strings.Cut(item, separator); ok {
-			key = strings.TrimSpace(key)
+			key = contractWord(key)
 			value = strings.Trim(strings.TrimSpace(value), "`")
 			if slices.Contains(keys, key) {
 				return key, strings.TrimSpace(value), value != ""
@@ -377,7 +414,7 @@ func SplitQuestions(text string) (rest string, questions []string, waiting bool)
 	prose := proseLines(lines)
 	kept := make([]string, 0, len(lines))
 	for i := 0; i < len(lines); i++ {
-		if !prose[i] || strings.TrimSpace(lines[i]) != questionsHeading {
+		if !prose[i] || contractWord(lines[i]) != questionsHeading {
 			kept = append(kept, lines[i])
 			continue
 		}
@@ -412,7 +449,7 @@ func SplitPullWatches(text string) (rest string, urls []string) {
 	found := false
 	seen := make(map[string]bool)
 	for i := 0; i < len(lines); i++ {
-		if !prose[i] || strings.TrimSpace(lines[i]) != pullWatchHeading {
+		if !prose[i] || contractWord(lines[i]) != pullWatchHeading {
 			kept = append(kept, lines[i])
 			continue
 		}
@@ -448,7 +485,7 @@ func SplitUserSettings(text string) (rest string, settings []string, present, in
 	kept := make([]string, 0, len(lines))
 	count := 0
 	for i := 0; i < len(lines); i++ {
-		if !prose[i] || strings.TrimSpace(lines[i]) != UserSettingsHeading {
+		if !prose[i] || contractWord(lines[i]) != UserSettingsHeading {
 			kept = append(kept, lines[i])
 			continue
 		}
@@ -478,7 +515,7 @@ func SplitUserSettings(text string) (rest string, settings []string, present, in
 	if count > 1 || len(settings) == 0 {
 		return rest, nil, true, true
 	}
-	if len(settings) == 1 && settings[0] == userSettingsClear {
+	if len(settings) == 1 && strings.EqualFold(contractWord(settings[0]), userSettingsClear) {
 		settings = nil
 	}
 	return rest, settings, true, false

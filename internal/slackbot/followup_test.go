@@ -35,7 +35,7 @@ func newFollowUpBot(t *testing.T, store *fakeStore, api *fakeSlack, runner *fake
 func TestTurnSchedulesFollowUp(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	runner := followUpRunner("CIを待っています。\n\n## フォローアップ\n- いつ: 30m\n- やること: CIの結果を確認して報告する")
+	runner := followUpRunner("CIを待っています。\n\n## Follow-up\n- When: 30m\n- Task: CIの結果を確認して報告する")
 	bot := newFollowUpBot(t, store, api, runner)
 
 	bot.HandleMention(context.Background(), mention())
@@ -52,7 +52,7 @@ func TestTurnSchedulesFollowUp(t *testing.T) {
 		t.Fatalf("follow-up = %#v, want %#v", followUp, want)
 	}
 	post := api.postTexts[len(api.postTexts)-1]
-	if strings.Contains(post, "## フォローアップ") || !strings.Contains(post, "ごろにフォローアップします: CIの結果を確認して報告する") {
+	if strings.Contains(post, "## Follow-up") || !strings.Contains(post, "ごろにフォローアップします: CIの結果を確認して報告する") {
 		t.Fatalf("result post = %q, want the section replaced by a notice", post)
 	}
 }
@@ -69,7 +69,7 @@ func TestRequestReplacesOrCancelsPendingFollowUp(t *testing.T) {
 
 	bot.HandleMention(context.Background(), mentionAt("100.2", "100.1"))
 
-	if !strings.Contains(runner.prompts[0], "予定中のフォローアップがあります") || !strings.Contains(runner.prompts[0], "CIを確認する") {
+	if !strings.Contains(runner.prompts[0], "has a scheduled follow-up") || !strings.Contains(runner.prompts[0], "CIを確認する") {
 		t.Fatalf("resume prompt does not mention the pending follow-up: %q", runner.prompts[0])
 	}
 	if _, ok := store.GetFollowUp("C1:100.1"); ok {
@@ -83,7 +83,7 @@ func TestRequestReplacesOrCancelsPendingFollowUp(t *testing.T) {
 func TestFireFollowUpResumesSessionAndReports(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	runner := followUpRunner("CIは成功しました。\n\n## フォローアップ\n- いつ: 1h\n- やること: デプロイを確認する")
+	runner := followUpRunner("CIは成功しました。\n\n## Follow-up\n- When: 1h\n- Task: デプロイを確認する")
 	bot := newFollowUpBot(t, store, api, runner)
 	store.threadIDs = map[string]string{"v5:C1:100.1": "codex-thread"}
 
@@ -94,7 +94,7 @@ func TestFireFollowUpResumesSessionAndReports(t *testing.T) {
 	if len(api.postTexts) != 2 || !strings.HasPrefix(api.postTexts[0], "⏰ 予定していたフォローアップを始めます: CIを確認する") {
 		t.Fatalf("posts = %q, want an announcement and the result", api.postTexts)
 	}
-	if runner.threadIDs[0] != "codex-thread" || !strings.Contains(runner.prompts[0], "予定した作業: CIを確認する") {
+	if runner.threadIDs[0] != "codex-thread" || !strings.Contains(runner.prompts[0], "Scheduled work: CIを確認する") {
 		t.Fatalf("turn = thread %q prompt %q, want the session resumed with the task", runner.threadIDs[0], runner.prompts[0])
 	}
 	if strings.Contains(runner.prompts[0], "<slack_message>") {
@@ -112,7 +112,7 @@ func TestFireFollowUpResumesSessionAndReports(t *testing.T) {
 func TestFollowUpChainLimit(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	runner := followUpRunner("まだです。\n\n## フォローアップ\n- いつ: 1h\n- やること: また確認する")
+	runner := followUpRunner("まだです。\n\n## Follow-up\n- When: 1h\n- Task: また確認する")
 	bot := newFollowUpBot(t, store, api, runner)
 	store.threadIDs = map[string]string{"v5:C1:100.1": "codex-thread"}
 

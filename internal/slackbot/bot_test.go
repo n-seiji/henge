@@ -1322,8 +1322,8 @@ func TestAllowedActiveMessageReplyRunsTurnInSharedThreadSession(t *testing.T) {
 	for _, want := range []string{
 		"<authenticated_slack_author_id>\nU2\n</authenticated_slack_author_id>",
 		"<message_text>\nplease continue\n</message_text>",
-		"## 添付ファイル",
-		"## 全体メモリ追記",
+		"## Attachments",
+		"## Global memory",
 	} {
 		if !strings.Contains(runner.prompts[0], want) {
 			t.Errorf("message prompt does not contain %q", want)
@@ -1713,7 +1713,7 @@ func TestFormatThreadContextCapsRunesAndKeepsEnds(t *testing.T) {
 	if len([]rune(got)) != maxThreadContextRunes {
 		t.Fatalf("context runes = %d, want %d", len([]rune(got)), maxThreadContextRunes)
 	}
-	for _, want := range []string{"[100.1 / U1]", "中間を省略", "末尾"} {
+	for _, want := range []string{"[100.1 / U1]", "middle of a long thread omitted", "末尾"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("thread context does not contain %q", want)
 		}
@@ -1798,8 +1798,8 @@ func TestWorkMemoryAppendIsWrittenByBot(t *testing.T) {
 			Completed: true,
 			Messages: []string{strings.Join([]string{
 				"Work completed.",
-				"## 全体メモリ追記", "ビルドは mise run build を使う",
-				"## チャンネルメモリ追記", "動作確認用チャンネル",
+				"## Global memory", "ビルドは mise run build を使う",
+				"## Channel memory", "動作確認用チャンネル",
 			}, "\n")},
 		}},
 	}}
@@ -1833,14 +1833,14 @@ func TestUserMemoryOutputIsNotAccepted(t *testing.T) {
 	api := &fakeSlack{}
 	runner := &fakeRunner{responses: []runnerResponse{
 		{result: &codex.TurnResult{Completed: true, Messages: []string{
-			"Work completed.\n## ユーザーメモリ追記\nprivate memory",
+			"Work completed.\n## User memory\nprivate memory",
 		}}},
 	}}
 	bot := newTestBot(t, store, api, runner)
 	bot.HandleMention(context.Background(), mention())
 
 	posts := strings.Join(api.postTexts, "|")
-	if !strings.Contains(posts, "Work completed.") || strings.Contains(posts, "メモリを更新しました") || strings.Contains(posts, "## ユーザーメモリ追記") || strings.Contains(posts, "private memory") {
+	if !strings.Contains(posts, "Work completed.") || strings.Contains(posts, "メモリを更新しました") || strings.Contains(posts, "## User memory") || strings.Contains(posts, "private memory") {
 		t.Fatalf("posts = %q, want work result", posts)
 	}
 	for _, path := range []string{
@@ -2431,8 +2431,8 @@ func TestChannelWithoutSharedWritesCannotChangePlaybooksOrMemory(t *testing.T) {
 			Completed: true,
 			Messages: []string{strings.Join([]string{
 				"Work completed.",
-				"## 全体メモリ追記", "全チャンネルに効く指示",
-				"## チャンネルメモリ追記", "このチャンネルの用語",
+				"## Global memory", "全チャンネルに効く指示",
+				"## Channel memory", "このチャンネルの用語",
 			}, "\n")},
 		}},
 	}}
@@ -2455,7 +2455,7 @@ func TestChannelWithoutSharedWritesCannotChangePlaybooksOrMemory(t *testing.T) {
 	if slices.Contains(runner.roots[0], playbooksDir) {
 		t.Errorf("work roots = %v, must not include playbooks", runner.roots[0])
 	}
-	for _, heading := range []string{"## 全体メモリ追記", "## チャンネルメモリ追記"} {
+	for _, heading := range []string{"## Global memory", "## Channel memory"} {
 		if strings.Contains(runner.prompts[0], heading) {
 			t.Errorf("work prompt offers %q to a channel without shared writes", heading)
 		}
@@ -2587,7 +2587,7 @@ func TestWorkAttachmentsAreUploadedToThread(t *testing.T) {
 	api := &fakeSlack{}
 	store := &fakeStore{claim: true}
 	newAttachmentBot(t, api, store,
-		"v1のプレビューを添付します。\n\n## 添付ファイル\n- preview.png\n- $BASE/checkouts/C1-100.1/slides/out/deck.pdf\n\n## 全体メモリ追記\n学び")
+		"v1のプレビューを添付します。\n\n## Attachments\n- preview.png\n- $BASE/checkouts/C1-100.1/slides/out/deck.pdf\n\n## Global memory\n学び")
 
 	want := []fakeUpload{
 		{channel: "C1", threadTS: "100.1", filename: "preview.png", content: "png-data"},
@@ -2620,7 +2620,7 @@ func TestWorkAttachmentsAreUploadedToThread(t *testing.T) {
 func TestFailedAttachmentIsReportedAndFileKept(t *testing.T) {
 	api := &fakeSlack{uploadErrs: []error{errors.New("upload refused")}}
 	store := &fakeStore{claim: true}
-	base := newAttachmentBot(t, api, store, "プレビューを添付します。\n## 添付ファイル\n- preview.png")
+	base := newAttachmentBot(t, api, store, "プレビューを添付します。\n## Attachments\n- preview.png")
 
 	if len(api.uploads) != 0 {
 		t.Fatalf("uploads = %+v, want none", api.uploads)
@@ -2643,7 +2643,7 @@ func TestAttachmentFromAnotherThreadIsNotUploaded(t *testing.T) {
 	api := &fakeSlack{}
 	store := &fakeStore{claim: true}
 	newAttachmentBot(t, api, store,
-		"添付します。\n## 添付ファイル\n- preview.png\n- ../C1-200.1/other-thread-draft.pdf\n- $BASE/workspace/C1-200.1/other-thread-draft.pdf")
+		"添付します。\n## Attachments\n- preview.png\n- ../C1-200.1/other-thread-draft.pdf\n- $BASE/workspace/C1-200.1/other-thread-draft.pdf")
 
 	if len(api.uploads) != 1 || api.uploads[0].filename != "preview.png" {
 		t.Fatalf("uploads = %+v, want only this thread's preview", api.uploads)
@@ -2657,13 +2657,13 @@ func TestAttachmentFromAnotherThreadIsNotUploaded(t *testing.T) {
 func TestMalformedAttachmentSectionUploadsNothing(t *testing.T) {
 	api := &fakeSlack{}
 	store := &fakeStore{claim: true}
-	newAttachmentBot(t, api, store, "添付します。\n## 添付ファイル\npreview.png を送ってください")
+	newAttachmentBot(t, api, store, "添付します。\n## Attachments\npreview.png を送ってください")
 
 	if len(api.uploads) != 0 {
 		t.Fatalf("uploads = %+v, want none", api.uploads)
 	}
 	if len(api.postTexts) != 1 || !strings.Contains(api.postTexts[0], "添付ファイルの指定を読み取れなかった") ||
-		strings.Contains(api.postTexts[0], "## 添付ファイル") {
+		strings.Contains(api.postTexts[0], "## Attachments") {
 		t.Fatalf("posts = %q, want the notice without the attachment heading", api.postTexts)
 	}
 	assertFinalReactionOrder(t, api.calls, "x")
@@ -2727,7 +2727,7 @@ func TestSharedWorkspaceFilesAreNotAttached(t *testing.T) {
 	}
 	api := &fakeSlack{}
 	runner := &fakeRunner{responses: []runnerResponse{
-		{result: &codex.TurnResult{Completed: true, Messages: []string{"添付します。\n## 添付ファイル\n- report.pdf"}}},
+		{result: &codex.TurnResult{Completed: true, Messages: []string{"添付します。\n## Attachments\n- report.pdf"}}},
 	}}
 	New(api, &fakeStore{claim: true}, runner, Config{
 		AllowedUserIDs:    []string{"U1"},
@@ -2759,7 +2759,7 @@ func TestUploadRetriesOnlyRateLimits(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			api := &fakeSlack{uploadErrs: test.errs}
-			newAttachmentBot(t, api, &fakeStore{claim: true}, "添付します。\n## 添付ファイル\n- preview.png")
+			newAttachmentBot(t, api, &fakeStore{claim: true}, "添付します。\n## Attachments\n- preview.png")
 			calls := 0
 			for _, call := range api.calls {
 				if call.kind == "upload" {
@@ -2801,12 +2801,12 @@ func TestResumedSessionReceivesOnlyTheRequest(t *testing.T) {
 	if !reflect.DeepEqual(runner.threadIDs, []string{"", "codex-thread"}) {
 		t.Fatalf("session IDs = %v, want same session resumed", runner.threadIDs)
 	}
-	for _, want := range []string{path, "first-version", "global-fact", "1800字以内"} {
+	for _, want := range []string{path, "first-version", "global-fact", "1,800 characters"} {
 		if !strings.Contains(runner.prompts[0], want) {
 			t.Errorf("first prompt missing %q", want)
 		}
 	}
-	for _, repeated := range []string{path, "global-fact", "1800字以内", "<slack_thread>"} {
+	for _, repeated := range []string{path, "global-fact", "1,800 characters", "<slack_thread>"} {
 		if strings.Contains(runner.prompts[1], repeated) {
 			t.Errorf("resumed prompt repeats %q", repeated)
 		}
