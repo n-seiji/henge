@@ -68,6 +68,7 @@ Unless denied, Codex's commands can read the whole file system. So every run den
 - Other threads' working directories are not listed one by one, because a rule per thread would eventually exceed the argument limit.
 - Codex's process environment is an allowlist. A denylist could not guarantee that something like `DATABASE_URL` in the operator's shell does not leak.
 - If the request or thread holds a string shaped like a token, it is stopped before reaching Codex. Anything sent stays with the model provider and in the session history, where the bot cannot remove it. Only formats services issue are checked, not "long random strings", which would also stop hashes and IDs.
+- The bot's own secrets may be references to 1Password or the Keychain, read once at startup rather than per run: a per-run read would ask for approval on every run. References are checked without reading them in `-check-config`, so a reload does not prompt twice.
 - With a GitHub App configured, only a token minted for the run is placed in a run-only directory, and it is revoked afterwards. Only the bot reads the private key.
 - If the deny list is too long, the run does not start rather than truncating it.
 

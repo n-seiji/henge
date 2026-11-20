@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -925,5 +926,26 @@ func TestLoadReadsLegacyEnvNamesWithoutOverridingNewOnes(t *testing.T) {
 		if _, exists := os.LookupEnv(name); exists {
 			t.Errorf("%s is still in the environment Codex inherits", name)
 		}
+	}
+}
+
+func TestResolveSecretsReplacesReferences(t *testing.T) {
+	dir := t.TempDir()
+	script := "#!/bin/sh\ncase \"$3\" in\nop://v/slack/bot) printf xoxb-real ;;\nop://v/api/token) printf api-real ;;\n*) exit 1 ;;\nesac\n"
+	if err := os.WriteFile(filepath.Join(dir, "op"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("EXAMPLE_API_TOKEN", "op://v/api/token")
+	cfg := &Config{SlackBotToken: "op://v/slack/bot", SlackAppToken: "xapp-plain", CodexEnv: []string{"EXAMPLE_API_TOKEN"}}
+
+	if err := cfg.ResolveSecrets(context.Background()); err != nil {
+		t.Fatalf("ResolveSecrets() error = %v", err)
+	}
+	if cfg.SlackBotToken != "xoxb-real" || cfg.SlackAppToken != "xapp-plain" || cfg.GitHubToken != "" {
+		t.Fatalf("tokens = %q, %q, %q; want the bot token read and the others kept", cfg.SlackBotToken, cfg.SlackAppToken, cfg.GitHubToken)
+	}
+	if got := os.Getenv("EXAMPLE_API_TOKEN"); got != "api-real" {
+		t.Fatalf("EXAMPLE_API_TOKEN = %q, want the value Codex should inherit", got)
 	}
 }
