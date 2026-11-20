@@ -21,6 +21,11 @@ type Access struct {
 	MCPServers   []string
 	NoGitHub     bool
 	Instructions string
+	// Secrets are the PassEnv names this turn's commands may read.
+	// ScopedSecrets are every name some channel grants; they stay out of
+	// commands that were not granted them, whatever their name looks like.
+	Secrets       []string
+	ScopedSecrets []string
 }
 
 func (access Access) disabledServers(servers map[string]any) []string {

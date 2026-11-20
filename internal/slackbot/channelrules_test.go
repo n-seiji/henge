@@ -102,6 +102,7 @@ func TestBrokenChannelRulesStopTheWork(t *testing.T) {
 	for name, content := range map[string]string{
 		"invalid yaml":  "channels: [",
 		"unknown field": "channels:\n  C1:\n    readonly: true\n",
+		"secret outside EBIX_CODEX_ENV": "channels:\n  C1:\n    secrets: [HOME_DATABASE_URL]\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			api := &fakeSlack{}
@@ -138,5 +139,35 @@ func TestApprovalChannelEditsChannelRules(t *testing.T) {
 	}
 	if len(api.postTexts) != 1 || !strings.Contains(api.postTexts[0], "チャンネルごとの設定ファイルを読めません") {
 		t.Fatalf("posts = %q, want the broken file reported", api.postTexts)
+	}
+}
+
+func TestChannelSecretsReachOnlyTheirChannel(t *testing.T) {
+	api := &fakeSlack{}
+	runner := completedRunner()
+	bot := newTestBot(t, &fakeStore{claim: true}, api, runner)
+	bot.config.Workspaces = &fakeWorkspaces{}
+	bot.config.CodexEnv = []string{"EXAMPLE_API_TOKEN", "DATABASE_URL"}
+	bot.config.ChannelRulesFile = writeChannelRules(t, `
+channels:
+  C1:
+    secrets: [EXAMPLE_API_TOKEN]
+  C2:
+    secrets: [DATABASE_URL]
+`)
+
+	bot.HandleMention(context.Background(), mention())
+
+	access := runner.access[0]
+	if !reflect.DeepEqual(access.Secrets, []string{"EXAMPLE_API_TOKEN"}) {
+		t.Fatalf("secrets = %v, want only C1's", access.Secrets)
+	}
+	scoped := slices.Clone(access.ScopedSecrets)
+	slices.Sort(scoped)
+	if !reflect.DeepEqual(scoped, []string{"DATABASE_URL", "EXAMPLE_API_TOKEN"}) {
+		t.Fatalf("scoped secrets = %v, want every channel's", access.ScopedSecrets)
+	}
+	if !strings.Contains(access.Instructions, "EXAMPLE_API_TOKEN") {
+		t.Fatalf("instructions = %q, want the granted name", access.Instructions)
 	}
 }

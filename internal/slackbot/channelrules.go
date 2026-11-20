@@ -27,6 +27,9 @@ type channelRule struct {
 	GitHub       *bool     `yaml:"github"`
 	Repositories *[]string `yaml:"repositories"`
 	MCPServers   *[]string `yaml:"mcp_servers"`
+	Secrets      []string  `yaml:"secrets"`
+	// Every name any channel lists under secrets.
+	scopedSecrets []string
 }
 
 type channelRulesFile struct {
@@ -45,7 +48,8 @@ func (rule channelRule) repoAllowed(repo string) bool {
 }
 
 func (rule channelRule) access(slackLimited bool) codex.Access {
-	access := codex.Access{WithoutSlack: slackLimited, NoGitHub: !rule.githubAllowed(), Instructions: rule.instructions()}
+	access := codex.Access{WithoutSlack: slackLimited, NoGitHub: !rule.githubAllowed(), Instructions: rule.instructions(),
+		Secrets: rule.Secrets, ScopedSecrets: rule.scopedSecrets}
 	if rule.MCPServers != nil {
 		access.MCPServers = append([]string{}, (*rule.MCPServers)...)
 	}
@@ -68,6 +72,9 @@ func (rule channelRule) instructions() string {
 	}
 	if rule.MCPServers != nil && len(*rule.MCPServers) == 0 {
 		lines = append(lines, "このチャンネルの作業では MCP のツールを使えません。")
+	}
+	if len(rule.Secrets) > 0 {
+		lines = append(lines, "このチャンネルの作業では、コマンドが環境変数 "+strings.Join(rule.Secrets, "・")+" で secret を使えます。値そのものは表示せず、ファイル・コミット・返答にも書かないでください。返答や進捗に値が含まれると、bot が伏せ字に置き換えます。")
 	}
 	if len(lines) == 0 {
 		return ""
@@ -107,7 +114,7 @@ func (rule channelRule) limitLease(lease *workspace.Lease) []string {
 }
 
 func (b *Bot) channelRule(channel string) (channelRule, error) {
-	rules, err := readChannelRules(b.config.ChannelRulesFile)
+	rules, err := readChannelRules(b.config.ChannelRulesFile, b.config.CodexEnv)
 	if err != nil {
 		// Not stopped like the others: the approval channel is where the file gets fixed.
 		if b.sharedWritable(channel) {
@@ -116,7 +123,15 @@ func (b *Bot) channelRule(channel string) (channelRule, error) {
 		// Fails instead of running without rules, which could drop a limit.
 		return channelRule{}, err
 	}
-	return rules.Channels[channel], nil
+	rule := rules.Channels[channel]
+	for _, other := range rules.Channels {
+		for _, name := range other.Secrets {
+			if !slices.Contains(rule.scopedSecrets, name) {
+				rule.scopedSecrets = append(rule.scopedSecrets, name)
+			}
+		}
+	}
+	return rule, nil
 }
 
 func (b *Bot) channelRulesDir() string {
@@ -127,13 +142,16 @@ func (b *Bot) channelRulesDir() string {
 }
 
 func (b *Bot) channelRulesNotice() string {
-	if err := ValidateChannelRules(b.config.ChannelRulesFile); err != nil {
+	if err := ValidateChannelRules(b.config.ChannelRulesFile, b.config.CodexEnv); err != nil {
 		return fmt.Sprintf(channelRulesBrokenNotice, err)
 	}
 	return ""
 }
 
-func readChannelRules(path string) (channelRulesFile, error) {
+// Secrets come only from EBIX_CODEX_ENV, which the operator sets outside the
+// agent's reach: the file is written by approval-channel work, and naming any
+// variable here would let that work read the operator's whole environment.
+func readChannelRules(path string, codexEnv []string) (channelRulesFile, error) {
 	if path == "" {
 		return channelRulesFile{}, nil
 	}
@@ -159,10 +177,17 @@ func readChannelRules(path string) (channelRulesFile, error) {
 	if err := decoder.Decode(&rules); err != nil && !errors.Is(err, io.EOF) {
 		return channelRulesFile{}, fmt.Errorf("parse channel rules %q: %w", path, err)
 	}
+	for channel, rule := range rules.Channels {
+		for _, name := range rule.Secrets {
+			if slices.Contains(codex.SecretsUnavailableToCommands(), name) || !slices.Contains(codexEnv, name) {
+				return channelRulesFile{}, fmt.Errorf("channel rules %q: secret %s of %s is not one of EBIX_CODEX_ENV", path, name, channel)
+			}
+		}
+	}
 	return rules, nil
 }
 
-func ValidateChannelRules(path string) error {
-	_, err := readChannelRules(path)
+func ValidateChannelRules(path string, codexEnv []string) error {
+	_, err := readChannelRules(path, codexEnv)
 	return err
 }

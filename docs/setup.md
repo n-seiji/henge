@@ -137,11 +137,33 @@ Codex がどの操作の前に依頼者へ確認するかは、既定で次の�
 | `github` | `false` で GitHub の認証情報を渡さない（push・PR の作成ができない） |
 | `repositories` | 読めるリポジトリ（ディレクトリ名かパス）。ほかのリポジトリと、そのクローンは読めない |
 | `mcp_servers` | 使える MCP サーバーの名前。`[]` で全部止める |
+| `secrets` | 作業のコマンドに渡す secret の環境変数名（後述） |
 
 - 依頼のたびに読み直すので、再起動は要りません。
 - 書き換えられるのは承認チャンネルからの依頼だけです。
 - ファイルが読めないとき（YAML の誤りや、知らない項目名）は、承認チャンネル以外の依頼を始めません（[design.md](design.md#チャンネルごとの設定)）。
 - プライベートチャンネルと Slack Connect チャンネルで Slack の MCP を止める制限は、`mcp_servers` に書いても外れません。
+
+#### secret を渡す
+
+API トークンなどを作業のコマンド（`curl` やスクリプト）で使うときは、値を `.env` に書き、名前を `EBIX_CODEX_ENV` と、使うチャンネルの `secrets` に書きます。Slack に値を貼って頼むことはしません。
+
+```sh
+# .env
+EBIX_CODEX_ENV=EXAMPLE_API_TOKEN
+EXAMPLE_API_TOKEN=...
+```
+
+```yaml
+# channels.yaml
+channels:
+  C123:
+    secrets: [EXAMPLE_API_TOKEN]
+```
+
+- `secrets` に書いたチャンネルのコマンドだけが読めます。ほかのチャンネルのコマンドからは、`DATABASE_URL` のように KEY・SECRET・TOKEN を含まない名前でも外します。
+- 返答・進捗表示・エラーに値が出たら、`[secret:EXAMPLE_API_TOKEN]` に置き換えてから Slack に出します。短すぎる値は伏せ字にすると普通の文まで崩れるので、渡さずにログに出します。
+- `EBIX_CODEX_ENV` にない名前と、Codex 自身の API キーは書けません（ファイルが読めないときと同じ扱い）。channels.yaml は承認チャンネルの作業が書き換えられるので、渡せる範囲は作業から書けない `.env` で決めます。
 
 ## 6. playbook
 
@@ -225,7 +247,7 @@ env_vars = ["EXAMPLE_API_TOKEN"]   # EBIX_CODEX_ENV=EXAMPLE_API_TOKEN も必要
 env = { EXAMPLE_REGION = "asia-northeast1" }
 ```
 
-`SLACK_BOT_TOKEN`・`SLACK_APP_TOKEN`・`EBIX_GITHUB_TOKEN`・`EBIX_GITHUB_APP_PRIVATE_KEY` は書けません（起動エラー）。名前に `KEY`・`SECRET`・`TOKEN` を含む変数は Codex 本体には届きますが、Codex が実行するコマンドには渡りません。そのため `GH_TOKEN` などで `git push` や `gh` を認証する使い方はできないので、credential helper か GitHub App（[7. PR の見守り](#作業の-github-認証github-app)）を使います。
+`SLACK_BOT_TOKEN`・`SLACK_APP_TOKEN`・`EBIX_GITHUB_TOKEN`・`EBIX_GITHUB_APP_PRIVATE_KEY` は書けません（起動エラー）。名前に `KEY`・`SECRET`・`TOKEN` を含む変数は Codex 本体には届きますが、チャンネルの `secrets` に書かない限り、Codex が実行するコマンドには渡りません（[secret を渡す](#secret-を渡す)）。そのため `GH_TOKEN` などで `git push` や `gh` を認証する使い方はできないので、credential helper か GitHub App（[7. PR の見守り](#作業の-github-認証github-app)）を使います。
 
 ## 9. 運用
 

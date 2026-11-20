@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -438,6 +439,7 @@ func TestBuildArgsWithOverridesKeepsSecuritySettingsLast(t *testing.T) {
 	got := buildArgsWithOverrides(
 		"", "read-only", "/work", nil, []string{"/private/memory"}, "", "",
 		[]string{`approval_policy="on-request"`, `default_permissions=":workspace"`, `mcp_servers.example.enabled=true`},
+		shellEnvPolicyOverrides(nil, nil, nil),
 	)
 	wantSequence := []string{
 		`approval_policy="on-request"`,
@@ -970,7 +972,7 @@ func TestWithheldEnvNames(t *testing.T) {
 
 func TestShellEnvPolicyOverrides(t *testing.T) {
 	got := buildArgsWithOverrides("", "workspace-write", "/work", nil, nil, "", "",
-		[]string{"shell_environment_policy.ignore_default_excludes=true", `shell_environment_policy.exclude=[]`})
+		[]string{"shell_environment_policy.ignore_default_excludes=true", `shell_environment_policy.exclude=[]`}, shellEnvPolicyOverrides(nil, nil, nil))
 	lastIndex := func(want string) int {
 		for i := len(got) - 1; i > 0; i-- {
 			if got[i-1] == "-c" && got[i] == want {
@@ -1070,5 +1072,60 @@ func TestLoadConfigOverridesMCPAllowlist(t *testing.T) {
 		if !reflect.DeepEqual(off, test.off) {
 			t.Errorf("allowed %v: off = %v, want %v", test.allowed, off, test.off)
 		}
+	}
+}
+
+func TestRunGivesGrantedSecretsToCommandsOnly(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(dir, "codex")
+	out := filepath.Join(dir, "args")
+	content := "#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' \"$@\" > \"" + out + "\"\n" +
+		`printf '{"type":"item.started","item":{"type":"command_execution","command":"curl -H \\"Bearer granted-value-123\\""}}\n'
+printf '{"type":"item.completed","item":{"type":"agent_message","text":"token is granted-value-123"}}\n'
+printf '{"type":"turn.completed"}\n'
+`
+	if err := os.WriteFile(script, []byte(content), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("EXAMPLE_API_TOKEN", "granted-value-123")
+	t.Setenv("SHORT_TOKEN", "short")
+	t.Setenv("OTHER_TOKEN", "other-value-456")
+	t.Setenv("DATABASE_URL", "postgres://other")
+	runner := &Runner{Command: script, PassEnv: []string{"EXAMPLE_API_TOKEN", "SHORT_TOKEN", "OTHER_TOKEN", "DATABASE_URL"}}
+	access := Access{Secrets: []string{"EXAMPLE_API_TOKEN", "SHORT_TOKEN"}, ScopedSecrets: []string{"EXAMPLE_API_TOKEN", "SHORT_TOKEN", "DATABASE_URL"}}
+	var commands []string
+	result, err := runner.Run(context.Background(), "", "workspace-write", dir, nil, nil, access, "prompt", nil,
+		func(activity Activity) { commands = append(commands, activity.Command) })
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+
+	args, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(args), "shell_environment_policy.ignore_default_excludes=true\n") {
+		t.Fatalf("args = %s, want Codex's default excludes off", args)
+	}
+	want := `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY",`
+	line := ""
+	for l := range strings.SplitSeq(string(args), "\n") {
+		if strings.HasPrefix(l, want) {
+			line = l
+		}
+	}
+	for _, name := range []string{"SHORT_TOKEN", "OTHER_TOKEN", "DATABASE_URL"} {
+		if !strings.Contains(line, strconv.Quote(name)) {
+			t.Errorf("exclude = %q, want %s kept from commands", line, name)
+		}
+	}
+	if strings.Contains(line, "EXAMPLE_API_TOKEN") {
+		t.Errorf("exclude = %q, want the granted secret passed", line)
+	}
+	if strings.Contains(strings.Join(result.Messages, "")+strings.Join(commands, ""), "granted-value-123") {
+		t.Errorf("messages %q and commands %q, want the value redacted", result.Messages, commands)
+	}
+	if !reflect.DeepEqual(result.Messages, []string{"token is [secret:EXAMPLE_API_TOKEN]"}) {
+		t.Errorf("messages = %q, want the name in place of the value", result.Messages)
 	}
 }

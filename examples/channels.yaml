@@ -8,3 +8,4 @@ channels:
     mcp_servers: []
   C0000000002:
     system_prompt: 回答は英語で書いてください。
+    secrets: [EXAMPLE_API_TOKEN]

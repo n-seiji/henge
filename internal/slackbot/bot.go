@@ -131,19 +131,21 @@ type Workspaces interface {
 }
 
 type Config struct {
-	AllowedUserIDs             []string
-	AllowedChannelIDs          []string
-	ApprovalChannelID          string
-	ApproverUserIDs            []string
-	Approvals                  Approvals
-	AllowWorkflows             bool
-	AllowedWorkflowIDs         []string
-	AdminUserID                string
-	EBIXHome                   string
-	WorkspaceDir               string
-	MemoryDir                  string
-	PlaybooksDir               string
-	ChannelRulesFile           string
+	AllowedUserIDs     []string
+	AllowedChannelIDs  []string
+	ApprovalChannelID  string
+	ApproverUserIDs    []string
+	Approvals          Approvals
+	AllowWorkflows     bool
+	AllowedWorkflowIDs []string
+	AdminUserID        string
+	EBIXHome           string
+	WorkspaceDir       string
+	MemoryDir          string
+	PlaybooksDir       string
+	ChannelRulesFile   string
+	// The only names channel rules may grant as secrets.
+	CodexEnv                   []string
 	ActionRulesFile            string
 	CodexTimeout               time.Duration
 	ThreadSubscriptionReaction string

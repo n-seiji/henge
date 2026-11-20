@@ -68,7 +68,7 @@ func main() {
 	if err := os.MkdirAll(filepath.Dir(cfg.ChannelRulesFile), 0o700); err != nil {
 		log.Fatalf("create channel rules directory: %v", err)
 	}
-	if err := slackbot.ValidateChannelRules(cfg.ChannelRulesFile); err != nil {
+	if err := slackbot.ValidateChannelRules(cfg.ChannelRulesFile, cfg.CodexEnv); err != nil {
 		log.Printf("channel rules: %v; requests fail until the file is fixed", err)
 	}
 	playbooks, err := playbook.List(cfg.PlaybooksDir)
@@ -154,6 +154,7 @@ func main() {
 		PlaybooksDir:               cfg.PlaybooksDir,
 		ActionRulesFile:            cfg.ActionRulesFile,
 		ChannelRulesFile:           cfg.ChannelRulesFile,
+		CodexEnv:                   cfg.CodexEnv,
 		CodexTimeout:               cfg.CodexTimeout,
 		ThreadSubscriptionReaction: cfg.ThreadSubscriptionReaction,
 		ThreadSubscriptionTTL:      cfg.ThreadSubscriptionTTL,

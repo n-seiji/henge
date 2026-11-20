@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -111,7 +112,28 @@ func (r *Runner) Run(
 		}
 		instructions += extra
 	}
-	args := buildArgsWithOverrides(threadID, sandbox, cwd, writableRoots, denied, r.Model, instructions, configOverrides)
+	env := FilterEnv(os.Environ(), r.PassEnv)
+	// Not just withheld: gh and git would fall back to the host's own. A
+	// read-only turn gets none either, since with no network it could only
+	// be read out into an answer.
+	if access.NoGitHub {
+		env = append(env, noGitHubEnv...)
+	} else if r.GitHub != nil && sandbox != "read-only" {
+		// TurnEnv has already retried transient failures. Without the turn
+		// credential, git and gh fall back to the host's configuration,
+		// so a failure does not stop the turn.
+		turnEnv, cleanup, err := r.GitHub.TurnEnv(ctx)
+		if err != nil {
+			log.Printf("codex exec: prepare the turn's GitHub credential: %v", err)
+		} else {
+			defer cleanup()
+			env = append(env, turnEnv...)
+		}
+	}
+	granted := grantedSecrets(env, access.Secrets)
+	redact := secretRedactor(granted)
+	args := buildArgsWithOverrides(threadID, sandbox, cwd, writableRoots, denied, r.Model, instructions, configOverrides,
+		shellEnvPolicyOverrides(env, slices.Collect(maps.Keys(granted)), access.ScopedSecrets))
 	for _, arg := range args {
 		if len(arg) > maxArgBytes {
 			// Running with a truncated deny list would expose protected paths.
@@ -122,24 +144,7 @@ func (r *Runner) Run(
 	defer cancel()
 
 	cmd := exec.CommandContext(runCtx, r.Command, args...)
-	cmd.Env = FilterEnv(os.Environ(), r.PassEnv)
-	// Not just withheld: gh and git would fall back to the host's own. A
-	// read-only turn gets none either, since with no network it could only
-	// be read out into an answer.
-	if access.NoGitHub {
-		cmd.Env = append(cmd.Env, noGitHubEnv...)
-	} else if r.GitHub != nil && sandbox != "read-only" {
-		// TurnEnv has already retried transient failures. Without the turn
-		// credential, git and gh fall back to the host's configuration,
-		// so a failure does not stop the turn.
-		env, cleanup, err := r.GitHub.TurnEnv(ctx)
-		if err != nil {
-			log.Printf("codex exec: prepare the turn's GitHub credential: %v", err)
-		} else {
-			defer cleanup()
-			cmd.Env = append(cmd.Env, env...)
-		}
-	}
+	cmd.Env = env
 	cmd.Stdin = strings.NewReader(prompt)
 
 	stdout, err := cmd.StdoutPipe()
@@ -154,7 +159,12 @@ func (r *Runner) Run(
 	}
 
 	result := &TurnResult{}
+	if onActivity != nil {
+		report := onActivity
+		onActivity = func(activity Activity) { report(activity.redacted(redact)) }
+	}
 	parseErr := parseJSONL(io.LimitReader(stdout, maxStdoutBytes+1), result, onThreadStarted, onActivity)
+	result.redact(redact)
 	if parseErr != nil {
 		cancel()
 	}
@@ -171,7 +181,7 @@ func (r *Runner) Run(
 			truncateFinalMessage(result)
 			return result, nil
 		}
-		if text := strings.TrimSpace(stderr.String()); text != "" {
+		if text := strings.TrimSpace(redact(stderr.String())); text != "" {
 			if IsNotSignedInMessage(text) {
 				return nil, fmt.Errorf("codex exec: %s: %w: %w", text, ErrNotSignedIn, waitErr)
 			}
@@ -264,14 +274,35 @@ func envAllowed(name string, extra []string) bool {
 
 // The two API keys are dropped by name too, so neither depends on Codex's
 // defaults or on local configuration.
-func shellEnvPolicyOverrides() []string {
-	excluded := make([]string, len(shellEnvExcluded))
-	for i, name := range shellEnvExcluded {
-		excluded[i] = strconv.Quote(name)
+//
+// With a grant, Codex's default excludes go off, since its patterns would
+// drop the granted names too, and every other hidden name in env is excluded
+// by name instead; env is the whole environment Codex inherits.
+// shell_environment_policy.set is not used to pass values: it would put them
+// on the command line, which other processes on the host can read.
+func shellEnvPolicyOverrides(env, granted, scoped []string) []string {
+	if len(granted) == 0 && len(scoped) == 0 {
+		return quotedShellEnvPolicy(false, shellEnvExcluded)
+	}
+	excluded := slices.Clone(shellEnvExcluded)
+	for _, entry := range env {
+		name, _, _ := strings.Cut(entry, "=")
+		hidden := HiddenFromCommands(name) || slices.Contains(scoped, name)
+		if hidden && !slices.Contains(granted, name) && !slices.Contains(excluded, name) {
+			excluded = append(excluded, name)
+		}
+	}
+	return quotedShellEnvPolicy(len(granted) > 0, excluded)
+}
+
+func quotedShellEnvPolicy(ignoreDefaults bool, excluded []string) []string {
+	quoted := make([]string, len(excluded))
+	for i, name := range excluded {
+		quoted[i] = strconv.Quote(name)
 	}
 	return []string{
-		"-c", "shell_environment_policy.ignore_default_excludes=false",
-		"-c", "shell_environment_policy.exclude=[" + strings.Join(excluded, ",") + "]",
+		"-c", "shell_environment_policy.ignore_default_excludes=" + strconv.FormatBool(ignoreDefaults),
+		"-c", "shell_environment_policy.exclude=[" + strings.Join(quoted, ",") + "]",
 	}
 }
 
@@ -301,10 +332,10 @@ func HiddenFromCommands(name string) bool {
 }
 
 func buildArgs(threadID, sandbox, cwd string, writableRoots, deniedReadPaths []string, model, developerInstructions string) []string {
-	return buildArgsWithOverrides(threadID, sandbox, cwd, writableRoots, deniedReadPaths, model, developerInstructions, nil)
+	return buildArgsWithOverrides(threadID, sandbox, cwd, writableRoots, deniedReadPaths, model, developerInstructions, nil, shellEnvPolicyOverrides(nil, nil, nil))
 }
 
-func buildArgsWithOverrides(threadID, sandbox, cwd string, writableRoots, deniedReadPaths []string, model, developerInstructions string, configOverrides []string) []string {
+func buildArgsWithOverrides(threadID, sandbox, cwd string, writableRoots, deniedReadPaths []string, model, developerInstructions string, configOverrides, shellEnvPolicy []string) []string {
 	args := []string{"exec"}
 	if threadID != "" {
 		args = append(args, "resume", threadID)
@@ -323,7 +354,7 @@ func buildArgsWithOverrides(threadID, sandbox, cwd string, writableRoots, denied
 	// Security invariants come after local values so local configuration can
 	// never weaken them.
 	args = append(args, "-c", `approval_policy="never"`, "-c", `default_permissions="ebi-x"`)
-	args = append(args, shellEnvPolicyOverrides()...)
+	args = append(args, shellEnvPolicy...)
 	parentProfile := ":read-only"
 	if sandbox == "workspace-write" {
 		parentProfile = ":workspace"
