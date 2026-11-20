@@ -46,6 +46,12 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) == 2 && os.Args[1] == initArg {
+		if err := initAgentDir(".", newTerminalPrompter(), os.Stdout); err != nil {
+			log.Fatalf("init: %v", err)
+		}
+		return
+	}
 	// config.Load copies .env into the environment; a reload starts from the
 	// environment ebi-x was launched with, so edits to .env take effect too.
 	launchEnv := os.Environ()

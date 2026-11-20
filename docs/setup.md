@@ -2,9 +2,34 @@
 
 ebi-x を動かすまでの手順と、運用者が決める設定です。
 
+## 0. インストール
+
+リリースのバイナリを入れるなら `install.sh` を使います（README の手順）。チェックサムを確かめてから `~/.local/bin` に置き、macOS では hardened runtime 付きで署名し直します。`EBIX_VERSION=v1.2.3` で版を、`EBIX_BIN_DIR` で置き場所を変えられます。
+
+ソースからビルドするときは、Go（`mise install` で揃います）を入れて `mise run build` を実行します。`go build` で直接ビルドしたときは、macOS では `codesign --force --sign - --options runtime ebi-x` も実行します（理由は [7. PR の見守り](#作業の-github-認証github-app)）。
+
+`ebi-x init` は端末から実行すると Slack のトークンと ID を聞き、既定値のない項目だけを `.env` に書きます。端末でなければ（スクリプトから実行したとき）、全項目の説明つきの `.env.example` をそのまま書き出します。どちらも既にあるファイルは上書きしません。
+
+**1ディレクトリ1エージェント**：ebi-x は起動したディレクトリの `.env` を読み、`EBIX_HOME`（既定はそのディレクトリ）に `data/` と `.codex/` を置きます。別の Slack App で別のエージェントを動かすときは、ディレクトリを分けて `ebi-x init` からやり直します。バイナリは共有できます。
+
+### 常駐させる
+
+`examples/` に雛形があります。どちらも作業ディレクトリをエージェントのディレクトリにし、`codex` と `git` が見つかる `PATH` を渡します。
+
+| OS | ファイル | 新しいバイナリへの入れ替え |
+| --- | --- | --- |
+| Linux（systemd のユーザーサービス） | `examples/ebi-x.service` | `install.sh` を実行してから `systemctl --user reload ebi-x` |
+| macOS（launchd） | `examples/ebi-x.plist` | `install.sh` を実行してから `launchctl kill HUP gui/$(id -u)/local.ebi-x` |
+
+入れ替えの動きは [9. 運用](#9-運用) のリロードと同じです。
+
+### リリース
+
+`v` で始まるタグを push すると、GitHub Actions がテストを通してから Linux と macOS（amd64・arm64）のバイナリと `checksums.txt` をリリースに載せます。`install.sh` はこのファイル名を前提にしています。
+
 ## 1. Slack App
 
-Slack App の作成画面で「From a manifest」を選び、`examples/slack-app-manifest.json` を貼り付けると、以下がまとめて入ります。manifest を使わない場合は、同じものを手で設定します。
+Slack App の作成画面で「From a manifest」を選び、`ebi-x init` が書き出す `slack-app-manifest.json`（リポジトリでは `examples/slack-app-manifest.json`）を貼り付けると、以下がまとめて入ります。manifest を使わない場合は、同じものを手で設定します。
 
 | 項目 | 設定 | 用途 |
 | --- | --- | --- |
@@ -24,7 +49,7 @@ Slack App の作成画面で「From a manifest」を選び、`examples/slack-app
 
 ## 2. `.env`
 
-`.env.example` を `.env` にコピーして書きます。主な項目は次のとおりです。各項目の説明は `.env.example` にもあります。
+`ebi-x init` が書き出した `.env` に書きます（リポジトリから動かすなら `.env.example` をコピーします）。主な項目は次のとおりです。各項目の説明は `.env.example` にもあります。
 
 | 変数 | 既定 | 内容 |
 | --- | --- | --- |

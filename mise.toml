@@ -1,6 +1,7 @@
 [tools]
-go = "1.27.3"
+go = "1.27.4"
 node = "latest"
+gitleaks = "8.30.1"
 
 [env]
 CGO_ENABLED = "0"
@@ -34,3 +35,15 @@ run = """
 go vet ./...
 test -z "$(gofmt -l .)" || { gofmt -l .; echo "gofmt: files need formatting"; exit 1; }
 """
+
+[tasks.hooks]
+description = "Scan staged changes and commit messages before each commit"
+run = "git config core.hooksPath .githooks"
+
+[tasks.scan]
+description = "Scan every commit for secrets and words in .denylist"
+run = ".githooks/scan"
+
+[tasks.vulncheck]
+description = "Report known vulnerabilities reachable from the code"
+run = "go run golang.org/x/vuln/cmd/govulncheck@latest ./..."
