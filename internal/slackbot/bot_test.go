@@ -2686,7 +2686,7 @@ func TestWebAPIUploadFileUsesExternalUpload(t *testing.T) {
 			if r.Form.Get("filename") != "deck.pdf" || r.Form.Get("length") != "8" {
 				t.Errorf("getUploadURLExternal form = %v", r.Form)
 			}
-			body = `{"ok":true,"upload_url":"https://files.slack.test/upload/1","file_id":"F1"}`
+			body = `{"ok":true,"upload_url":"https://slack.test/upload/1","file_id":"F1"}`
 		case "/upload/1":
 			data, err := io.ReadAll(r.Body)
 			if err != nil {
