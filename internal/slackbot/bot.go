@@ -1201,7 +1201,7 @@ func (w *webAPI) HasReaction(ctx context.Context, channel, timestamp, reaction s
 	if err != nil {
 		return false, err
 	}
-	for _, itemReaction := range reactions {
+	for _, itemReaction := range reactions.Reactions {
 		if itemReaction.Name == reaction {
 			return true, nil
 		}
@@ -1215,7 +1215,7 @@ func (w *webAPI) ReactionUsers(ctx context.Context, channel, timestamp, reaction
 	if err != nil {
 		return nil, err
 	}
-	for _, itemReaction := range reactions {
+	for _, itemReaction := range reactions.Reactions {
 		if itemReaction.Name == reaction {
 			return itemReaction.Users, nil
 		}
@@ -1286,7 +1286,7 @@ func (w *webAPI) RemoveReaction(ctx context.Context, channel, timestamp, name st
 
 // Needs the files:write scope.
 func (w *webAPI) UploadFile(ctx context.Context, channel, threadTS, filename string, size int64, content io.Reader) error {
-	_, err := w.client.UploadFileV2Context(ctx, slack.UploadFileV2Parameters{
+	_, err := w.client.UploadFileContext(ctx, slack.UploadFileParameters{
 		Reader:          content,
 		FileSize:        int(size),
 		Filename:        filename,

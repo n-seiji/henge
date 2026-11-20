@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // FileName is the operator's settings file, read from the working directory

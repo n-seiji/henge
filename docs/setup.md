@@ -64,6 +64,22 @@ Behaviour that people change from Slack, such as the reaction watch or SQL write
 
 Times use the process's local time zone, so to run on Japan time, start it with `TZ=Asia/Tokyo`.
 
+### Keeping secrets out of `.env`
+
+`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `HENGE_GITHUB_TOKEN`, `HENGE_GITHUB_APP_PRIVATE_KEY`, and the variables named in `HENGE_CODEX_ENV` can hold a reference instead of the secret. henge reads each reference once at startup (and again on reload) and keeps the value in memory, so `.env` holds nothing worth stealing.
+
+```sh
+SLACK_BOT_TOKEN=op://henge/slack/bot-token      # 1Password
+SLACK_APP_TOKEN=keychain:henge-slack-app-token  # macOS Keychain
+```
+
+- **1Password** (`op://vault/item/field`): read with the 1Password CLI (`op read`). Prefer a [service account](https://developer.1password.com/docs/service-accounts/) whose `OP_SERVICE_ACCOUNT_TOKEN` is in henge's environment and that can read only henge's vault. The token never reaches Codex. With the desktop app's sign-in instead, a command Codex runs could call `op` while that sign-in lasts; 1Password asks you to approve it, so do not approve a request you did not expect.
+- **Keychain** (`keychain:<service name>`, macOS only): store the secret so that only henge can read it: `security add-generic-password -s henge-slack-app-token -a henge -T "$PWD/henge" -w`. henge calls the Security framework directly instead of the `security` command, so attempts by Codex's work to read it with `security find-generic-password` are refused (the same goes for running `security` by hand, so check in Keychain Access.app).
+  - After creating it, check that `security find-generic-password -s henge-slack-app-token -w` does not print the secret without asking. If it does, remove `security` under "Access Control" in Keychain Access.app.
+  - After a rebuild, the Keychain sees a different app. So after a reload, at startup you are asked "henge wants to use confidential information stored in your keychain"; press "Always Allow". Startup waits until then (it is logged).
+  - On macOS, `mise run build` adds the hardened runtime (`codesign --sign - --options runtime`), so a debugger, that is Codex's work, cannot attach to henge and read secrets from memory. If you build with `go build` directly, run the same `codesign`.
+- A malformed reference stops `henge -check-config`, so a reload keeps the running process. A reference that cannot be read stops startup.
+
 ### Removed settings
 
 If you reuse an old `.env`, delete these items.
@@ -225,13 +241,9 @@ With `github.app_id` and `HENGE_GITHUB_APP_PRIVATE_KEY` set, the bot mints an in
 
 `henge init` can create the App: answer `y`, and it opens GitHub's "create an App from a manifest" page with the permissions the work needs (contents, pull requests and issues to write; checks, statuses and actions to read). After you press Create, it saves the key as `github-app.pem` (mode 600), writes `github.app_id` and the key's path, and shows where to install the App on your repositories. Each agent gets its own App rather than sharing one, since sharing would mean handing out the App's private key.
 
-- `HENGE_GITHUB_APP_PRIVATE_KEY`: the path of the PEM private key file (`~/` allowed), or `keychain:<service name>` (the macOS Keychain). The file is automatically hidden from Codex.
+- `HENGE_GITHUB_APP_PRIVATE_KEY`: the path of the PEM private key file (`~/` allowed), or a reference to it in 1Password or the Keychain ([Keeping secrets out of `.env`](#keeping-secrets-out-of-env)); for the Keychain, store it with `security add-generic-password -s henge-github-app -a henge -T "$PWD/henge" -w "$(cat app.pem)"`. The file is automatically hidden from Codex.
 - `github.app_installation_id`: not needed if the App has one installation. If it has several, the startup log lists them; write the one to use. The token works only for that installation's (organization's) repositories.
 - If minting fails, it is logged and that run continues with the host's git and gh settings.
-- When storing the key in the Keychain, let only henge read it: `security add-generic-password -s henge-github-app -a henge -T "$PWD/henge" -w "$(cat app.pem)"`. henge calls the Security framework directly instead of the `security` command, so attempts by Codex's work to read it with `security find-generic-password` are refused (the same goes for running `security` by hand, so check in Keychain Access.app).
-  - After creating it, check that `security find-generic-password -s henge-github-app -w` does not print the key without asking. If it does, remove `security` under "Access Control" in Keychain Access.app.
-  - After a rebuild, the Keychain sees a different app. So after a reload, at startup you are asked "henge wants to use confidential information stored in your keychain"; press "Always Allow". The key is read only once at startup, and startup waits until then (it is logged).
-  - On macOS, `mise run build` adds the hardened runtime (`codesign --sign - --options runtime`), so a debugger, that is Codex's work, cannot attach to henge and read the key from memory. If you build with `go build` directly, run the same `codesign`.
 
 ## 8. MCP
 

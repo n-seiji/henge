@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -69,6 +68,9 @@ func main() {
 		log.Fatalf("lock state directory: %v", err)
 	}
 	defer releaseLock()
+	if err := cfg.ResolveSecrets(context.Background()); err != nil {
+		log.Fatalf("read secrets: %v", err)
+	}
 	store, err := state.NewStore(cfg.StateDir)
 	if err != nil {
 		log.Fatalf("open state store: %v", err)
@@ -327,12 +329,9 @@ const maxGitHubTokenTurn = 55 * time.Minute
 // A failed mint is only logged, not fatal: each turn tries again, and until one
 // succeeds turns use the host's git and gh configuration.
 func githubAppTokens(apiURL string, app *config.GitHubApp, turnDir string, codexTimeout time.Duration) (*github.AppTokens, error) {
-	if strings.HasPrefix(app.KeyLocation, github.KeychainPrefix) {
-		// A rebuilt binary is a new application to the Keychain, so macOS
-		// may ask to allow it; startup waits for that answer.
-		log.Printf("reading the GitHub App private key from the Keychain; allow henge if macOS asks")
-	}
-	key, err := github.LoadPrivateKey(app.KeyLocation)
+	// A rebuilt binary is a new application to the Keychain, so macOS may
+	// ask to allow it; startup waits for that answer.
+	key, err := github.LoadPrivateKey(context.Background(), app.KeyLocation)
 	if err != nil {
 		return nil, err
 	}
