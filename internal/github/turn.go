@@ -102,7 +102,7 @@ func writeTurnCredentials(dir, host, token string) ([]string, error) {
 	if err := os.WriteFile(filepath.Join(dir, "token"), []byte(token), 0o600); err != nil {
 		return nil, fmt.Errorf("write turn GitHub token: %w", err)
 	}
-	helper := filepath.Join(dir, "git-credential-ebi-x")
+	helper := filepath.Join(dir, "git-credential-henge")
 	if err := os.WriteFile(helper, []byte(credentialHelperScript), 0o700); err != nil {
 		return nil, fmt.Errorf("write turn git credential helper: %w", err)
 	}

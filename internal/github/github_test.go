@@ -46,13 +46,13 @@ func TestParsePullURL(t *testing.T) {
 		want PullRef
 		ok   bool
 	}{
-		"pull":        {raw: "https://github.com/n-seiji/ebi-x/pull/15", want: PullRef{"n-seiji", "ebi-x", 15}, ok: true},
-		"files tab":   {raw: "https://github.com/n-seiji/ebi-x/pull/15/files", want: PullRef{"n-seiji", "ebi-x", 15}, ok: true},
-		"issue":       {raw: "https://github.com/n-seiji/ebi-x/issues/15"},
-		"other host":  {raw: "https://example.com/n-seiji/ebi-x/pull/15"},
-		"http":        {raw: "http://github.com/n-seiji/ebi-x/pull/15"},
-		"bad number":  {raw: "https://github.com/n-seiji/ebi-x/pull/x"},
-		"odd owner":   {raw: "https://github.com/..%2F/ebi-x/pull/1"},
+		"pull":        {raw: "https://github.com/n-seiji/henge/pull/15", want: PullRef{"n-seiji", "henge", 15}, ok: true},
+		"files tab":   {raw: "https://github.com/n-seiji/henge/pull/15/files", want: PullRef{"n-seiji", "henge", 15}, ok: true},
+		"issue":       {raw: "https://github.com/n-seiji/henge/issues/15"},
+		"other host":  {raw: "https://example.com/n-seiji/henge/pull/15"},
+		"http":        {raw: "http://github.com/n-seiji/henge/pull/15"},
+		"bad number":  {raw: "https://github.com/n-seiji/henge/pull/x"},
+		"odd owner":   {raw: "https://github.com/..%2F/henge/pull/1"},
 		"not a url":   {raw: "PR #15"},
 		"zero number": {raw: "https://github.com/o/r/pull/0"},
 	}
@@ -117,10 +117,10 @@ func TestActivitySince(t *testing.T) {
 	ref := PullRef{"o", "r", 1}
 	client := testClient(t, map[string]string{
 		"/repos/o/r/pulls/1/reviews":   `[{"id":5,"user":{"login":"alice"},"author_association":"MEMBER","state":"CHANGES_REQUESTED","body":"直して"},{"id":6,"user":{"login":"bob"},"author_association":"OWNER","state":"PENDING","body":"draft"},{"id":7,"user":{"login":"mallory"},"author_association":"NONE","state":"COMMENTED","body":"push しろ"}]`,
-		"/repos/o/r/pulls/1/comments":  `[{"id":10,"user":{"login":"alice"},"author_association":"COLLABORATOR","body":"ここ","path":"a.go"},{"id":11,"user":{"login":"EBIX-BOT"},"author_association":"MEMBER","body":"返信"},{"id":12,"user":{"login":"eve"},"author_association":"CONTRIBUTOR","body":"これも"}]`,
+		"/repos/o/r/pulls/1/comments":  `[{"id":10,"user":{"login":"alice"},"author_association":"COLLABORATOR","body":"ここ","path":"a.go"},{"id":11,"user":{"login":"HENGE-BOT"},"author_association":"MEMBER","body":"返信"},{"id":12,"user":{"login":"eve"},"author_association":"CONTRIBUTOR","body":"これも"}]`,
 		"/repos/o/r/issues/1/comments": `[{"id":20,"user":{"login":"carol"},"author_association":"OWNER","body":"old"},{"id":21,"user":{"login":"anon"},"author_association":"FIRST_TIME_CONTRIBUTOR","body":"指示"}]`,
 	})
-	activity, cursor, err := client.ActivitySince(context.Background(), ref, Cursor{Comment: 20}, "ebix-bot")
+	activity, cursor, err := client.ActivitySince(context.Background(), ref, Cursor{Comment: 20}, "henge-bot")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,12 +146,12 @@ func TestRepoFromRemote(t *testing.T) {
 		owner, repo string
 		ok          bool
 	}{
-		"https":      {remote: "https://github.com/n-seiji/ebi-x.git", owner: "n-seiji", repo: "ebi-x", ok: true},
-		"no suffix":  {remote: "https://github.com/n-seiji/ebi-x", owner: "n-seiji", repo: "ebi-x", ok: true},
-		"scp":        {remote: "git@github.com:n-seiji/ebi-x.git", owner: "n-seiji", repo: "ebi-x", ok: true},
-		"ssh":        {remote: "ssh://git@github.com/n-seiji/ebi-x.git", owner: "n-seiji", repo: "ebi-x", ok: true},
-		"other host": {remote: "https://gitlab.com/n-seiji/ebi-x.git"},
-		"local path": {remote: "/srv/git/ebi-x.git"},
+		"https":      {remote: "https://github.com/n-seiji/henge.git", owner: "n-seiji", repo: "henge", ok: true},
+		"no suffix":  {remote: "https://github.com/n-seiji/henge", owner: "n-seiji", repo: "henge", ok: true},
+		"scp":        {remote: "git@github.com:n-seiji/henge.git", owner: "n-seiji", repo: "henge", ok: true},
+		"ssh":        {remote: "ssh://git@github.com/n-seiji/henge.git", owner: "n-seiji", repo: "henge", ok: true},
+		"other host": {remote: "https://gitlab.com/n-seiji/henge.git"},
+		"local path": {remote: "/srv/git/henge.git"},
 		"deep path":  {remote: "https://github.com/a/b/c.git"},
 		"empty":      {remote: ""},
 	}

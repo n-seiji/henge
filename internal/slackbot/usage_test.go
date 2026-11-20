@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/state"
 )
 
 type fakeUsage struct {
@@ -54,7 +54,7 @@ func TestRecordUsageAnnouncesOncePerLevel(t *testing.T) {
 		{primary: 85, secondary: 75},
 		{primary: 91, secondary: 10, want: []string{"Codex の利用枠（5時間）の残りが 10% を下回りました。"}},
 		{primary: 95, secondary: 10},
-		{primary: 100, secondary: 92, want: []string{"Codex の利用枠（5時間）を使い切りました。", "まで、ebi-x は作業できません。", "（1週間）の残りが 10% を下回りました"}},
+		{primary: 100, secondary: 92, want: []string{"Codex の利用枠（5時間）を使い切りました。", "まで、henge は作業できません。", "（1週間）の残りが 10% を下回りました"}},
 		{primary: 100, secondary: 93},
 		// The 5-hour window resets; a later fall is announced again.
 		{primary: 5, secondary: 93},

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 240 240" role="img" aria-label="henge">
+  <title>henge</title>
+  <rect width="240" height="240" fill="#1C1A17"/>
+  <!-- h (slab serif) -->
+  <path d="M88 70 V182 M88 130 C88 108 104 98 124 98 C144 98 160 108 160 130 V182" fill="none" stroke="#D2BE9E" stroke-width="28" stroke-linecap="butt"/>
+  <g fill="#D2BE9E">
+    <rect x="60" y="66" width="42" height="12"/>
+    <rect x="60" y="178" width="56" height="12"/>
+    <!-- right foot serif flowing into the tail -->
+    <path d="M132 178 H188 C198 178 202 170 202 160 C202 148 208 140 216 142 C224 146 222 162 216 172 C210 188 198 190 188 190 H132 Z"/>
+  </g>
+  <path d="M202 160 C202 148 208 140 216 142 C224 146 223 156 220 164 C214 160 208 158 202 162 Z" fill="#7D6D5C"/>
+  <!-- face in the counter -->
+  <path d="M124 134 C118 129 110 129 106 133 C102 139 102 150 104 157 C110 153 118 147 124 142 Z" fill="#40352C"/>
+  <path d="M124 134 C130 129 138 129 142 133 C146 139 146 150 144 157 C138 153 130 147 124 142 Z" fill="#40352C"/>
+  <circle cx="115" cy="139" r="3.2" fill="#FFF7EC"/>
+  <circle cx="133" cy="139" r="3.2" fill="#FFF7EC"/>
+  <ellipse cx="124" cy="155" rx="8" ry="5.5" fill="#E8DAC2"/>
+  <ellipse cx="124" cy="152.5" rx="3.2" ry="2.4" fill="#1C1A17"/>
+</svg>

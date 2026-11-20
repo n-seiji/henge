@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack/slackevents"
 )
 
@@ -243,7 +243,7 @@ func TestApprovalIsNotRequestedForDeniedOrUnapprovableSubjects(t *testing.T) {
 			if store.claimCalls != 0 || len(approvalRequests(api)) != 0 {
 				t.Fatalf("claims = %d, approval requests = %d, want 0", store.claimCalls, len(approvalRequests(api)))
 			}
-			if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "ebi-x の管理者") {
+			if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "henge の管理者") {
 				t.Fatalf("posts = %q, want forbidden response", got)
 			}
 		})
@@ -261,7 +261,7 @@ func TestFailedApprovalPostIsRolledBack(t *testing.T) {
 	if got := approvals.ApprovalStatus(state.ApprovalUser, "U2"); got != "" {
 		t.Fatalf("status = %q, want no record", got)
 	}
-	if got := api.posts[len(api.posts)-1].text; got != forbiddenText("あなた", "ebi-x の管理者") {
+	if got := api.posts[len(api.posts)-1].text; got != forbiddenText("あなた", "henge の管理者") {
 		t.Fatalf("last post = %q, want forbidden response", got)
 	}
 }

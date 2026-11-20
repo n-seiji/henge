@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	ebix "github.com/n-seiji/ebi-x"
+	"github.com/n-seiji/henge"
 )
 
 type scriptedPrompter struct{ answers []string }
@@ -43,7 +43,7 @@ func TestInitAgentDirWritesPrivateEnvAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(manifest, ebix.SlackAppManifest) {
+	if !bytes.Equal(manifest, henge.SlackAppManifest) {
 		t.Error("slack-app-manifest.json differs from the embedded manifest")
 	}
 }

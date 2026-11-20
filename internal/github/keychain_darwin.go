@@ -9,8 +9,8 @@ import (
 )
 
 // The Security framework is called directly rather than through the
-// security command, so the Keychain checks ebi-x's own executable against
-// the item's access list: an item that trusts only ebi-x stays closed to
+// security command, so the Keychain checks henge's own executable against
+// the item's access list: an item that trusts only henge stays closed to
 // the commands Codex runs, security included. purego keeps the build free
 // of cgo.
 var (
@@ -35,7 +35,7 @@ func loadSecurity() error {
 	return securityErr
 }
 
-// Blocks while macOS asks whether ebi-x may read the item.
+// Blocks while macOS asks whether henge may read the item.
 func readKeychain(service string) ([]byte, error) {
 	if err := loadSecurity(); err != nil {
 		return nil, err

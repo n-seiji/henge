@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/playbook"
-	"github.com/n-seiji/ebi-x/internal/prompt"
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/playbook"
+	"github.com/n-seiji/henge/internal/prompt"
+	"github.com/n-seiji/henge/internal/workspace"
 )
 
 const (

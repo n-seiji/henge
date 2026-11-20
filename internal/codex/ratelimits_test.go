@@ -17,7 +17,7 @@ func writeFakeAppServer(t *testing.T, response string) string {
 	content := `#!/bin/sh
 test "$1" = "app-server" || exit 2
 read -r init
-printf '{"id":1,"result":{"userAgent":"ebi-x/0"}}\n'
+printf '{"id":1,"result":{"userAgent":"henge/0"}}\n'
 read -r initialized
 read -r request
 case "$request" in *account/rateLimits/read*) ;; *) exit 3 ;; esac

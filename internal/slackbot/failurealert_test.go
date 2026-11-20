@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
+	"github.com/n-seiji/henge/internal/codex"
 )
 
 func approvalPosts(api *fakeSlack) []string {

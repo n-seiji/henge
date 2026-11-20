@@ -145,7 +145,7 @@ func TestPlainTextRemovesMarkdownSyntax(t *testing.T) {
 }
 
 func TestHideLocalPaths(t *testing.T) {
-	const home = "/Users/example/ebi-x"
+	const home = "/Users/example/henge"
 	tests := []struct {
 		name string
 		text string
@@ -153,7 +153,7 @@ func TestHideLocalPaths(t *testing.T) {
 	}{
 		{
 			name: "markdown link to a local file keeps its label",
-			text: "根拠：[問い合わせ調査手順](/Users/example/ebi-x/data/playbooks/inquiry.md)",
+			text: "根拠：[問い合わせ調査手順](/Users/example/henge/data/playbooks/inquiry.md)",
 			want: "根拠：問い合わせ調査手順",
 		},
 		{

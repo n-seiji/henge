@@ -125,7 +125,7 @@ func (a *AppTokens) onlyInstallation(ctx context.Context, jwt string) (int64, er
 		for _, installation := range installations {
 			accounts = append(accounts, installation.Account.Login+"="+strconv.FormatInt(installation.ID, 10))
 		}
-		return 0, fmt.Errorf("GitHub App has %d installations %v; set EBIX_GITHUB_APP_INSTALLATION_ID", len(installations), accounts)
+		return 0, fmt.Errorf("GitHub App has %d installations %v; set HENGE_GITHUB_APP_INSTALLATION_ID", len(installations), accounts)
 	}
 	return installations[0].ID, nil
 }

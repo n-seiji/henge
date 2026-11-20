@@ -12,14 +12,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/attachment"
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/memory"
-	"github.com/n-seiji/ebi-x/internal/playbook"
-	"github.com/n-seiji/ebi-x/internal/prompt"
-	"github.com/n-seiji/ebi-x/internal/slackfmt"
-	"github.com/n-seiji/ebi-x/internal/state"
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/attachment"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/memory"
+	"github.com/n-seiji/henge/internal/playbook"
+	"github.com/n-seiji/henge/internal/prompt"
+	"github.com/n-seiji/henge/internal/slackfmt"
+	"github.com/n-seiji/henge/internal/state"
+	"github.com/n-seiji/henge/internal/workspace"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
@@ -128,7 +128,7 @@ type Config struct {
 	AllowWorkflows             bool
 	AllowedWorkflowIDs         []string
 	AdminUserID                string
-	EBIXHome                   string
+	HengeHome                  string
 	WorkspaceDir               string
 	MemoryDir                  string
 	PlaybooksDir               string
@@ -977,7 +977,7 @@ func neutralizeBroadcasts(text string) string {
 }
 
 func (b *Bot) post(ctx context.Context, channel, threadTS, text string) error {
-	text = slackfmt.HideLocalPaths(text, b.config.EBIXHome)
+	text = slackfmt.HideLocalPaths(text, b.config.HengeHome)
 	for _, chunk := range slackfmt.Split(text, maxSlackMessageRunes) {
 		if err := b.retrySlack(ctx, func() error {
 			_, err := b.api.PostMessage(ctx, channel, threadTS, chunk)

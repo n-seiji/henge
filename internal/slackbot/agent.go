@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )

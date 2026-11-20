@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack/slackevents"
 )
 
@@ -79,7 +79,7 @@ func (s approvalSubject) subject(text *messages) string {
 func missingSubjects(text *messages, missing []approvalSubject) string {
 	names := make([]string, 0, len(missing))
 	for _, subject := range missing {
-		// A DM is only between the author and ebi-x, so only the author's
+		// A DM is only between the author and henge, so only the author's
 		// access matters there.
 		if subject.kind == state.ApprovalChannel && strings.HasPrefix(subject.id, "D") {
 			continue

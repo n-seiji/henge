@@ -12,7 +12,7 @@ import (
 	"syscall"
 )
 
-const lockFilename = "ebi-x.lock"
+const lockFilename = "henge.lock"
 
 // The holder's PID is kept in the file so a conflict names the process to stop.
 func LockDir(dir string) (release func(), err error) {
@@ -27,7 +27,7 @@ func LockDir(dir string) (release func(), err error) {
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		_ = file.Close()
 		if errors.Is(err, syscall.EWOULDBLOCK) {
-			return nil, fmt.Errorf("lock %q: %w", path, errors.New("another ebi-x process"+holderPID(path)+" is using this data directory"))
+			return nil, fmt.Errorf("lock %q: %w", path, errors.New("another henge process"+holderPID(path)+" is using this data directory"))
 		}
 		return nil, fmt.Errorf("lock %q: %w", path, err)
 	}

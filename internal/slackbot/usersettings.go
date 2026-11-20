@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/n-seiji/ebi-x/internal/usersettings"
+	"github.com/n-seiji/henge/internal/usersettings"
 )
 
 const ()
