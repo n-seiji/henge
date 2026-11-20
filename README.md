@@ -29,13 +29,13 @@ You need Codex CLI 0.149.0 or later (after `codex login`), a Slack workspace whe
    curl -fsSL https://raw.githubusercontent.com/n-seiji/henge/main/install.sh | sh
    ```
 
-2. Make a directory for the agent and run `henge init` there. `.env` and `data/` are read from this directory.
+2. Make a directory for the agent and run `henge init` there. `.env`, `henge.yaml` and `data/` are read from this directory.
 
    ```sh
    mkdir ~/henge && cd ~/henge && henge init
    ```
 
-   Paste the `slack-app-manifest.json` it writes into "From a manifest" on Slack's app creation screen and install the app in your workspace. Then answer the questions with the Bot Token (`xoxb-`), the App Token for Socket Mode (`xapp-`), your member ID, and the ID of the channel to talk to the bot in, and `.env` is created. That channel becomes the approval channel, where other people and channels are allowed from Slack.
+   Paste the `slack-app-manifest.json` it writes into "From a manifest" on Slack's app creation screen and install the app in your workspace. Then answer the questions with the Bot Token (`xoxb-`), the App Token for Socket Mode (`xapp-`), your member ID, the ID of the channel to talk to the bot in, the repositories it may work on, and whether to create a GitHub App. The tokens go to `.env` and the rest to `henge.yaml`. That channel becomes the approval channel, where other people and channels are allowed from Slack.
 
 3. Sign in to Codex and start it.
 
@@ -52,7 +52,7 @@ How to keep it running, and how to build from source, are in [docs/setup.md](doc
 
 | File | Contents |
 | --- | --- |
-| [docs/setup.md](docs/setup.md) | Installation and settings (Slack app, `.env`, permissions, operations) |
+| [docs/setup.md](docs/setup.md) | Installation and settings (Slack app, `.env` and `henge.yaml`, permissions, operations) |
 | [docs/usage.md](docs/usage.md) | How to use it in Slack, and how each feature behaves |
 | [docs/design.md](docs/design.md) | Design decisions and their reasons |
 | [examples/](examples/) | The Slack app manifest, service templates, and example action rules and playbooks |

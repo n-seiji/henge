@@ -4,7 +4,7 @@ The decisions behind henge and their reasons. For the details (limits, file name
 
 ## Principles
 
-- **Keep it small**: a single Go binary, a single process. No web UI, no database, no HTTP Events API. Settings live in `.env`, and state in JSON files under `data/`.
+- **Keep it small**: a single Go binary, a single process. No web UI, no database, no HTTP Events API. Settings live in `.env` (secrets) and `henge.yaml`, and state in JSON files under `data/`.
 - **Codex does the thinking and the work**: the bot handles only Slack, permissions, state and isolation, and leaves judgment about the request to Codex.
 - **The output contract is the boundary between the bot and Codex**: Codex never touches Slack, the state files or memory directly. It writes fixed headings in its final reply, and the bot reads and acts on them.
 - **Work with side effects is never retried automatically**: a duplicate post is acceptable, but losing a result or doing the work twice is not.
@@ -14,7 +14,7 @@ The decisions behind henge and their reasons. For the details (limits, file name
 ```text
 cmd/henge/            startup, loading settings, signal handling
 internal/
-  config/             loading and checking .env
+  config/             loading and checking .env and henge.yaml
   slackbot/           Slack event handling, and what runs after the conversation
   codex/              starting codex exec and parsing its output
   prompt/ policy/     the prompt for Codex and the top-level rules
@@ -63,7 +63,7 @@ So that threads running in parallel do not clash over files, each thread gets it
 
 ## What is protected from Codex
 
-Unless denied, Codex's commands can read the whole file system. So every run denies reading and writing the state, memory, `.env`, `CODEX_HOME` (which holds credentials and every thread's history) and the known credential locations. Only the locations needed for pushing and signing are exempted, found from the git settings at startup.
+Unless denied, Codex's commands can read the whole file system. So every run denies reading and writing the state, memory, `.env`, `henge.yaml`, `CODEX_HOME` (which holds credentials and every thread's history) and the known credential locations. Only the locations needed for pushing and signing are exempted, found from the git settings at startup.
 
 - Other threads' working directories are not listed one by one, because a rule per thread would eventually exceed the argument limit.
 - Codex's process environment is an allowlist. A denylist could not guarantee that something like `DATABASE_URL` in the operator's shell does not leak.
@@ -72,7 +72,7 @@ Unless denied, Codex's commands can read the whole file system. So every run den
 - With a GitHub App configured, only a token minted for the run is placed in a run-only directory, and it is revoked afterwards. Only the bot reads the private key.
 - If the deny list is too long, the run does not start rather than truncating it.
 
-Remaining risks: the default locations are fixed paths under the home directory, so anything moved with `XDG_CONFIG_HOME` and the like must be added to `HENGE_DENIED_READ_PATHS`. If work can reach the Docker socket, the denials can be bypassed. `~/.ssh` and `~/.config/gh`, needed for pushing, are visible to work that can reach the network.
+Remaining risks: the default locations are fixed paths under the home directory, so anything moved with `XDG_CONFIG_HOME` and the like must be added to `sandbox.denied_read_paths`. If work can reach the Docker socket, the denials can be bypassed. `~/.ssh` and `~/.config/gh`, needed for pushing, are visible to work that can reach the network.
 
 Action rules (what to confirm before doing) are instructions in the prompt, separate from these denials.
 

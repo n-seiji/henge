@@ -10,5 +10,8 @@ import _ "embed"
 //go:embed .env.example
 var EnvTemplate []byte
 
+//go:embed examples/henge.yaml
+var SettingsTemplate []byte
+
 //go:embed examples/slack-app-manifest.json
 var SlackAppManifest []byte
