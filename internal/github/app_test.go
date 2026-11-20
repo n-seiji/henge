@@ -164,7 +164,7 @@ func TestTurnEnvRevokesTokenOnCleanup(t *testing.T) {
 func TestAppTokensNeedsInstallationIDForSeveralInstallations(t *testing.T) {
 	installations := `[{"id":42,"account":{"login":"a"}},{"id":43,"account":{"login":"b"}}]`
 	several := newTestApp(t, installations, 0)
-	if _, err := several.tokens.Mint(context.Background()); err == nil || !strings.Contains(err.Error(), "EBIX_GITHUB_APP_INSTALLATION_ID") {
+	if _, err := several.tokens.Mint(context.Background()); err == nil || !strings.Contains(err.Error(), "HENGE_GITHUB_APP_INSTALLATION_ID") {
 		t.Fatalf("Mint() error = %v, want a hint to set the installation ID", err)
 	}
 	chosen := newTestApp(t, installations, 42)
@@ -190,7 +190,7 @@ func TestNewAppTokensAcceptsPKCS8(t *testing.T) {
 func TestAppTokensReportsAppWithoutInstallations(t *testing.T) {
 	app := newTestApp(t, `[]`, 0)
 	_, err := app.tokens.Mint(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "no installations") || strings.Contains(err.Error(), "EBIX_GITHUB_APP_INSTALLATION_ID") {
+	if err == nil || !strings.Contains(err.Error(), "no installations") || strings.Contains(err.Error(), "HENGE_GITHUB_APP_INSTALLATION_ID") {
 		t.Fatalf("Mint() error = %v, want a report that the App has no installations", err)
 	}
 }

@@ -7,14 +7,14 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 )
 
-const deferredMessage = "🔄 ebi-x を更新しています。いま動いている作業が終わり次第再起動し、この依頼は再起動後に自動で始めます。"
+const deferredMessage = "🔄 henge を更新しています。いま動いている作業が終わり次第再起動し、この依頼は再起動後に自動で始めます。"
 
 const deferredStoppedMessage = "再起動後に始める予定だった依頼を取り消しました。"
 
-var errDraining = errors.New("ebi-x is draining for a restart")
+var errDraining = errors.New("henge is draining for a restart")
 
 var triggerSourceNames = map[triggerSource]string{
 	mentionTrigger:   "mention",

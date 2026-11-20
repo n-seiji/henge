@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/n-seiji/ebi-x/internal/usersettings"
+	"github.com/n-seiji/henge/internal/usersettings"
 )
 
 const (
-	userSettingsSavedNotice   = "⚙️ あなたの個人設定を更新しました（%d件）。内容は ebi-x のアプリのホームで確認できます。このメッセージはあなたにだけ表示されています。"
+	userSettingsSavedNotice   = "⚙️ あなたの個人設定を更新しました（%d件）。内容は henge のアプリのホームで確認できます。このメッセージはあなたにだけ表示されています。"
 	userSettingsClearedNotice = "⚙️ あなたの個人設定をすべて消しました。このメッセージはあなたにだけ表示されています。"
 	userSettingsFailedNotice  = "⚠️ 個人設定を保存できませんでした。もう一度お試しください。このメッセージはあなたにだけ表示されています。"
 )

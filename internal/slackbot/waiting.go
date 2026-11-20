@@ -13,7 +13,7 @@ func (b *Bot) waitingNotice(authorID, channel, threadTS string, questions []stri
 	if b.repliesWithoutMention(channel, threadTS) {
 		builder.WriteString("このスレッドに返信してください。")
 	} else {
-		builder.WriteString("このスレッドで ebi-x に mention して答えてください。")
+		builder.WriteString("このスレッドで henge に mention して答えてください。")
 	}
 	for _, question := range questions {
 		builder.WriteString("\n- " + question)

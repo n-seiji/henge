@@ -30,7 +30,7 @@ func isAliveQuestion(text string) bool {
 	return false
 }
 
-// Usage numbers are left out because it answers anyone in any channel ebi-x is
+// Usage numbers are left out because it answers anyone in any channel henge is
 // in.
 func (b *Bot) answerAliveQuestion(ctx context.Context, channel, threadTS string) {
 	reply := aliveNoCodexReply

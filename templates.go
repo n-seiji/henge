@@ -1,6 +1,6 @@
-// Package ebix holds the files `ebi-x init` writes, so that a binary
+// Package henge holds the files `henge init` writes, so that a binary
 // installed without the repository can still start a new agent directory.
-package ebix
+package henge
 
 import _ "embed"
 

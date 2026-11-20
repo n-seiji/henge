@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack/slackevents"
 )
 
@@ -17,8 +17,8 @@ const (
 	approveCommand = "許可"
 	denyCommand    = "拒否"
 
-	approvalRequestedMessage = "🔒 %sには ebi-x を使う権限がまだないため、承認者に許可を依頼しました%s。\n許可されたら、このスレッドでお知らせします。そのあと、もう一度 mention してください。"
-	approvalQueuedMessage    = "🔒 %sには ebi-x を使う権限がまだないため、承認者に許可を依頼しました%s。\nそのままお待ちください！許可されたら、この依頼から自動で始めます。"
+	approvalRequestedMessage = "🔒 %sには henge を使う権限がまだないため、承認者に許可を依頼しました%s。\n許可されたら、このスレッドでお知らせします。そのあと、もう一度 mention してください。"
+	approvalQueuedMessage    = "🔒 %sには henge を使う権限がまだないため、承認者に許可を依頼しました%s。\nそのままお待ちください！許可されたら、この依頼から自動で始めます。"
 
 	approvalResumeWindow    = 24 * time.Hour
 	notApproverMessage      = "承認者（SLACK_APPROVER_USER_IDS）だけが操作できます。"
@@ -85,7 +85,7 @@ func (s approvalSubject) subject() string {
 func missingSubjects(missing []approvalSubject) string {
 	names := make([]string, 0, len(missing))
 	for _, subject := range missing {
-		// A DM is only between the author and ebi-x, so only the author's
+		// A DM is only between the author and henge, so only the author's
 		// access matters there.
 		if subject.kind == state.ApprovalChannel && strings.HasPrefix(subject.id, "D") {
 			continue
@@ -245,11 +245,11 @@ func (b *Bot) recordWaitingMention(subject approvalSubject, mention state.Approv
 func (b *Bot) postApprovalRequest(ctx context.Context, subject approvalSubject, event *slackevents.AppMentionEvent) error {
 	where := "<#" + event.Channel + "> で mention しました。"
 	if isDirectMessage(event.Channel) {
-		where = "ebi-x に DM で依頼しました。"
+		where = "henge に DM で依頼しました。"
 	}
-	text := "🔐 ebi-x の利用許可の依頼\n対象: " + subject.label() +
+	text := "🔐 henge の利用許可の依頼\n対象: " + subject.label() +
 		"\n<@" + event.User + "> が " + where +
-		"\n\nこのスレッドで ebi-x に mention して「" + approveCommand + "」か「" + denyCommand + "」と返信してください。"
+		"\n\nこのスレッドで henge に mention して「" + approveCommand + "」か「" + denyCommand + "」と返信してください。"
 	timestamp, err := b.api.PostMessage(ctx, b.config.ApprovalChannelID, "", text)
 	if err != nil {
 		return err

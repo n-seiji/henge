@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack"
 )
 
@@ -22,15 +22,15 @@ const (
 	maxDoneWatchesPerUser = 10
 	maxDoneWatchTargets   = 100
 
-	doneWatchStartedNotice    = "👀 :done: の監視を始めます。対象は元メッセージで @メンションされた%d人です。%sに、まだ :done: を付けていない人にこのスレッドで通知します（次回 %s）。%s\n全員が付けるか、%d回通知したら終了します。止める場合は、このスレッドで「@ebi-x 監視をとめて」と mention してください。"
+	doneWatchStartedNotice    = "👀 :done: の監視を始めます。対象は元メッセージで @メンションされた%d人です。%sに、まだ :done: を付けていない人にこのスレッドで通知します（次回 %s）。%s\n全員が付けるか、%d回通知したら終了します。止める場合は、このスレッドで「@henge 監視をとめて」と mention してください。"
 	doneWatchAllDoneNotice    = "✅ 対象の全員がすでに :done: を付けているため、監視は始めていません。"
-	doneWatchNoTargetNotice   = "⚠️ @メンションされた人が見つからなかったため、監視は始めていません。対象の人を @メンションしたメッセージの末尾で「@ebi-x 監視して」と書いてください。"
-	doneWatchLimitNotice      = "⚠️ 1人が同時に続けられる監視は%d件までのため、監視は始めていません。不要な監視を、そのスレッドで「@ebi-x 監視をとめて」と mention して止めてください。"
+	doneWatchNoTargetNotice   = "⚠️ @メンションされた人が見つからなかったため、監視は始めていません。対象の人を @メンションしたメッセージの末尾で「@henge 監視して」と書いてください。"
+	doneWatchLimitNotice      = "⚠️ 1人が同時に続けられる監視は%d件までのため、監視は始めていません。不要な監視を、そのスレッドで「@henge 監視をとめて」と mention して止めてください。"
 	doneWatchTooManyNotice    = "⚠️ 対象が%d人を超えるため、監視は始めていません。"
 	doneWatchScopeNotice      = "⚠️ @channel やユーザーグループの対象を調べるには、Slack アプリに channels:read・groups:read・usergroups:read・users:read の scope が必要です。管理者に追加を頼んでください。"
 	doneWatchOutsideNotice    = "ユーザーグループのうち、このチャンネルにいない%d人は通知が届かないため対象から外しました。"
 	doneWatchNamedOutsideNote = "%s はまだこのチャンネルに参加していないようです。招待しないと通知が届きません。"
-	doneWatchAllOutsideNotice = "⚠️ ユーザーグループのメンバーは全員このチャンネルにいないため、通知が届きません。監視は始めていません。メンバーをチャンネルに招待してから、もう一度「@ebi-x 監視して」と mention してください。"
+	doneWatchAllOutsideNotice = "⚠️ ユーザーグループのメンバーは全員このチャンネルにいないため、通知が届きません。監視は始めていません。メンバーをチャンネルに招待してから、もう一度「@henge 監視して」と mention してください。"
 	doneWatchFailedNotice     = "⚠️ 監視を始められませんでした。もう一度 mention してください。"
 	doneWatchReminder         = "%s\n:done: のリアクションがまだのようです。対応が済んだら、%sに :done: を付けてください。（%d回目の通知）"
 	doneWatchLastReminder     = "\n%d回通知したため、監視はこれで終了します。"

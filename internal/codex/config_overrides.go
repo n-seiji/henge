@@ -15,7 +15,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/n-seiji/ebi-x/internal/sqlguard"
+	"github.com/n-seiji/henge/internal/sqlguard"
 )
 
 type Access struct {
@@ -46,7 +46,7 @@ func (access Access) disabledServers(servers map[string]any) []string {
 	return slices.Sorted(maps.Keys(off))
 }
 
-// The caller keeps --ignore-user-config and appends ebi-x's security overrides
+// The caller keeps --ignore-user-config and appends henge's security overrides
 // after these, so local values cannot override them.
 func loadConfigOverrides(path string, access Access) ([]string, error) {
 	if path == "" {
@@ -189,7 +189,7 @@ func flattenConfig(prefix []string, value map[string]any, overrides *[]string) e
 	for key := range value {
 		if len(prefix) == 0 && isSecurityOwnedKey(key) {
 			// Key name only: values may hold secrets.
-			log.Printf("ignoring local Codex config key %q: security settings are owned by ebi-x", key)
+			log.Printf("ignoring local Codex config key %q: security settings are owned by henge", key)
 			continue
 		}
 		keys = append(keys, key)

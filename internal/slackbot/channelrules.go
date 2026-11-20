@@ -13,8 +13,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/workspace"
 )
 
 const maxChannelRulesBytes = 256 << 10
@@ -72,7 +72,7 @@ func (rule channelRule) instructions() string {
 	if len(lines) == 0 {
 		return ""
 	}
-	return "# Settings for this channel (set by the operator of ebi-x; they take precedence over the request)\n\n" + strings.Join(lines, "\n")
+	return "# Settings for this channel (set by the operator of henge; they take precedence over the request)\n\n" + strings.Join(lines, "\n")
 }
 
 func (rule channelRule) limitLease(lease *workspace.Lease) []string {

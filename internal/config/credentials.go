@@ -13,7 +13,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/workspace"
 )
 
 var credentialPaths = []string{
@@ -66,10 +66,10 @@ func resolveCredentialPaths(writableRoots, protectedPaths []string, allowed, che
 	for _, item := range splitList(allowed) {
 		path, err := canonicalHomePath(item)
 		if err != nil {
-			return nil, fmt.Errorf("EBIX_ALLOWED_READ_PATHS %q: %w", item, err)
+			return nil, fmt.Errorf("HENGE_ALLOWED_READ_PATHS %q: %w", item, err)
 		}
 		if _, ok := known[path]; !ok {
-			return nil, fmt.Errorf("EBIX_ALLOWED_READ_PATHS %q is not a default credential path; valid entries: %s", item, strings.Join(credentialPaths, ", "))
+			return nil, fmt.Errorf("HENGE_ALLOWED_READ_PATHS %q is not a default credential path; valid entries: %s", item, strings.Join(credentialPaths, ", "))
 		}
 		exempt[path] = struct{}{}
 	}

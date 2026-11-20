@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
+	"github.com/n-seiji/henge/internal/codex"
 )
 
 func writeChannelRules(t *testing.T, content string) string {

@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   launchd agent. Replace YOU with your user name, copy to
-  ~/Library/LaunchAgents/local.ebi-x.plist, then:
-    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.ebi-x.plist
+  ~/Library/LaunchAgents/local.henge.plist, then:
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.henge.plist
   After installing a new binary:
-    launchctl kill HUP gui/$(id -u)/local.ebi-x
+    launchctl kill HUP gui/$(id -u)/local.henge
 -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>local.ebi-x</string>
+  <string>local.henge</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/YOU/.local/bin/ebi-x</string>
+    <string>/Users/YOU/.local/bin/henge</string>
   </array>
   <!-- .env and data/ are read from the working directory. -->
   <key>WorkingDirectory</key>
-  <string>/Users/YOU/ebi-x</string>
+  <string>/Users/YOU/henge</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>TZ</key>
@@ -34,8 +34,8 @@
     <false/>
   </dict>
   <key>StandardOutPath</key>
-  <string>/Users/YOU/ebi-x/ebi-x.log</string>
+  <string>/Users/YOU/henge/henge.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/YOU/ebi-x/ebi-x.log</string>
+  <string>/Users/YOU/henge/henge.log</string>
 </dict>
 </plist>

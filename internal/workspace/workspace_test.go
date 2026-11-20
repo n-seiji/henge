@@ -133,10 +133,10 @@ func TestAcquireCreatesThreadCheckoutAndKeepsPlainRootsShared(t *testing.T) {
 		t.Fatalf("Checkouts = %v, want one", lease.Checkouts)
 	}
 	checkout := lease.Checkouts[0]
-	if checkout.Repo != repo || checkout.Branch != "ebi-x/C1-100.1" {
+	if checkout.Repo != repo || checkout.Branch != "henge/C1-100.1" {
 		t.Errorf("checkout = %+v", checkout)
 	}
-	if got := runGit(t, checkout.Path, "branch", "--show-current"); got != "ebi-x/C1-100.1" {
+	if got := runGit(t, checkout.Path, "branch", "--show-current"); got != "henge/C1-100.1" {
 		t.Errorf("checkout branch = %q", got)
 	}
 	if got := runGit(t, checkout.Path, "remote", "get-url", "origin"); got != "https://example.com/app.git" {
@@ -151,7 +151,7 @@ func TestAcquireCreatesThreadCheckoutAndKeepsPlainRootsShared(t *testing.T) {
 	if !reflect.DeepEqual(lease.WritableRoots, want) {
 		t.Errorf("WritableRoots = %v, want %v", lease.WritableRoots, want)
 	}
-	if got := runGit(t, repo, "branch", "--list", "ebi-x/*"); got != "" {
+	if got := runGit(t, repo, "branch", "--list", "henge/*"); got != "" {
 		t.Errorf("original repository gained branches: %q", got)
 	}
 }
@@ -294,7 +294,7 @@ func TestAcquireRecreatesPartiallyRemovedCheckout(t *testing.T) {
 		t.Fatalf("Acquire() error = %v", err)
 	}
 	defer lease.Release()
-	if got := runGit(t, path, "branch", "--show-current"); got != "ebi-x/C1-100.1" {
+	if got := runGit(t, path, "branch", "--show-current"); got != "henge/C1-100.1" {
 		t.Fatalf("recreated checkout branch = %q", got)
 	}
 }

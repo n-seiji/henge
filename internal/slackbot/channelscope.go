@@ -6,12 +6,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/workspace"
 )
 
 const (
 	channelScopeTTL   = 30 * 24 * time.Hour
-	closedChannelNote = "[Note from ebi-x: this channel is %s. Slack search and read tools are unavailable so that this channel's content does not leave it. If you need information from Slack, ask the requester to paste it instead of guessing]"
+	closedChannelNote = "[Note from henge: this channel is %s. Slack search and read tools are unavailable so that this channel's content does not leave it. If you need information from Slack, ask the requester to paste it instead of guessing]"
 )
 
 type ChannelInfo struct {

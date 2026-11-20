@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/usersettings"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/usersettings"
 	"github.com/slack-go/slack/slackevents"
 )
 

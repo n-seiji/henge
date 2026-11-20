@@ -13,7 +13,7 @@ const (
 	repeatedFailureCount  = 3
 	repeatedFailureWindow = time.Hour
 	maxFailureAlertRunes  = 300
-	repeatedFailureAlert  = "🚨 ebi-x の作業が直近%d分で%d件失敗しています。依頼者には「依頼し直してください」と返していますが、同じ原因で失敗し続けている可能性があります。ebi-x のログを確認してください。\n最新のエラー: `%s`"
+	repeatedFailureAlert  = "🚨 henge の作業が直近%d分で%d件失敗しています。依頼者には「依頼し直してください」と返していますが、同じ原因で失敗し続けている可能性があります。henge のログを確認してください。\n最新のエラー: `%s`"
 )
 
 // A broken setting or environment fails every request with the same generic

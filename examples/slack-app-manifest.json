@@ -1,6 +1,6 @@
 {
   "display_information": {
-    "name": "ebi-x",
+    "name": "henge",
     "description": "An agent you can ask from Slack to investigate and work with Codex"
   },
   "features": {
@@ -10,7 +10,7 @@
       "messages_tab_read_only_enabled": false
     },
     "bot_user": {
-      "display_name": "ebi-x",
+      "display_name": "henge",
       "always_online": true
     },
     "agent_view": {
@@ -18,10 +18,10 @@
     },
     "shortcuts": [
       {
-        "name": "Ask ebi-x",
+        "name": "Ask henge",
         "type": "message",
-        "callback_id": "ebix_request",
-        "description": "Ask ebi-x to investigate or work on this message"
+        "callback_id": "henge_request",
+        "description": "Ask henge to investigate or work on this message"
       }
     ]
   },

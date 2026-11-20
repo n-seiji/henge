@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/github"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/github"
+	"github.com/n-seiji/henge/internal/state"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 	pullWatchInvalidNotice  = "⚠️ 次の URL は見守れる PR として読み取れなかったため、見守っていません。"
 	pullWatchFailedNotice   = "⚠️ 次の PR の状態を GitHub から読めなかったため、見守っていません。"
 	pullWatchClosedNotice   = "次の PR はマージ済みか閉じられているため、見守っていません。"
-	pullWatchRepoNotice     = "⚠️ 次の PR は ebi-x が作業するリポジトリのものではないため、見守っていません。"
+	pullWatchRepoNotice     = "⚠️ 次の PR は henge が作業するリポジトリのものではないため、見守っていません。"
 	pullWatchTakenNotice    = "⚠️ 次の PR は別のスレッドで見守っているため、ここでは見守っていません。"
 	pullWatchTooManyNotice  = "⚠️ 一度に見守れる PR は%d件までのため、残りは見守っていません。"
 	pullWatchWakeMessage    = "🔔 PR に動きがありました（%s）: %s。対応を始めます。"

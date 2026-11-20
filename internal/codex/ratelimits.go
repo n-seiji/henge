@@ -101,7 +101,7 @@ func (r *Runner) ReadRateLimits(ctx context.Context) (*RateLimits, error) {
 	}()
 
 	requests := []string{
-		`{"id":1,"method":"initialize","params":{"clientInfo":{"name":"ebi-x","title":null,"version":"1"}}}`,
+		`{"id":1,"method":"initialize","params":{"clientInfo":{"name":"henge","title":null,"version":"1"}}}`,
 		`{"method":"initialized"}`,
 		`{"id":2,"method":"account/rateLimits/read"}`,
 	}

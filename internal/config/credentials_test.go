@@ -272,9 +272,9 @@ func TestLoadAllowedReadPathsCannotUndenyProtectedPaths(t *testing.T) {
 	clearConfigEnv(t)
 	setRequiredEnv(t)
 	home := credentialTestHome(t)
-	t.Setenv("EBIX_HOME", filepath.Join(workingDir, "ebix"))
-	t.Setenv("EBIX_DENIED_READ_PATHS", "~/.aws")
-	t.Setenv("EBIX_ALLOWED_READ_PATHS", "~/.aws,~/.config/gcloud")
+	t.Setenv("HENGE_HOME", filepath.Join(workingDir, "henge"))
+	t.Setenv("HENGE_DENIED_READ_PATHS", "~/.aws")
+	t.Setenv("HENGE_ALLOWED_READ_PATHS", "~/.aws,~/.config/gcloud")
 
 	cfg, err := Load()
 	if err != nil {
@@ -300,8 +300,8 @@ func TestLoadAcceptsWritableRootContainingHome(t *testing.T) {
 	clearConfigEnv(t)
 	setRequiredEnv(t)
 	home := credentialTestHome(t)
-	t.Setenv("EBIX_HOME", filepath.Join(workingDir, "ebix"))
-	t.Setenv("EBIX_WRITABLE_ROOTS", home)
+	t.Setenv("HENGE_HOME", filepath.Join(workingDir, "henge"))
+	t.Setenv("HENGE_WRITABLE_ROOTS", home)
 
 	cfg, err := Load()
 	if err != nil {
@@ -318,8 +318,8 @@ func TestLoadRejectsAllowedReadPathsOutsideDefaults(t *testing.T) {
 	clearConfigEnv(t)
 	setRequiredEnv(t)
 	credentialTestHome(t)
-	t.Setenv("EBIX_HOME", filepath.Join(workingDir, "ebix"))
-	t.Setenv("EBIX_ALLOWED_READ_PATHS", ".env")
+	t.Setenv("HENGE_HOME", filepath.Join(workingDir, "henge"))
+	t.Setenv("HENGE_ALLOWED_READ_PATHS", ".env")
 
 	if _, err := Load(); err == nil || !strings.Contains(err.Error(), `".env"`) {
 		t.Errorf("Load() error = %v; want it to name the .env entry", err)
@@ -370,11 +370,11 @@ func TestLoadPassesSSHAgentOnlyWhenSSHIsReadable(t *testing.T) {
 			clearConfigEnv(t)
 			setRequiredEnv(t)
 			credentialTestHome(t)
-			t.Setenv("EBIX_HOME", filepath.Join(workingDir, "ebix"))
-			t.Setenv("EBIX_ALLOWED_READ_PATHS", tt.allowed)
-			t.Setenv("EBIX_CODEX_ENV", tt.codex)
+			t.Setenv("HENGE_HOME", filepath.Join(workingDir, "henge"))
+			t.Setenv("HENGE_ALLOWED_READ_PATHS", tt.allowed)
+			t.Setenv("HENGE_CODEX_ENV", tt.codex)
 			if tt.origin != "" {
-				t.Setenv("EBIX_WRITABLE_ROOTS", newCredentialRepo(t, tt.origin))
+				t.Setenv("HENGE_WRITABLE_ROOTS", newCredentialRepo(t, tt.origin))
 			}
 
 			cfg, err := Load()
@@ -407,9 +407,9 @@ func TestLoadDetectsPushCredentialsInCodexEnvironment(t *testing.T) {
 			clearConfigEnv(t)
 			setRequiredEnv(t)
 			home := credentialTestHome(t)
-			t.Setenv("EBIX_HOME", filepath.Join(workingDir, "ebix"))
-			t.Setenv("EBIX_CODEX_ENV", tt.codex)
-			t.Setenv("EBIX_WRITABLE_ROOTS", newCredentialRepo(t, "git@github.com:o/r.git"))
+			t.Setenv("HENGE_HOME", filepath.Join(workingDir, "henge"))
+			t.Setenv("HENGE_CODEX_ENV", tt.codex)
+			t.Setenv("HENGE_WRITABLE_ROOTS", newCredentialRepo(t, "git@github.com:o/r.git"))
 			t.Setenv("GIT_CONFIG_COUNT", "1")
 			t.Setenv("GIT_CONFIG_KEY_0", "url.https://github.com/.insteadOf")
 			t.Setenv("GIT_CONFIG_VALUE_0", "git@github.com:")

@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/state"
 )
 
 const (

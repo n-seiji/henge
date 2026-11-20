@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/state"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	usageDayLayout     = "2006-01-02"
 
 	usageLowMessage          = "⚠️ Codex の利用枠（%s）の残りが %d%% を下回りました。%s"
-	usageExhaustedMessage    = "🚫 Codex の利用枠（%s）を使い切りました。%sまで、ebi-x は作業できません。"
+	usageExhaustedMessage    = "🚫 Codex の利用枠（%s）を使い切りました。%sまで、henge は作業できません。"
 	usageResetSuffix         = "%sにリセットされます。"
 	usageSummaryPrefix       = "今の残り: "
 	usageUnknownReset        = "リセットされる"
@@ -43,9 +43,9 @@ const (
 	usageLimitRetryLater     = "利用枠がリセットされてから"
 	// Used when the reset time could not be read, so recordUsage cannot
 	// announce the limit.
-	usageLimitAdminAlert = "🚫 Codex の利用上限に達したため、ebi-x は作業できません。利用枠がリセットされるまでお待ちください。"
-	authFailureMessage   = "⚠️ ebi-x の Codex のログインが切れているため、作業できませんでした。%s復旧したら、新しい mention で依頼し直してください。"
-	authAdminAlert       = "🔑 ebi-x の Codex のログインが切れているため、作業できません。ebi-x を動かしている環境で `codex login` を実行して、ログインし直してください。"
+	usageLimitAdminAlert = "🚫 Codex の利用上限に達したため、henge は作業できません。利用枠がリセットされるまでお待ちください。"
+	authFailureMessage   = "⚠️ henge の Codex のログインが切れているため、作業できませんでした。%s復旧したら、新しい mention で依頼し直してください。"
+	authAdminAlert       = "🔑 henge の Codex のログインが切れているため、作業できません。henge を動かしている環境で `codex login` を実行して、ログインし直してください。"
 	adminNotifiedText    = "管理者に知らせたので、お待ちください。"
 	adminContactText     = "管理者に連絡してください。"
 	adminAlertInterval   = time.Hour

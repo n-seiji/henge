@@ -107,3 +107,16 @@ func TestRequestSubmissionRechecksPermission(t *testing.T) {
 		t.Fatalf("runner calls = %d, slack calls = %#v, want nothing", runner.calls, api.calls)
 	}
 }
+
+func TestRequestShortcutAcceptsCallbackIDsFromBeforeTheRename(t *testing.T) {
+	api := &fakeSlack{}
+	bot := newTestBot(t, &fakeStore{claim: true}, api, successfulTurnRunner())
+	callback := messageShortcut("U1", "C1", "300.2", "")
+	callback.CallbackID = legacyRequestShortcutID
+
+	bot.HandleInteraction(context.Background(), callback)
+
+	if len(api.calls) != 1 || api.calls[0].kind != "modal:T1" {
+		t.Fatalf("calls = %#v, want one modal", api.calls)
+	}
+}

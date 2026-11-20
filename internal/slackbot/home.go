@@ -17,12 +17,12 @@ const (
 	// size.
 	maxHomeItems = 15
 
-	homeTitle     = "*ebi-x の作業*\nあなたが依頼した作業の今の状況です。ホームを開き直すと最新になります。"
-	homeForbidden = "*ebi-x の作業*\nebi-x を使う許可がないため、作業はありません。"
+	homeTitle     = "*henge の作業*\nあなたが依頼した作業の今の状況です。ホームを開き直すと最新になります。"
+	homeForbidden = "*henge の作業*\nhenge を使う許可がないため、作業はありません。"
 	homeEmpty     = "ありません。"
 
 	homeSettingsTitle = "⚙️ あなたの個人設定"
-	homeSettingsHelp  = "ebi-x への依頼の中で「返事は短くして、今後もそうして」のように頼むと設定され、「個人設定から〇〇を消して」で変更や削除ができます。この一覧はあなたにだけ表示されます。"
+	homeSettingsHelp  = "henge への依頼の中で「返事は短くして、今後もそうして」のように頼むと設定され、「個人設定から〇〇を消して」で変更や削除ができます。この一覧はあなたにだけ表示されます。"
 )
 
 type homeThread struct {

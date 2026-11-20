@@ -16,15 +16,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/config"
-	"github.com/n-seiji/ebi-x/internal/github"
-	"github.com/n-seiji/ebi-x/internal/playbook"
-	"github.com/n-seiji/ebi-x/internal/policy"
-	"github.com/n-seiji/ebi-x/internal/slackbot"
-	"github.com/n-seiji/ebi-x/internal/sqlguard"
-	"github.com/n-seiji/ebi-x/internal/state"
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/config"
+	"github.com/n-seiji/henge/internal/github"
+	"github.com/n-seiji/henge/internal/playbook"
+	"github.com/n-seiji/henge/internal/policy"
+	"github.com/n-seiji/henge/internal/slackbot"
+	"github.com/n-seiji/henge/internal/sqlguard"
+	"github.com/n-seiji/henge/internal/state"
+	"github.com/n-seiji/henge/internal/workspace"
 )
 
 const checkoutGCInterval = time.Hour
@@ -35,7 +35,7 @@ const drainLogInterval = time.Minute
 
 func main() {
 	// Before config.Load: Codex starts the guard as an MCP server, without
-	// ebi-x's environment.
+	// henge's environment.
 	if len(os.Args) > 1 && os.Args[1] == sqlguard.Arg {
 		sqlguard.Main(os.Args[2:])
 		return
@@ -53,7 +53,7 @@ func main() {
 		return
 	}
 	// config.Load copies .env into the environment; a reload starts from the
-	// environment ebi-x was launched with, so edits to .env take effect too.
+	// environment henge was launched with, so edits to .env take effect too.
 	launchEnv := os.Environ()
 	cfg, err := config.Load()
 	if err != nil {
@@ -102,7 +102,7 @@ func main() {
 		log.Printf("work turns use per-thread checkouts of %s", repo)
 	}
 
-	codexConfig := filepath.Join(cfg.EBIXHome, ".codex", "config.toml")
+	codexConfig := filepath.Join(cfg.HengeHome, ".codex", "config.toml")
 	if servers, err := codex.LocalSlackServers(codexConfig); err != nil {
 		log.Printf("find Slack MCP servers: %v", err)
 	} else {
@@ -166,7 +166,7 @@ func main() {
 		AllowWorkflows:             cfg.AllowWorkflows,
 		AllowedWorkflowIDs:         cfg.AllowedWorkflowIDs,
 		AdminUserID:                cfg.AdminUserID,
-		EBIXHome:                   cfg.EBIXHome,
+		HengeHome:                  cfg.HengeHome,
 		WorkspaceDir:               cfg.WorkspaceDir,
 		MemoryDir:                  cfg.MemoryDir,
 		PlaybooksDir:               cfg.PlaybooksDir,
@@ -330,7 +330,7 @@ func githubAppTokens(apiURL string, app *config.GitHubApp, turnDir string, codex
 	if strings.HasPrefix(app.KeyLocation, github.KeychainPrefix) {
 		// A rebuilt binary is a new application to the Keychain, so macOS
 		// may ask to allow it; startup waits for that answer.
-		log.Printf("reading the GitHub App private key from the Keychain; allow ebi-x if macOS asks")
+		log.Printf("reading the GitHub App private key from the Keychain; allow henge if macOS asks")
 	}
 	key, err := github.LoadPrivateKey(app.KeyLocation)
 	if err != nil {

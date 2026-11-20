@@ -12,14 +12,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/attachment"
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/memory"
-	"github.com/n-seiji/ebi-x/internal/playbook"
-	"github.com/n-seiji/ebi-x/internal/prompt"
-	"github.com/n-seiji/ebi-x/internal/slackfmt"
-	"github.com/n-seiji/ebi-x/internal/state"
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/attachment"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/memory"
+	"github.com/n-seiji/henge/internal/playbook"
+	"github.com/n-seiji/henge/internal/prompt"
+	"github.com/n-seiji/henge/internal/slackfmt"
+	"github.com/n-seiji/henge/internal/state"
+	"github.com/n-seiji/henge/internal/workspace"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
@@ -35,7 +35,7 @@ const (
 	threadFailureMessage    = "⚠️ スレッドの読み込みに失敗したため、作業は開始していません。もう一度 mention してください。"
 	workStartFailureMessage = "⚠️ 作業を開始できなかったため、作業は行っていません。もう一度 mention してください。"
 	workFailureMessage      = "⚠️ 作業が完了したことを確認できませんでした。状況を確認し、新しい mention で依頼し直してください。"
-	forbiddenMessage        = "🔒 %sには ebi-x を使う権限がありません。使いたい場合は %s に許可を頼んでください。"
+	forbiddenMessage        = "🔒 %sには henge を使う権限がありません。使いたい場合は %s に許可を頼んでください。"
 	attachmentFailureNotice = "⚠️ 次のファイルを添付できませんでした。生成済みのファイルは作業領域に残しています。再送する場合は「添付を再送して」と依頼してください。"
 	attachmentOutputNotice  = "⚠️ 添付ファイルの指定を読み取れなかったため、ファイルは添付していません。再送する場合は「添付を再送して」と依頼してください。"
 	workingStatus           = "が作業を進めています…"
@@ -139,7 +139,7 @@ type Config struct {
 	AllowWorkflows             bool
 	AllowedWorkflowIDs         []string
 	AdminUserID                string
-	EBIXHome                   string
+	HengeHome                  string
 	WorkspaceDir               string
 	MemoryDir                  string
 	PlaybooksDir               string
@@ -882,7 +882,7 @@ func (w sharedWorkspaces) Denied(workspace.Area) ([]string, error) { return nil,
 
 // Names who lacks access so the author asks the admin rather than retrying.
 func (b *Bot) forbidden(ctx context.Context, event *slackevents.AppMentionEvent, missing []approvalSubject) {
-	contact := "ebi-x の管理者"
+	contact := "henge の管理者"
 	if b.config.AdminUserID != "" {
 		contact = "<@" + b.config.AdminUserID + ">"
 	}
@@ -988,7 +988,7 @@ func neutralizeBroadcasts(text string) string {
 }
 
 func (b *Bot) post(ctx context.Context, channel, threadTS, text string) error {
-	text = slackfmt.HideLocalPaths(text, b.config.EBIXHome)
+	text = slackfmt.HideLocalPaths(text, b.config.HengeHome)
 	for _, chunk := range slackfmt.Split(text, maxSlackMessageRunes) {
 		if err := b.retrySlack(ctx, func() error {
 			_, err := b.api.PostMessage(ctx, channel, threadTS, chunk)

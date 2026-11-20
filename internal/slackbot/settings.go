@@ -11,7 +11,7 @@ const (
 	defaultDoneWatchHour = 19
 )
 
-const settingsBrokenNotice = "⚠️ ebi-x の設定ファイルを読めません（%v）。直すまで、既定の設定で動き、SQL の書き込みはすべて止めます。"
+const settingsBrokenNotice = "⚠️ henge の設定ファイルを読めません（%v）。直すまで、既定の設定で動き、SQL の書き込みはすべて止めます。"
 
 var reactionName = regexp.MustCompile(`^[a-z0-9_+'-]+$`)
 

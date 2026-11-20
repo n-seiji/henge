@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
+	"github.com/n-seiji/henge/internal/codex"
 )
 
 const (

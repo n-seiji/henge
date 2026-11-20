@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )
@@ -18,7 +18,7 @@ type suggestedPrompt struct {
 }
 
 var agentSuggestedPrompts = []suggestedPrompt{
-	{title: "できること", message: "ebi-x にできることと、依頼の仕方を教えて"},
+	{title: "できること", message: "henge にできることと、依頼の仕方を教えて"},
 	{title: "リポジトリの説明", message: "作業できるリポジトリの構成と主な機能を説明して"},
 	{title: "最近の変更", message: "作業できるリポジトリの最近の変更をまとめて"},
 }

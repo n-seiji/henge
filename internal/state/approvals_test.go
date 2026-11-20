@@ -153,7 +153,7 @@ func TestLockDirRejectsSecondHolder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LockDir() error = %v", err)
 	}
-	want := fmt.Sprintf("another ebi-x process (pid %d)", os.Getpid())
+	want := fmt.Sprintf("another henge process (pid %d)", os.Getpid())
 	if _, err := LockDir(dir); err == nil || !strings.Contains(err.Error(), want) {
 		t.Fatalf("second LockDir() error = %v, want %q", err, want)
 	}

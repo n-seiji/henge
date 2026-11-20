@@ -7,23 +7,23 @@ gitleaks = "8.30.1"
 CGO_ENABLED = "0"
 
 [tasks.build]
-description = "Build ebi-x binary"
+description = "Build henge binary"
 # On macOS, the hardened runtime keeps debuggers, and so the commands Codex
-# runs, from attaching to ebi-x and reading the keys it holds in memory.
+# runs, from attaching to henge and reading the keys it holds in memory.
 run = """
-go build -o ebi-x ./cmd/ebi-x
-if [ "$(uname)" = Darwin ]; then codesign --force --sign - --options runtime ebi-x; fi
+go build -o henge ./cmd/henge
+if [ "$(uname)" = Darwin ]; then codesign --force --sign - --options runtime henge; fi
 """
 
 [tasks.run]
-description = "Build and run ebi-x"
+description = "Build and run henge"
 depends = ["build"]
-run = "./ebi-x"
+run = "./henge"
 
 [tasks.reload]
-description = "Rebuild ebi-x and restart the running one once its work is done"
+description = "Rebuild henge and restart the running one once its work is done"
 depends = ["build"]
-run = 'kill -HUP "$(cat "${EBIX_HOME:-.}/data/state/ebi-x.lock")"'
+run = 'kill -HUP "$(cat "${HENGE_HOME:-.}/data/state/henge.lock")"'
 
 [tasks.test]
 description = "Run tests with race detector"

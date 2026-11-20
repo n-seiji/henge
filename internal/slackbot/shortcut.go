@@ -10,12 +10,18 @@ import (
 )
 
 const (
-	requestShortcutID = "ebix_request"
-	requestModalID    = "ebix_request_modal"
-	requestBlockID    = "request"
-	requestActionID   = "request_text"
-	maxQuotedRunes    = 500
-	shortcutForbidden = "このメッセージについて ebi-x に依頼する許可がありません。"
+	requestShortcutID = "henge_request"
+	requestModalID    = "henge_request_modal"
+	// Slack apps created from the manifest before the rename keep sending the
+	// old shortcut ID until an admin edits it, and a form opened before the
+	// upgrade submits the old modal ID; dropping them would silently break
+	// the shortcut on those workspaces.
+	legacyRequestShortcutID = "ebix_request"
+	legacyRequestModalID    = "ebix_request_modal"
+	requestBlockID          = "request"
+	requestActionID         = "request_text"
+	maxQuotedRunes          = 500
+	shortcutForbidden       = "このメッセージについて henge に依頼する許可がありません。"
 )
 
 type requestTarget struct {
@@ -33,9 +39,9 @@ func (t requestTarget) thread() string {
 
 func (b *Bot) HandleInteraction(ctx context.Context, callback *slack.InteractionCallback) {
 	switch {
-	case callback.Type == slack.InteractionTypeMessageAction && callback.CallbackID == requestShortcutID:
+	case callback.Type == slack.InteractionTypeMessageAction && (callback.CallbackID == requestShortcutID || callback.CallbackID == legacyRequestShortcutID):
 		b.HandleRequestShortcut(ctx, callback)
-	case callback.Type == slack.InteractionTypeViewSubmission && callback.View.CallbackID == requestModalID:
+	case callback.Type == slack.InteractionTypeViewSubmission && (callback.View.CallbackID == requestModalID || callback.View.CallbackID == legacyRequestModalID):
 		b.HandleRequestSubmission(ctx, callback)
 	}
 }
@@ -116,7 +122,7 @@ func (w *webAPI) OpenRequestModal(ctx context.Context, triggerID, metadata, quot
 	_, err := w.client.OpenViewContext(ctx, triggerID, slack.ModalViewRequest{
 		Type:            slack.VTModal,
 		CallbackID:      requestModalID,
-		Title:           slack.NewTextBlockObject(slack.PlainTextType, "ebi-x に頼む", false, false),
+		Title:           slack.NewTextBlockObject(slack.PlainTextType, "henge に頼む", false, false),
 		Submit:          slack.NewTextBlockObject(slack.PlainTextType, "依頼する", false, false),
 		Close:           slack.NewTextBlockObject(slack.PlainTextType, "やめる", false, false),
 		Blocks:          slack.Blocks{BlockSet: blocks},
