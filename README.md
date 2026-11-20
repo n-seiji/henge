@@ -1,5 +1,7 @@
 # henge
 
+<img src="assets/icon.png" alt="henge" width="128">
+
 henge is a resident bot that hands work requested in Slack to Codex and posts the result back to the same thread.
 
 ```text

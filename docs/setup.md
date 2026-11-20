@@ -45,6 +45,8 @@ On Slack's app creation screen, choose "From a manifest" and paste the `slack-ap
 - Switching to an Agent App cannot be undone, and needs a paid Slack plan.
 - After changing scopes, reinstall the app in the workspace. If the Bot Token changes, update `.env` too.
 
+The manifest cannot carry an icon, so upload `assets/icon.png` under "Basic Information" → "Display Information" → "App icon". henge takes whatever name and look each workspace gives it, so any other image works too.
+
 After installing, get the Bot Token (`xoxb-`) and the App Token for Socket Mode (`xapp-`, `connections:write`).
 
 ## 2. `.env`
