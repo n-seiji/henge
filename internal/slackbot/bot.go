@@ -448,6 +448,13 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 		}
 		slackThread = formatThreadContext(threadMessages, timestamp)
 	}
+	// Checked before Codex sees anything: once sent, the value is in the
+	// model provider's logs and the session history, beyond the bot's reach.
+	if containsPastedSecret(trigger.message, slackThread) {
+		log.Printf("slackbot: %q holds what looks like a token; not sent to Codex", eventKey)
+		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, pastedSecretMessage)
+		return
+	}
 	files := b.sharedFiles(ctx, trigger, threadMessages)
 	scope := b.channelScope(ctx, channel)
 	output, started, workErr := b.work(ctx, stopCtx, eventKey, channel, threadTS, threadKey, workspaceID, threadID, slackThread, files, scope, trigger)
