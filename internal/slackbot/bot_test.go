@@ -426,6 +426,7 @@ type fakeSlack struct {
 	uploadErrs        []error
 	posts             []fakePost
 	reactionUsers     []string
+	reactionUsersName string
 	reactionUsersErr  error
 	channelMembers    []string
 	channelMembersErr error
@@ -593,9 +594,10 @@ func (s *fakeSlack) HasReaction(_ context.Context, channel, timestamp, reaction 
 	return s.hasReaction, s.reactionErr
 }
 
-func (s *fakeSlack) ReactionUsers(_ context.Context, _, _, _ string) ([]string, error) {
+func (s *fakeSlack) ReactionUsers(_ context.Context, _, _, reaction string) ([]string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.reactionUsersName = reaction
 	return append([]string(nil), s.reactionUsers...), s.reactionUsersErr
 }
 

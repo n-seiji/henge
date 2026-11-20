@@ -144,6 +144,7 @@ type Config struct {
 	MemoryDir                  string
 	PlaybooksDir               string
 	ChannelRulesFile           string
+	SettingsFile               string
 	ActionRulesFile            string
 	CodexTimeout               time.Duration
 	ThreadSubscriptionReaction string
@@ -629,6 +630,9 @@ func (b *Bot) work(ctx, stopCtx context.Context, eventKey, channel, threadTS, th
 			log.Printf("slackbot: read memory: %v", memErr)
 		}
 		turnPrompt = prompt.BuildTurnPrompt(memoryContext, currentPlaybooks, readActionRules(b.config.ActionRulesFile), slackThread, trigger.authorID, trigger.message, settings, lease.Checkouts, lease.PendingRepos, sharedWritable, b.pullWatchEnabled())
+		if sharedWritable && b.config.SettingsFile != "" {
+			turnPrompt += prompt.SettingsRules(b.config.ChannelRulesFile, b.config.SettingsFile)
+		}
 	} else if trigger.source == pullWatchTrigger {
 		turnPrompt = prompt.BuildPullWatchPrompt(trigger.message, lease.Checkouts, lease.PendingRepos)
 	} else if trigger.followUp != nil {
@@ -711,8 +715,10 @@ func (b *Bot) work(ctx, stopCtx context.Context, eventKey, channel, threadTS, th
 	resultText, memoryAppends, memoryOutputValid := codex.SplitMemoryAppends(resultText)
 	output.text = codex.SanitizeSlackOutput(resultText)
 	if sharedWritable {
-		if notice := b.channelRulesNotice(); notice != "" {
-			output.text += "\n\n" + notice
+		for _, notice := range []string{b.channelRulesNotice(), b.settingsNotice()} {
+			if notice != "" {
+				output.text += "\n\n" + notice
+			}
 		}
 	}
 	if !memoryOutputValid {
@@ -770,6 +776,7 @@ func (b *Bot) runWorkTurn(ctx context.Context, threadID string, lease *workspace
 		sandbox = "read-only"
 	}
 	access := scope.rule.access(scope.slackLimited)
+	access.SQLWriters = b.settings().SQLWriteServers
 	result, err := b.runTurn(ctx, threadID, sandbox, lease.Dir, roots, denied, access, text, onThreadStarted, onActivity)
 	if err != nil {
 		return "", err

@@ -307,3 +307,14 @@ func stripClosingTags(value string, tags ...string) string {
 		value = next
 	}
 }
+
+// Setup happens in conversation, not through environment variables, so the
+// approval channel is told where the files are and what they hold.
+func SettingsRules(channelsFile, settingsFile string) string {
+	return fmt.Sprintf(`依頼者が ebi-x 自体の設定の変更を頼んだ場合は、次の YAML ファイルを編集してください。知らない項目名があるとファイル全体が読めなくなるので、ここにある項目だけを使ってください。編集の前に変更内容を依頼者に示して承認を得てください。
+- %[1]s: チャンネル ID ごとの制限。channels.<チャンネルID> の下に system_prompt（そのチャンネルへの追加の指示）、read_only（true でファイル変更とネットワークを止める）、github（false で push と PR を止める）、repositories（読めるリポジトリ名の一覧）、mcp_servers（使える MCP サーバー名の一覧）
+- %[2]s: 全体の設定。done_watch.reaction（「監視して」で待つリアクション名、コロンなし。既定 done）、done_watch.hour（通知する時刻 0〜23、既定 19）、sql_write_servers（更新やロックを伴う SQL を許す MCP サーバー名の一覧。既定ではすべての MCP サーバーで読み取りの SQL だけを許す）
+- 書き込みを許す MCP サーバーを増やす変更は、取り消せない操作につながるため、理由を依頼者に確かめてください。
+
+`, channelsFile, settingsFile)
+}

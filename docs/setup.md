@@ -15,7 +15,7 @@ Slack App の作成画面で「From a manifest」を選び、`examples/slack-app
 | Interactivity & Shortcuts | Interactivity をオン、Message Shortcut「ebi-x に頼む」（Callback ID `ebix_request`） | メッセージから依頼する |
 | Agents & AI Apps | Agent App に切り替え（manifest では `features.agent_view`） | サイドバーと Messages タブでのエージェント表示 |
 
-- `:done:` の監視（[usage.md](usage.md#done-の監視)）で `@channel` を使うときは `channels:read` と `users:read`（プライベートチャンネルでは `groups:read` も）を、`@dev_team` のようなユーザーグループを使うときはさらに `usergroups:read` を追加します。manifest には入っています。
+- リアクションの監視（[usage.md](usage.md#リアクションの監視)）で `@channel` を使うときは `channels:read` と `users:read`（プライベートチャンネルでは `groups:read` も）を、`@dev_team` のようなユーザーグループを使うときはさらに `usergroups:read` を追加します。manifest には入っています。
 - プライベートチャンネルと Slack Connect チャンネルには `groups:read`・`groups:history`・`message.groups` が要ります（manifest に入っています）。
 - Agent App への切り替えは元に戻せません。Slack の有料プランが必要です。
 - scope を変えたらワークスペースへ再インストールします。Bot Token が変わった場合は `.env` も更新します。
@@ -138,6 +138,17 @@ Codex がどの操作の前に依頼者へ確認するかは、既定で次の�
 | `repositories` | 読めるリポジトリ（ディレクトリ名かパス）。ほかのリポジトリと、そのクローンは読めない |
 | `mcp_servers` | 使える MCP サーバーの名前。`[]` で全部止める |
 
+### 全体の設定
+
+`$EBIX_HOME/data/channel-rules/settings.yaml` に書きます（例は `examples/settings.yaml`）。承認チャンネルで `@ebi-x 監視のリアクションは ok_hand、時刻は9時にして` のように頼めば、ebi-x が変更内容を見せてから書き換えます。手で書いてもかまいません。
+
+| 項目 | 内容 |
+| --- | --- |
+| `done_watch.reaction` / `done_watch.hour` | 「監視して」で待つリアクションと、通知する時刻（[usage.md](usage.md#リアクションの監視)） |
+| `sql_write_servers` | 更新やロックを伴う SQL を許す MCP サーバーの名前 |
+
+ファイルを読めないときは既定の設定で動き、承認チャンネルの回答でそのことを伝えます。
+
 - 依頼のたびに読み直すので、再起動は要りません。
 - 書き換えられるのは承認チャンネルからの依頼だけです。
 - ファイルが読めないとき（YAML の誤りや、知らない項目名）は、承認チャンネル以外の依頼を始めません（[design.md](design.md#チャンネルごとの設定)）。
@@ -191,7 +202,9 @@ Slack から playbook を書き換えられるのは承認チャンネルだけ�
 
 Codex の MCP サーバーは `$EBIX_HOME/.codex/config.toml` に書きます。`~/.codex/config.toml` は読みません。
 
-ebi-x は MCP サーバーの書き込みを止めません。データベースなど更新できるツールを持つサーバーは、`enabled_tools` や `disabled_tools`、サーバー自身の読み取り専用の設定で、作業に要るツールだけを公開します。
+`command` で起動する MCP サーバーは、ebi-x の SQL ガードを挟んで起動します。ツールの呼び出しに SQL（引数 `sql`、`statement`、または名前に sql・query・execute を含むツールの `query`）があれば、SELECT・WITH・SHOW・EXPLAIN などの読み取りで、更新やロックを伴わない1文だけを通し、ほかはツールのエラーとして返します。書き込みが必要なサーバーは `settings.yaml` の `sql_write_servers` に名前を書きます。
+
+`url` で接続する MCP サーバーにはガードを挟めません。更新できるツールは `enabled_tools` や `disabled_tools`、サーバー自身の読み取り専用の設定で外します。
 
 必要なツールが公開されていないとき、Codex は「接続できない」ではなく「公開されていない」と依頼者に伝えます。
 

@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/n-seiji/ebi-x/internal/sqlguard"
 )
 
 type Access struct {
@@ -21,6 +23,10 @@ type Access struct {
 	MCPServers   []string
 	NoGitHub     bool
 	Instructions string
+	// MCP servers whose SQL may write; every other stdio server runs behind
+	// the SQL guard.
+	SQLWriters []string
+	sqlGuard   string
 }
 
 func (access Access) disabledServers(servers map[string]any) []string {
@@ -59,6 +65,7 @@ func loadConfigOverrides(path string, access Access) ([]string, error) {
 		return nil, fmt.Errorf("encode local Codex config %q: %w", path, err)
 	}
 	servers, _ := config["mcp_servers"].(map[string]any)
+	overrides = guardServers(overrides, servers, access)
 	overrides = disableServers(overrides, access.disabledServers(servers))
 	sort.Strings(overrides)
 	return overrides, nil
@@ -120,6 +127,46 @@ func disableServers(overrides, names []string) []string {
 		kept = append(kept, encodeDottedKey([]string{"mcp_servers", name, "enabled"})+"=false")
 	}
 	return kept
+}
+
+// Every stdio server is wrapped, not only ones that look like databases: the
+// guard passes through calls without SQL, and guessing by name would miss a
+// renamed server. Servers reached by url cannot be wrapped.
+func guardServers(overrides []string, servers map[string]any, access Access) []string {
+	if access.sqlGuard == "" {
+		return overrides
+	}
+	replaced := make(map[string]bool)
+	var added []string
+	for _, name := range slices.Sorted(maps.Keys(servers)) {
+		server, _ := servers[name].(map[string]any)
+		command, ok := server["command"].(string)
+		if !ok || slices.Contains(access.SQLWriters, name) {
+			continue
+		}
+		args := append([]string{sqlguard.Arg, "--", command}, stringList(server["args"])...)
+		commandKey := encodeDottedKey([]string{"mcp_servers", name, "command"})
+		argsKey := encodeDottedKey([]string{"mcp_servers", name, "args"})
+		replaced[commandKey], replaced[argsKey] = true, true
+		encodedArgs, _ := encodeTOMLValue(toAny(args))
+		added = append(added, commandKey+"="+strconv.Quote(access.sqlGuard), argsKey+"="+encodedArgs)
+	}
+	kept := overrides[:0:0]
+	for _, override := range overrides {
+		key, _, _ := strings.Cut(override, "=")
+		if !replaced[key] {
+			kept = append(kept, override)
+		}
+	}
+	return append(kept, added...)
+}
+
+func toAny(values []string) []any {
+	items := make([]any, len(values))
+	for i, value := range values {
+		items[i] = value
+	}
+	return items
 }
 
 func stringList(value any) []string {

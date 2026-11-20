@@ -59,6 +59,7 @@ type Config struct {
 	TurnCredentialsDir string
 	ActionRulesFile    string
 	ChannelRulesFile   string
+	SettingsFile       string
 	WritableRoots      []string
 	ProtectedPaths     []string
 	CredentialPaths    []string
@@ -220,6 +221,7 @@ func Load() (*Config, error) {
 	actionRulesFile := filepath.Join(home, "data", "rules.md")
 	channelRulesDir := filepath.Join(home, "data", "channel-rules")
 	channelRulesFile := filepath.Join(channelRulesDir, "channels.yaml")
+	settingsFile := filepath.Join(channelRulesDir, "settings.yaml")
 	codexHome, err := resolveCodexHome()
 	if err != nil {
 		return nil, err
@@ -296,6 +298,7 @@ func Load() (*Config, error) {
 		TurnCredentialsDir:         turnCredentialsDir,
 		ActionRulesFile:            actionRulesFile,
 		ChannelRulesFile:           channelRulesFile,
+		SettingsFile:               settingsFile,
 		WritableRoots:              writableRoots,
 		ProtectedPaths:             protectedPaths,
 		CredentialPaths:            credentialPaths,

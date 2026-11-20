@@ -22,6 +22,7 @@ import (
 	"github.com/n-seiji/ebi-x/internal/playbook"
 	"github.com/n-seiji/ebi-x/internal/policy"
 	"github.com/n-seiji/ebi-x/internal/slackbot"
+	"github.com/n-seiji/ebi-x/internal/sqlguard"
 	"github.com/n-seiji/ebi-x/internal/state"
 	"github.com/n-seiji/ebi-x/internal/workspace"
 )
@@ -33,6 +34,12 @@ const checkConfigArg = "-check-config"
 const drainLogInterval = time.Minute
 
 func main() {
+	// Before config.Load: Codex starts the guard as an MCP server, without
+	// ebi-x's environment.
+	if len(os.Args) > 1 && os.Args[1] == sqlguard.Arg {
+		sqlguard.Main(os.Args[2:])
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == checkConfigArg {
 		if _, err := config.Load(); err != nil {
 			log.Fatalf("load configuration: %v", err)
@@ -48,7 +55,8 @@ func main() {
 	}
 	executable, err := os.Executable()
 	if err != nil {
-		log.Printf("find own executable; reload is unavailable: %v", err)
+		// Without it the SQL guard cannot start, and MCP servers would run SQL unchecked.
+		log.Fatalf("find own executable: %v", err)
 	}
 	releaseLock, err := state.LockDir(cfg.StateDir)
 	if err != nil {
@@ -70,6 +78,9 @@ func main() {
 	}
 	if err := slackbot.ValidateChannelRules(cfg.ChannelRulesFile); err != nil {
 		log.Printf("channel rules: %v; requests fail until the file is fixed", err)
+	}
+	if _, err := slackbot.ReadSettings(cfg.SettingsFile); err != nil {
+		log.Printf("settings: %v; defaults are used until the file is fixed", err)
 	}
 	playbooks, err := playbook.List(cfg.PlaybooksDir)
 	if err != nil {
@@ -99,6 +110,7 @@ func main() {
 		PassEnv:               cfg.CodexEnv,
 		CodexHome:             cfg.CodexHome,
 		DeveloperInstructions: policy.Instructions(),
+		SQLGuard:              executable,
 	}
 	log.Printf("environment variables withheld from Codex: %v", codex.WithheldEnvNames(os.Environ(), cfg.CodexEnv))
 	if cfg.GitHubApp != nil {
@@ -154,6 +166,7 @@ func main() {
 		PlaybooksDir:               cfg.PlaybooksDir,
 		ActionRulesFile:            cfg.ActionRulesFile,
 		ChannelRulesFile:           cfg.ChannelRulesFile,
+		SettingsFile:               cfg.SettingsFile,
 		CodexTimeout:               cfg.CodexTimeout,
 		ThreadSubscriptionReaction: cfg.ThreadSubscriptionReaction,
 		ThreadSubscriptionTTL:      cfg.ThreadSubscriptionTTL,

@@ -989,3 +989,24 @@ func TestLoadConfigOverridesMCPAllowlist(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadConfigOverridesGuardsStdioServers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	content := "[mcp_servers.analytics]\ncommand = \"npx\"\nargs = [\"-y\", \"@example/db-server\"]\n\n[mcp_servers.ledger]\ncommand = \"ledger-mcp\"\n\n[mcp_servers.remote]\nurl = \"https://example.com/mcp\"\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := loadConfigOverrides(path, Access{SQLWriters: []string{"ledger"}, sqlGuard: "/opt/ebi-x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		`mcp_servers.analytics.args=["mcp-sql-guard","--","npx","-y","@example/db-server"]`,
+		`mcp_servers.analytics.command="/opt/ebi-x"`,
+		`mcp_servers.ledger.command="ledger-mcp"`,
+		`mcp_servers.remote.url="https://example.com/mcp"`,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("loadConfigOverrides() = %#v, want %#v", got, want)
+	}
+}

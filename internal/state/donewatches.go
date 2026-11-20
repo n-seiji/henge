@@ -16,6 +16,7 @@ type DoneWatch struct {
 	AuthorID     string    `json:"author_id"`
 	Targets      []string  `json:"targets"`
 	IntervalDays int       `json:"interval_days"`
+	Reaction     string    `json:"reaction,omitempty"`
 	NextAt       time.Time `json:"next_at"`
 	Reminders    int       `json:"reminders"`
 	CreatedAt    time.Time `json:"created_at"`
