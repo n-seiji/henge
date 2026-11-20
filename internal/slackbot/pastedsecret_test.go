@@ -32,7 +32,7 @@ func TestPastedSecretIsNotSentToCodex(t *testing.T) {
 			if stopped := len(runner.prompts) == 0; stopped != test.stopped {
 				t.Fatalf("turns = %d, want stopped %v", len(runner.prompts), test.stopped)
 			}
-			if test.stopped && (len(api.postTexts) != 1 || api.postTexts[0] != pastedSecretMessage) {
+			if test.stopped && (len(api.postTexts) != 1 || api.postTexts[0] != japanese.pastedSecret) {
 				t.Fatalf("posts = %q, want the pasted secret notice", api.postTexts)
 			}
 		})

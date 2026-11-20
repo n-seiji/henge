@@ -2,8 +2,6 @@ package slackbot
 
 import "regexp"
 
-const pastedSecretMessage = "🔐 依頼かスレッドにトークンや秘密鍵らしい文字列があるため、Codex には送らず作業を止めました。そのメッセージを削除し、トークンは失効させて作り直してください。"
-
 // Only formats a service issues are matched, never "long random-looking
 // strings": a false positive refuses an ordinary request, and hashes, IDs and
 // URLs in requests look random too.

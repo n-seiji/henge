@@ -14,17 +14,7 @@ import (
 const (
 	maxSchedulesPerUser  = 5
 	maxScheduleTaskRunes = 500
-
-	scheduleSetNotice     = "🔁 定期実行を設定しました: %s に「%s」（次回 %s）\n毎回このチャンネルの新しいスレッドで始めます。止める場合は、このスレッドで「停止」と mention してください。"
-	scheduleStopNotice    = "🔁 定期実行（%s）を止めました。"
-	scheduleInvalidNotice = "⚠️ 定期実行の指定を読み取れなかったため、設定していません。"
-	scheduleSpecNotice    = "⚠️ 定期実行の「%s」を読み取れなかったため、設定していません。「毎日 09:00」「平日 09:00」「週末 10:00」「毎週月水金 09:30」の形で指定できます。"
-	scheduleLimitNotice   = "⚠️ 1人が設定できる定期実行は%d件までのため、設定していません。不要な定期実行を、設定したスレッドで「停止」と mention して止めてください。"
-	scheduleSourceNotice  = "⚠️ 定期実行は人の依頼への回答でだけ設定・変更できるため、指定を無視しました。"
-	scheduleStartMessage  = "🔁 定期実行（%s）: %s"
-	scheduleOriginLink    = "\n設定したスレッド: <%s|こちら>（止める場合はそこで「停止」と mention してください）"
-	scheduleStoppedMsg    = "定期実行を止めました。"
-	scheduleRunPrefix     = "(This is work the requester scheduled to run %s. Earlier runs' results are not in this thread.)\n"
+	scheduleRunPrefix    = "(This is work the requester scheduled to run %s. Earlier runs' results are not in this thread.)\n"
 )
 
 // Only a person's request may change a schedule, so unattended turns cannot
@@ -35,10 +25,10 @@ func (b *Bot) applySchedule(trigger processingTrigger, output workOutput) string
 	}
 	if trigger.source != mentionTrigger && trigger.source != messageTrigger {
 		log.Printf("slackbot: ignore schedule from an unattended turn in %s:%s", trigger.channel, trigger.threadTS)
-		return scheduleSourceNotice
+		return b.text().scheduleSourceNotice
 	}
 	if output.scheduleInvalid {
-		return scheduleInvalidNotice
+		return b.text().scheduleInvalidNotice
 	}
 	threadKey := threadRef(trigger.channel, trigger.threadTS)
 	request := output.schedule
@@ -46,17 +36,17 @@ func (b *Bot) applySchedule(trigger processingTrigger, output workOutput) string
 		previous, deleted, err := b.store.DeleteSchedule(threadKey)
 		if err != nil {
 			log.Printf("slackbot: stop schedule %q: %v", threadKey, err)
-			return scheduleInvalidNotice
+			return b.text().scheduleInvalidNotice
 		}
 		if !deleted {
 			return ""
 		}
-		return fmt.Sprintf(scheduleStopNotice, previous.Spec)
+		return fmt.Sprintf(b.text().scheduleStopNotice, previous.Spec)
 	}
 	spec, err := codex.ParseScheduleSpec(request.When)
 	if err != nil {
 		log.Printf("slackbot: reject schedule %q in %q: %v", request.When, threadKey, err)
-		return fmt.Sprintf(scheduleSpecNotice, shortDetail(request.When))
+		return fmt.Sprintf(b.text().scheduleSpecNotice, shortDetail(request.When))
 	}
 	others := 0
 	for _, schedule := range b.store.Schedules() {
@@ -65,7 +55,7 @@ func (b *Bot) applySchedule(trigger processingTrigger, output workOutput) string
 		}
 	}
 	if others >= maxSchedulesPerUser {
-		return fmt.Sprintf(scheduleLimitNotice, maxSchedulesPerUser)
+		return fmt.Sprintf(b.text().scheduleLimitNotice, maxSchedulesPerUser)
 	}
 	now := b.now()
 	schedule := state.Schedule{
@@ -79,9 +69,9 @@ func (b *Bot) applySchedule(trigger processingTrigger, output workOutput) string
 	}
 	if err := b.store.SetSchedule(threadKey, schedule); err != nil {
 		log.Printf("slackbot: save schedule %q: %v", threadKey, err)
-		return scheduleInvalidNotice
+		return b.text().scheduleInvalidNotice
 	}
-	return fmt.Sprintf(scheduleSetNotice, schedule.Spec, schedule.Task, formatFollowUpTime(schedule.NextAt))
+	return fmt.Sprintf(b.text().scheduleSetNotice, schedule.Spec, schedule.Task, formatFollowUpTime(schedule.NextAt))
 }
 
 func (b *Bot) nextOccurrence(schedule state.Schedule) time.Time {
@@ -117,9 +107,9 @@ func (b *Bot) fireSchedule(ctx context.Context, schedule state.Schedule) {
 		log.Printf("slackbot: skip schedule %q: user %q or channel is no longer allowed", threadKey, schedule.AuthorID)
 		return
 	}
-	text := fmt.Sprintf(scheduleStartMessage, schedule.Spec, schedule.Task)
+	text := fmt.Sprintf(b.text().scheduleStartMessage, schedule.Spec, schedule.Task)
 	if link, err := b.api.Permalink(ctx, schedule.Channel, schedule.ThreadTS); err == nil {
-		text += fmt.Sprintf(scheduleOriginLink, link)
+		text += fmt.Sprintf(b.text().scheduleOriginLink, link)
 	} else {
 		log.Printf("slackbot: link schedule thread %q: %v", threadKey, err)
 	}
@@ -150,6 +140,6 @@ func (b *Bot) stopSchedule(channel, threadTS string) bool {
 	return deleted
 }
 
-func scheduleSummary(schedule state.Schedule) string {
-	return schedule.Spec + "「" + clipText(schedule.Task, 100) + "」（次回 " + formatFollowUpTime(schedule.NextAt) + "）"
+func scheduleSummary(text *messages, schedule state.Schedule) string {
+	return fmt.Sprintf(text.scheduleSummary, schedule.Spec, clipText(schedule.Task, 100), formatFollowUpTime(schedule.NextAt))
 }

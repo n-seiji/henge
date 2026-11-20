@@ -9,11 +9,12 @@ func (b *Bot) waitingNotice(authorID, channel, threadTS string, questions []stri
 	if authorID != "" && b.userAllowed(authorID) {
 		builder.WriteString("<@" + authorID + "> ")
 	}
-	builder.WriteString("回答待ちです。")
+	text := b.text()
+	builder.WriteString(text.waitingPrefix)
 	if b.repliesWithoutMention(channel, threadTS) {
-		builder.WriteString("このスレッドに返信してください。")
+		builder.WriteString(text.waitingReply)
 	} else {
-		builder.WriteString("このスレッドで ebi-x に mention して答えてください。")
+		builder.WriteString(text.waitingMention)
 	}
 	for _, question := range questions {
 		builder.WriteString("\n- " + question)

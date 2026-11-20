@@ -81,7 +81,7 @@ func TestRecordUsageAnnouncesOncePerLevel(t *testing.T) {
 				t.Fatalf("step %d: post %q does not contain %q", i, posted[0].text, want)
 			}
 		}
-		if !strings.Contains(posted[0].text, usageSummaryPrefix) {
+		if !strings.Contains(posted[0].text, japanese.usageSummaryPrefix) {
 			t.Fatalf("step %d: post %q has no summary", i, posted[0].text)
 		}
 	}
@@ -181,7 +181,7 @@ func TestApprovalChannelAnswersUsageQuestion(t *testing.T) {
 
 	reply := approvalCommand(bot, api, "U1", "", "残りどれくらい？")
 
-	if !strings.HasPrefix(reply, usageReplyPrefix+"5時間 27%（") || !strings.Contains(reply, "・1週間 63%（") {
+	if !strings.HasPrefix(reply, japanese.usageReplyPrefix+"5時間 27%（") || !strings.Contains(reply, "・1週間 63%（") {
 		t.Fatalf("reply = %q", reply)
 	}
 }
@@ -190,7 +190,7 @@ func TestApprovalChannelUsageQuestionWithoutUsage(t *testing.T) {
 	bot, api, _, _ := newApprovalBot(t, &fakeRunner{})
 	bot.config.Usage = &fakeUsage{err: errors.New("api key")}
 
-	if reply := approvalCommand(bot, api, "UOWNER", "", "usage"); reply != usageUnavailableReply {
+	if reply := approvalCommand(bot, api, "UOWNER", "", "usage"); reply != japanese.usageUnavailableReply {
 		t.Fatalf("reply = %q", reply)
 	}
 }
@@ -219,7 +219,7 @@ func TestUsageLimitFailureNamesReset(t *testing.T) {
 	limits := usageLimits(100, 40)
 	bot := newUsageBot(t, &fakeStore{}, api, &fakeUsage{limits: limits})
 	message := bot.usageLimitFailure(context.Background())
-	if !strings.Contains(message, adminNotifiedText+formatFollowUpTime(limits.Primary.ResetTime())+"以降に") {
+	if !strings.Contains(message, japanese.adminNotifiedText+formatFollowUpTime(limits.Primary.ResetTime())+"以降に") {
 		t.Fatalf("message = %q", message)
 	}
 	if len(api.posts) != 1 || api.posts[0].channel != "CAPPROVAL" {
@@ -231,12 +231,12 @@ func TestUsageLimitFailureWithoutUsage(t *testing.T) {
 	api := &fakeSlack{}
 	bot := newUsageBot(t, &fakeStore{}, api, &fakeUsage{err: errors.New("api key")})
 	for range 2 {
-		if message := bot.usageLimitFailure(context.Background()); !strings.Contains(message, adminNotifiedText+usageLimitRetryLater) {
+		if message := bot.usageLimitFailure(context.Background()); !strings.Contains(message, japanese.adminNotifiedText+japanese.usageLimitRetryLater) {
 			t.Fatalf("message = %q", message)
 		}
 	}
 	// The second failure within the hour does not repeat the alert.
-	if len(api.posts) != 1 || api.posts[0].channel != "CAPPROVAL" || api.posts[0].text != usageLimitAdminAlert {
+	if len(api.posts) != 1 || api.posts[0].channel != "CAPPROVAL" || api.posts[0].text != japanese.usageLimitAdminAlert {
 		t.Fatalf("posts = %+v, want one alert", api.posts)
 	}
 }
@@ -244,7 +244,7 @@ func TestUsageLimitFailureWithoutUsage(t *testing.T) {
 func TestUsageLimitFailureWithoutApprovalChannel(t *testing.T) {
 	api := &fakeSlack{}
 	bot := newTestBot(t, &fakeStore{}, api, &fakeRunner{})
-	if message := bot.usageLimitFailure(context.Background()); !strings.Contains(message, adminContactText) {
+	if message := bot.usageLimitFailure(context.Background()); !strings.Contains(message, japanese.adminContactText) {
 		t.Fatalf("message = %q", message)
 	}
 	if len(api.posts) != 0 {
@@ -274,10 +274,10 @@ func TestWorkTurnNotSignedInAlertsAdmin(t *testing.T) {
 				replies = append(replies, post.text)
 			}
 		}
-		if len(alerts) != 1 || alerts[0] != authAdminAlert {
+		if len(alerts) != 1 || alerts[0] != japanese.authAdminAlert {
 			t.Fatalf("alerts = %q", alerts)
 		}
-		if want := fmt.Sprintf(authFailureMessage, adminNotifiedText); len(replies) != 1 || replies[0] != want {
+		if want := fmt.Sprintf(japanese.authFailureMessage, japanese.adminNotifiedText); len(replies) != 1 || replies[0] != want {
 			t.Fatalf("replies = %q, want %q", replies, want)
 		}
 	}
@@ -295,7 +295,7 @@ func TestWorkTurnUsageLimitExplainsFailure(t *testing.T) {
 	bot.HandleMention(context.Background(), mention())
 
 	got := strings.Join(api.postTexts, "\n")
-	if !strings.Contains(got, "Codex の利用上限に達したため") || strings.Contains(got, workFailureMessage) {
+	if !strings.Contains(got, "Codex の利用上限に達したため") || strings.Contains(got, japanese.workFailureMessage) {
 		t.Fatalf("posts = %q", api.postTexts)
 	}
 }
@@ -413,8 +413,8 @@ func TestUsageHourlyReportNamesReset(t *testing.T) {
 	at := time.Date(2026, 10, 20, 1, 0, 0, 0, time.UTC)
 	previous := state.UsageSample{At: at, Remaining: map[string]float64{"primary": 5}, ResetsAt: map[string]int64{"primary": 100}}
 	latest := state.UsageSample{At: at.Add(time.Hour), Remaining: map[string]float64{"primary": 100}, ResetsAt: map[string]int64{"primary": 200}}
-	text := usageHourlyReport(&previous, []state.UsageSample{previous, latest})
-	if !strings.Contains(text, "5時間: 残り 100.0%（"+usageHourlyWasReset) {
+	text := usageHourlyReport(&japanese, &previous, []state.UsageSample{previous, latest})
+	if !strings.Contains(text, "5時間: 残り 100.0%（"+japanese.usageHourlyWasReset) {
 		t.Fatalf("report %q does not name the reset", text)
 	}
 }

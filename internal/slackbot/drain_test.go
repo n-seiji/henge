@@ -100,7 +100,7 @@ func TestDrainDefersNewRequestsUntilRunningWorkEnds(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("deferred = %#v, want %#v", got, want)
 	}
-	if !slices.Contains(api.postTexts, deferredMessage) {
+	if !slices.Contains(api.postTexts, japanese.deferredMessage) {
 		t.Fatalf("posts = %q, want the deferred notice", api.postTexts)
 	}
 
@@ -141,7 +141,7 @@ func TestDrainDefersQueuedWork(t *testing.T) {
 		defer close(queued)
 		bot.HandleMention(context.Background(), otherThreadMention())
 	}()
-	waitFor(t, func() bool { return slices.Contains(statusTexts(api), queuedStatus) })
+	waitFor(t, func() bool { return slices.Contains(statusTexts(api), japanese.queuedStatus) })
 
 	drained := bot.Drain()
 	select {
@@ -152,7 +152,7 @@ func TestDrainDefersQueuedWork(t *testing.T) {
 	if runner.calls() != 1 {
 		t.Fatalf("runner calls = %d, want the queued request not started", runner.calls())
 	}
-	if !slices.Contains(api.postTexts, deferredMessage) {
+	if !slices.Contains(api.postTexts, japanese.deferredMessage) {
 		t.Fatalf("posts = %q, want the deferred notice", api.postTexts)
 	}
 	close(runner.release)
@@ -199,7 +199,7 @@ func TestStopCancelsDeferredRequests(t *testing.T) {
 	if len(store.deferred) != 1 || store.deferred[0].ThreadTS != "300.1" {
 		t.Fatalf("deferred = %#v, want only the other thread's request", store.deferred)
 	}
-	if !slices.Equal(api.postTexts, []string{deferredStoppedMessage}) {
+	if !slices.Equal(api.postTexts, []string{japanese.deferredStoppedMessage}) {
 		t.Fatalf("posts = %q, want the deferred-stopped message", api.postTexts)
 	}
 }

@@ -3,7 +3,6 @@ package attachment
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
@@ -74,19 +73,19 @@ func TestResolveRejectsUnsafeFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tests := map[string]string{
-		"hardlink.pdf":                           "ハードリンク",
-		"../C1-9.9/secret.pdf":                   "作業領域外",
-		filepath.Join(other, "secret.pdf"):       "作業領域外",
-		filepath.Join(base, "secret.png"):        "作業領域外",
-		"link.pdf":                               "作業領域外",
-		"linked/secret.pdf":                      "作業領域外",
-		"alias.pdf":                              "作業領域外",
-		".env":                                   "種類",
-		"empty.pdf":                              "空",
-		"dir.pdf":                                "通常のファイルではありません",
-		"missing.pdf":                            "見つかりません",
-		filepath.Join(workspaceDir, "notes.txt"): "種類",
+	tests := map[string]Reason{
+		"hardlink.pdf":                           HardLinked,
+		"../C1-9.9/secret.pdf":                   OutsideArea,
+		filepath.Join(other, "secret.pdf"):       OutsideArea,
+		filepath.Join(base, "secret.png"):        OutsideArea,
+		"link.pdf":                               OutsideArea,
+		"linked/secret.pdf":                      OutsideArea,
+		"alias.pdf":                              OutsideArea,
+		".env":                                   NotAllowedType,
+		"empty.pdf":                              Empty,
+		"dir.pdf":                                NotRegular,
+		"missing.pdf":                            NotFound,
+		filepath.Join(workspaceDir, "notes.txt"): NotAllowedType,
 	}
 	for path, want := range tests {
 		t.Run(path, func(t *testing.T) {
@@ -94,8 +93,8 @@ func TestResolveRejectsUnsafeFiles(t *testing.T) {
 			if len(files) != 0 {
 				t.Fatalf("files = %+v, want none", files)
 			}
-			if len(rejections) != 1 || !strings.Contains(rejections[0].Reason, want) {
-				t.Fatalf("rejections = %+v, want reason containing %q", rejections, want)
+			if len(rejections) != 1 || rejections[0].Reason != want {
+				t.Fatalf("rejections = %+v, want reason %d", rejections, want)
 			}
 		})
 	}

@@ -17,13 +17,7 @@ const (
 	approveCommand = "許可"
 	denyCommand    = "拒否"
 
-	approvalRequestedMessage = "🔒 %sには ebi-x を使う権限がまだないため、承認者に許可を依頼しました%s。\n許可されたら、このスレッドでお知らせします。そのあと、もう一度 mention してください。"
-	approvalQueuedMessage    = "🔒 %sには ebi-x を使う権限がまだないため、承認者に許可を依頼しました%s。\nそのままお待ちください！許可されたら、この依頼から自動で始めます。"
-
-	approvalResumeWindow    = 24 * time.Hour
-	notApproverMessage      = "承認者（SLACK_APPROVER_USER_IDS）だけが操作できます。"
-	approvalUsageMessage    = "許可や拒否は、依頼のスレッドで「" + approveCommand + "」か「" + denyCommand + "」とだけ mention してください。"
-	approvalSaveFailMessage = "記録の保存に失敗したため、操作していません。もう一度お試しください。"
+	approvalResumeWindow = 24 * time.Hour
 )
 
 var (
@@ -60,29 +54,29 @@ func (s approvalSubject) valid() bool {
 	return false
 }
 
-func (s approvalSubject) label() string {
+func (s approvalSubject) label(text *messages) string {
 	switch s.kind {
 	case state.ApprovalUser:
-		return "ユーザー <@" + s.id + ">"
+		return fmt.Sprintf(text.approvalSubjectUser, s.id)
 	case state.ApprovalChannel:
-		return "チャンネル <#" + s.id + ">"
+		return fmt.Sprintf(text.approvalSubjectChannel, s.id)
 	default:
-		return "Workflow `" + s.id + "`"
+		return fmt.Sprintf(text.approvalSubjectWorkflow, s.id)
 	}
 }
 
-func (s approvalSubject) subject() string {
+func (s approvalSubject) subject(text *messages) string {
 	switch s.kind {
 	case state.ApprovalUser:
-		return "あなた"
+		return text.approvalYou
 	case state.ApprovalChannel:
-		return "このチャンネル"
+		return text.approvalThisChannel
 	default:
-		return "この Workflow"
+		return text.approvalThisWorkflow
 	}
 }
 
-func missingSubjects(missing []approvalSubject) string {
+func missingSubjects(text *messages, missing []approvalSubject) string {
 	names := make([]string, 0, len(missing))
 	for _, subject := range missing {
 		// A DM is only between the author and ebi-x, so only the author's
@@ -90,12 +84,12 @@ func missingSubjects(missing []approvalSubject) string {
 		if subject.kind == state.ApprovalChannel && strings.HasPrefix(subject.id, "D") {
 			continue
 		}
-		names = append(names, subject.subject())
+		names = append(names, subject.subject(text))
 	}
 	if len(names) == 0 {
-		return "あなた"
+		return text.approvalYou
 	}
-	return strings.Join(names, "と")
+	return strings.Join(names, text.approvalAnd)
 }
 
 func (s approvalSubject) value() string {
@@ -181,11 +175,11 @@ func (b *Bot) rejectUnapproved(ctx context.Context, event *slackevents.AppMentio
 		b.forbidden(ctx, event, missing)
 		return
 	}
-	format := approvalRequestedMessage
+	format := b.text().approvalRequestedMessage
 	if queued {
-		format = approvalQueuedMessage
+		format = b.text().approvalQueuedMessage
 	}
-	reply := fmt.Sprintf(format, missingSubjects(missing), b.approvalRequestLinks(ctx, missing))
+	reply := fmt.Sprintf(format, missingSubjects(b.text(), missing), b.approvalRequestLinks(ctx, missing))
 
 	if err := b.post(ctx, event.Channel, mentionThreadTS(event), reply); err != nil {
 		log.Printf("slackbot: post approval requested response: %v", err)
@@ -205,19 +199,19 @@ func (b *Bot) approvalRequestLinks(ctx context.Context, missing []approvalSubjec
 			log.Printf("slackbot: permalink for approval request %s: %v", subject.value(), err)
 			continue
 		}
-		requests = append(requests, request{subject.subject(), link})
+		requests = append(requests, request{subject.subject(b.text()), link})
 	}
 	if len(requests) == 0 {
 		return ""
 	}
 	if len(requests) == 1 {
-		return "（<" + requests[0].link + "|承認依頼>）"
+		return fmt.Sprintf(b.text().approvalRequestLink, requests[0].link)
 	}
 	links := make([]string, 0, len(requests))
 	for _, r := range requests {
-		links = append(links, "<"+r.link+"|"+r.subject+"の承認依頼>")
+		links = append(links, fmt.Sprintf(b.text().approvalRequestLinkFor, r.link, r.subject))
 	}
-	return "（" + strings.Join(links, "・") + "）"
+	return fmt.Sprintf(b.text().approvalRequestLinks, strings.Join(links, b.text().listSeparator))
 }
 
 func waitingMention(event *slackevents.AppMentionEvent, botUserID string) (state.ApprovalMention, bool) {
@@ -243,13 +237,12 @@ func (b *Bot) recordWaitingMention(subject approvalSubject, mention state.Approv
 }
 
 func (b *Bot) postApprovalRequest(ctx context.Context, subject approvalSubject, event *slackevents.AppMentionEvent) error {
-	where := "<#" + event.Channel + "> で mention しました。"
+	messages := b.text()
+	where := fmt.Sprintf(messages.approvalWhereChannel, event.Channel)
 	if isDirectMessage(event.Channel) {
-		where = "ebi-x に DM で依頼しました。"
+		where = messages.approvalWhereDM
 	}
-	text := "🔐 ebi-x の利用許可の依頼\n対象: " + subject.label() +
-		"\n<@" + event.User + "> が " + where +
-		"\n\nこのスレッドで ebi-x に mention して「" + approveCommand + "」か「" + denyCommand + "」と返信してください。"
+	text := fmt.Sprintf(messages.approvalRequestPost, subject.label(messages), event.User, where, messages.approveWord, messages.denyWord)
 	timestamp, err := b.api.PostMessage(ctx, b.config.ApprovalChannelID, "", text)
 	if err != nil {
 		return err
@@ -263,7 +256,7 @@ func (b *Bot) postApprovalRequest(ctx context.Context, subject approvalSubject, 
 
 func (b *Bot) isApprovalCommand(event *slackevents.AppMentionEvent) bool {
 	command := stripBotMention(event.Text, b.config.BotUserID)
-	if command == approveCommand || command == denyCommand || isUsageQuestion(command) {
+	if isApproveCommand(command) || isDenyCommand(command) || isUsageQuestion(command) {
 		return true
 	}
 	if event.ThreadTimeStamp == "" {
@@ -282,11 +275,11 @@ func (b *Bot) handleApprovalCommand(ctx context.Context, event *slackevents.AppM
 	case isUsageQuestion(command):
 		reply = b.usageReply(ctx)
 	case !b.isApprover(event.User):
-		reply = notApproverMessage
-	case !inRequest || (command != approveCommand && command != denyCommand):
-		reply = approvalUsageMessage
+		reply = b.text().notApproverMessage
+	case !inRequest || (!isApproveCommand(command) && !isDenyCommand(command)):
+		reply = b.text().approvalUsageMessage
 	default:
-		reply, resume = b.decideApproval(ctx, request, command == approveCommand, event.User)
+		reply, resume = b.decideApproval(ctx, request, isApproveCommand(command), event.User)
 	}
 	if err := b.post(ctx, event.Channel, mentionThreadTS(event), reply); err != nil {
 		log.Printf("slackbot: post approval command reply: %v", err)
@@ -303,33 +296,34 @@ func (b *Bot) isApprover(user string) bool {
 
 // The first decision wins.
 func (b *Bot) decideApproval(ctx context.Context, request state.Approval, approve bool, user string) (string, *processingTrigger) {
+	text := b.text()
 	subject := approvalSubject{kind: request.Kind, id: request.ID}
 	approval, decided, err := b.config.Approvals.DecideApproval(subject.kind, subject.id, approve, user, b.now())
 	if err != nil {
 		log.Printf("slackbot: decide approval %s: %v", subject.value(), err)
-		return approvalSaveFailMessage, nil
+		return text.approvalSaveFailMessage, nil
 	}
 	if !decided {
-		return subject.label() + " は、すでに" + decisionText(approval) + "。", nil
+		return fmt.Sprintf(text.approvalAlreadyDecided, subject.label(text), decisionText(text, approval)), nil
 	}
 	log.Printf("slackbot: %s %s by %q", approval.Status, subject.value(), user)
 	var resume *processingTrigger
 	if approval.Status == state.Approved && approval.RequestChannel != "" && approval.RequestThreadTS != "" {
-		notice := "✅ " + subject.label() + " が許可されました。"
+		notice := fmt.Sprintf(text.approvalApprovedNotice, subject.label(text))
 		switch waiting := b.waitingTrigger(approval); {
 		case waiting == nil:
-			notice += "もう一度 mention してください。"
+			notice += text.approvalMentionAgain
 		case !b.userAllowed(waiting.authorID) || !b.channelAllowed(waiting.channel):
-			notice += "残りの許可を待っています。"
+			notice += text.approvalWaitingOthers
 		default:
-			notice += "依頼を始めます。"
+			notice += text.approvalStarting
 			resume = waiting
 		}
 		if err := b.post(ctx, approval.RequestChannel, approval.RequestThreadTS, notice); err != nil {
 			log.Printf("slackbot: notify approval %s: %v", subject.value(), err)
 		}
 	}
-	return statusIcon(approval.Status) + " " + subject.label() + ": " + decisionText(approval) + "。", resume
+	return fmt.Sprintf(text.approvalDecided, statusIcon(approval.Status), subject.label(text), decisionText(text, approval)), resume
 }
 
 func (b *Bot) waitingTrigger(approval state.Approval) *processingTrigger {
@@ -358,11 +352,11 @@ func statusIcon(status state.ApprovalStatus) string {
 	return "🚫"
 }
 
-func decisionText(approval state.Approval) string {
+func decisionText(text *messages, approval state.Approval) string {
 	if approval.Status == state.Approved {
-		return "<@" + approval.DecidedBy + "> が許可しました"
+		return fmt.Sprintf(text.approvalApprovedBy, approval.DecidedBy)
 	}
-	return "<@" + approval.DecidedBy + "> が拒否しました"
+	return fmt.Sprintf(text.approvalDeniedBy, approval.DecidedBy)
 }
 
 func mentionThreadTS(event *slackevents.AppMentionEvent) string {
@@ -370,4 +364,14 @@ func mentionThreadTS(event *slackevents.AppMentionEvent) string {
 		return event.ThreadTimeStamp
 	}
 	return event.TimeStamp
+}
+
+// Both languages are accepted whatever the setting, so a switch does not
+// break approvers who learned the other word.
+func isApproveCommand(command string) bool {
+	return command == approveCommand || strings.EqualFold(command, english.approveWord)
+}
+
+func isDenyCommand(command string) bool {
+	return command == denyCommand || strings.EqualFold(command, english.denyWord)
 }

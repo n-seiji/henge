@@ -6,11 +6,7 @@ import (
 	"strings"
 )
 
-const (
-	aliveReply          = "🟢 生きてます。Codex にもつながっています。"
-	aliveNoCodexReply   = "🟢 生きてます。"
-	aliveCodexDownReply = "⚠️ 生きてますが、Codex に接続できません。今は作業を受けられないかもしれません。"
-)
+const ()
 
 // Only the whole text counts, so a request that merely contains one still
 // starts a turn.
@@ -33,12 +29,12 @@ func isAliveQuestion(text string) bool {
 // Usage numbers are left out because it answers anyone in any channel ebi-x is
 // in.
 func (b *Bot) answerAliveQuestion(ctx context.Context, channel, threadTS string) {
-	reply := aliveNoCodexReply
+	reply := b.text().aliveNoCodexReply
 	if b.config.Usage != nil {
-		reply = aliveReply
+		reply = b.text().aliveReply
 		if _, err := b.readUsage(ctx); err != nil {
 			log.Printf("slackbot: alive check: %v", err)
-			reply = aliveCodexDownReply
+			reply = b.text().aliveCodexDownReply
 		}
 	}
 	if err := b.post(ctx, channel, threadTS, reply); err != nil {

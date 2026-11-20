@@ -104,13 +104,13 @@ func TestDoneWatchRefusesWithoutTargetsOrWhenAllDone(t *testing.T) {
 	bot := newFollowUpBot(t, store, api, &fakeRunner{})
 
 	bot.HandleMention(context.Background(), doneWatchMention("<@UBOT> 監視して"))
-	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != doneWatchNoTargetNotice {
+	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != japanese.doneWatchNoTargetNotice {
 		t.Fatalf("watches = %#v, posts = %q", store.doneWatches, api.postTexts)
 	}
 
 	api.reactionUsers = []string{"U2"}
 	bot.HandleMention(context.Background(), doneWatchMention("<@U2> <@UBOT> 監視して"))
-	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != doneWatchAllDoneNotice {
+	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != japanese.doneWatchAllDoneNotice {
 		t.Fatalf("watches = %#v, posts = %q", store.doneWatches, api.postTexts)
 	}
 }
@@ -156,9 +156,9 @@ func TestCheckDoneWatchEnds(t *testing.T) {
 		reminders int
 		want      string
 	}{
-		{"all done", []string{"U2"}, nil, 0, doneWatchCompleted},
+		{"all done", []string{"U2"}, nil, 0, japanese.doneWatchCompleted},
 		{"last reminder", nil, nil, maxDoneWatchReminders - 1, "5回通知したため、監視はこれで終了します"},
-		{"message deleted", nil, slack.SlackErrorResponse{Err: "message_not_found"}, 0, doneWatchGoneMessage},
+		{"message deleted", nil, slack.SlackErrorResponse{Err: "message_not_found"}, 0, japanese.doneWatchGoneMessage},
 	}
 	for _, test := range tests {
 		store := &fakeStore{claim: true}
@@ -209,12 +209,12 @@ func TestDoneWatchStopCommandKeepsOtherWork(t *testing.T) {
 	event.ThreadTimeStamp = "90.1"
 
 	bot.HandleMention(context.Background(), event)
-	if len(store.doneWatches) != 0 || len(store.schedules) != 1 || api.postTexts[len(api.postTexts)-1] != doneWatchStoppedMessage {
+	if len(store.doneWatches) != 0 || len(store.schedules) != 1 || api.postTexts[len(api.postTexts)-1] != japanese.doneWatchStoppedMessage {
 		t.Fatalf("watches = %#v, schedules = %#v, posts = %q", store.doneWatches, store.schedules, api.postTexts)
 	}
 
 	bot.HandleMention(context.Background(), event)
-	if api.postTexts[len(api.postTexts)-1] != doneWatchNothingToStop {
+	if api.postTexts[len(api.postTexts)-1] != japanese.doneWatchNothingToStop {
 		t.Fatalf("second stop posts = %q", api.postTexts)
 	}
 }
@@ -268,7 +268,7 @@ func TestDoneWatchUserGroupKeepsChannelMembersOnly(t *testing.T) {
 	if !ok || strings.Join(got.Targets, ",") != "U2" {
 		t.Fatalf("watches = %#v, want only the group member in the channel", store.doneWatches)
 	}
-	if last := api.postTexts[len(api.postTexts)-1]; !strings.Contains(last, fmt.Sprintf(doneWatchOutsideNotice, 2)) {
+	if last := api.postTexts[len(api.postTexts)-1]; !strings.Contains(last, fmt.Sprintf(japanese.doneWatchOutsideNotice, 2)) {
 		t.Fatalf("start notice = %q, want it to say 2 people outside the channel were left out", last)
 	}
 }
@@ -283,7 +283,7 @@ func TestDoneWatchUserGroupAllOutsideChannel(t *testing.T) {
 
 	bot.HandleMention(context.Background(), doneWatchMention("<!subteam^S1> 回答してください <@UBOT> 監視して"))
 
-	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != doneWatchAllOutsideNotice {
+	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != japanese.doneWatchAllOutsideNotice {
 		t.Fatalf("watches = %#v, posts = %q, want no watch", store.doneWatches, api.postTexts)
 	}
 }
@@ -314,7 +314,7 @@ func TestDoneWatchUserGroupMissingScope(t *testing.T) {
 
 	bot.HandleMention(context.Background(), doneWatchMention("<!subteam^S1> 回答してください <@UBOT> 監視して"))
 
-	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != doneWatchScopeNotice {
+	if len(store.doneWatches) != 0 || api.postTexts[len(api.postTexts)-1] != japanese.doneWatchScopeNotice {
 		t.Fatalf("watches = %#v, posts = %q", store.doneWatches, api.postTexts)
 	}
 }
@@ -330,8 +330,8 @@ func TestDoneWatchChannelRefusals(t *testing.T) {
 		err     error
 		want    string
 	}{
-		{"too many", many, nil, fmt.Sprintf(doneWatchTooManyNotice, maxDoneWatchTargets)},
-		{"missing scope", nil, slack.SlackErrorResponse{Err: "missing_scope"}, doneWatchScopeNotice},
+		{"too many", many, nil, fmt.Sprintf(japanese.doneWatchTooManyNotice, maxDoneWatchTargets)},
+		{"missing scope", nil, slack.SlackErrorResponse{Err: "missing_scope"}, japanese.doneWatchScopeNotice},
 	}
 	for _, test := range tests {
 		store := &fakeStore{claim: true}

@@ -13,42 +13,18 @@ import (
 )
 
 const (
-	usageCheckInterval = 30 * time.Minute
-	usageChartHours    = 12
-	usagePaceMinSpan   = 3 * time.Hour
-	usageHistoryKeep   = usageChartHours * time.Hour
-	usageReadTimeout   = 30 * time.Second
-	usageDayLayout     = "2006-01-02"
-
-	usageLowMessage          = "⚠️ Codex の利用枠（%s）の残りが %d%% を下回りました。%s"
-	usageExhaustedMessage    = "🚫 Codex の利用枠（%s）を使い切りました。%sまで、ebi-x は作業できません。"
-	usageResetSuffix         = "%sにリセットされます。"
-	usageSummaryPrefix       = "今の残り: "
-	usageUnknownReset        = "リセットされる"
-	usageReplyPrefix         = "Codex の利用枠の残り: "
-	usageUnavailableReply    = "⚠️ Codex の利用枠を読み取れませんでした。"
-	usageDailyHeader         = "📊 %s の Codex の利用枠（%d回確認）"
-	usageDailyLine           = "- %s: %d%% → %d%%（最低 %d%%）"
-	usageHourlyHeader        = "📈 Codex の利用枠（%s 時点）"
-	usageHourlyLine          = "- %s: 残り %.1f%%"
-	usageHourlyChange        = "前回から %+.1fpt"
-	usageHourlyWasReset      = "前回からリセット済み"
-	usageHourlyEmptyAt       = "このペースだと%sに使い切り"
-	usageHourlyResetAt       = "%sにリセット"
-	usageChartTimeLayout     = "15:04"
-	usageChartMissing        = "    -"
-	usageChartBarWidth       = 10
-	usageLimitFailureMessage = "⚠️ Codex の利用上限に達したため、作業を完了できませんでした。%s%s、新しい mention で依頼し直してください。途中までの変更が作業領域に残っている場合があります。"
-	usageLimitRetryAt        = "%s以降に"
-	usageLimitRetryLater     = "利用枠がリセットされてから"
+	usageCheckInterval   = 30 * time.Minute
+	usageChartHours      = 12
+	usagePaceMinSpan     = 3 * time.Hour
+	usageHistoryKeep     = usageChartHours * time.Hour
+	usageReadTimeout     = 30 * time.Second
+	usageDayLayout       = "2006-01-02"
+	usageChartTimeLayout = "15:04"
+	usageChartMissing    = "    -"
+	usageChartBarWidth   = 10
 	// Used when the reset time could not be read, so recordUsage cannot
 	// announce the limit.
-	usageLimitAdminAlert = "🚫 Codex の利用上限に達したため、ebi-x は作業できません。利用枠がリセットされるまでお待ちください。"
-	authFailureMessage   = "⚠️ ebi-x の Codex のログインが切れているため、作業できませんでした。%s復旧したら、新しい mention で依頼し直してください。"
-	authAdminAlert       = "🔑 ebi-x の Codex のログインが切れているため、作業できません。ebi-x を動かしている環境で `codex login` を実行して、ログインし直してください。"
-	adminNotifiedText    = "管理者に知らせたので、お待ちください。"
-	adminContactText     = "管理者に連絡してください。"
-	adminAlertInterval   = time.Hour
+	adminAlertInterval = time.Hour
 )
 
 var usageThresholds = []int{10, 0}
@@ -103,13 +79,14 @@ func isUsageQuestion(text string) bool {
 }
 
 func (b *Bot) usageReply(ctx context.Context) string {
+	text := b.text()
 	if b.config.Usage == nil {
-		return usageUnavailableReply
+		return text.usageUnavailableReply
 	}
 	limits, err := b.readUsage(ctx)
 	if err != nil {
 		log.Printf("slackbot: read Codex usage for a question: %v", err)
-		return usageUnavailableReply
+		return text.usageUnavailableReply
 	}
 	windows := usageWindows(limits)
 	var parts []string
@@ -118,16 +95,16 @@ func (b *Bot) usageReply(ctx context.Context) string {
 		if !ok {
 			continue
 		}
-		part := fmt.Sprintf("%s %d%%", usageWindowLabel(key, window), usageRemaining(window))
+		part := fmt.Sprintf("%s %d%%", usageWindowLabel(text, key, window), usageRemaining(window))
 		if at := window.ResetTime(); !at.IsZero() {
-			part += "（" + formatFollowUpTime(at) + "にリセット）"
+			part += fmt.Sprintf(text.usageReplyReset, formatFollowUpTime(at))
 		}
 		parts = append(parts, part)
 	}
 	if len(parts) == 0 {
-		return usageUnavailableReply
+		return text.usageUnavailableReply
 	}
-	return usageReplyPrefix + strings.Join(parts, "・")
+	return text.usageReplyPrefix + strings.Join(parts, text.listSeparator)
 }
 
 func (b *Bot) recordUsage(ctx context.Context, limits *codex.RateLimits) {
@@ -138,7 +115,7 @@ func (b *Bot) recordUsage(ctx context.Context, limits *codex.RateLimits) {
 	quiet := isWeekend(b.now())
 	day := b.now().In(time.Local).Format(usageDayLayout)
 	if saved.Day != day {
-		if summary := usageDailySummary(saved); summary != "" && !quiet {
+		if summary := usageDailySummary(b.text(), saved); summary != "" && !quiet {
 			if err := b.post(ctx, b.config.ApprovalChannelID, "", summary); err != nil {
 				log.Printf("slackbot: post Codex usage summary: %v", err)
 			}
@@ -157,7 +134,7 @@ func (b *Bot) recordUsage(ctx context.Context, limits *codex.RateLimits) {
 		if !ok {
 			record = state.UsageDay{First: remaining, Min: remaining}
 		}
-		record.Label = usageWindowLabel(key, window)
+		record.Label = usageWindowLabel(b.text(), key, window)
 		record.Last = remaining
 		record.Min = math.Min(record.Min, remaining)
 		record.Checks++
@@ -166,13 +143,13 @@ func (b *Bot) recordUsage(ctx context.Context, limits *codex.RateLimits) {
 	next.Windows = days
 	next.History = appendUsageSample(next.History, usageSample(b.now(), windows))
 
-	alerts, lines := usageAlerts(saved.Alerts, windows)
+	alerts, lines := usageAlerts(b.text(), saved.Alerts, windows)
 	next.Alerts = alerts
 	if quiet {
 		// Announce it at the first weekday check instead.
 		next.Alerts = saved.Alerts
 	} else if len(lines) > 0 {
-		text := strings.Join(lines, "\n") + "\n" + usageSummaryPrefix + usageSummary(limits)
+		text := strings.Join(lines, "\n") + "\n" + b.text().usageSummaryPrefix + usageSummary(b.text(), limits)
 		if err := b.post(ctx, b.config.ApprovalChannelID, "", text); err != nil {
 			log.Printf("slackbot: post Codex usage alert: %v", err)
 			// Announce it again at the next check.
@@ -209,7 +186,7 @@ func (b *Bot) reportUsage(ctx context.Context) {
 		// across quiet hours.
 		return
 	}
-	text := usageHourlyReport(previous, saved.History) + "\n" + usageChart(saved.History, latest.At)
+	text := usageHourlyReport(b.text(), previous, saved.History) + "\n" + usageChart(b.text(), saved.History, latest.At)
 	if err := b.post(ctx, b.config.ApprovalChannelID, "", text); err != nil {
 		log.Printf("slackbot: post Codex usage report: %v", err)
 		// Report again at the next check.
@@ -222,15 +199,15 @@ func (b *Bot) reportUsage(ctx context.Context) {
 	}
 }
 
-func usageChart(history []state.UsageSample, now time.Time) string {
+func usageChart(text *messages, history []state.UsageSample, now time.Time) string {
 	current := localHour(now)
 	latest := history[len(history)-1]
 	var keys []string
-	header := "時刻 "
+	header := text.usageChartTime + " "
 	for _, key := range usageWindowKeys {
 		if _, ok := latest.Remaining[key]; ok {
 			keys = append(keys, key)
-			header += fmt.Sprintf("  %-17s", usageSampleLabel(latest, key))
+			header += fmt.Sprintf("  %-17s", usageSampleLabel(text, latest, key))
 		}
 	}
 	lines := []string{"```" + strings.TrimRight(header, " ")}
@@ -260,34 +237,34 @@ func usageChart(history []state.UsageSample, now time.Time) string {
 	return strings.Join(lines, "\n") + "```"
 }
 
-func usageHourlyReport(previous *state.UsageSample, history []state.UsageSample) string {
+func usageHourlyReport(text *messages, previous *state.UsageSample, history []state.UsageSample) string {
 	latest := history[len(history)-1]
-	lines := []string{fmt.Sprintf(usageHourlyHeader, latest.At.In(time.Local).Format("1/2 15:04"))}
+	lines := []string{fmt.Sprintf(text.usageHourlyHeader, latest.At.In(time.Local).Format("1/2 15:04"))}
 	for _, key := range usageWindowKeys {
 		remaining, ok := latest.Remaining[key]
 		if !ok {
 			continue
 		}
-		line := fmt.Sprintf(usageHourlyLine, usageSampleLabel(latest, key), remaining)
+		line := fmt.Sprintf(text.usageHourlyLine, usageSampleLabel(text, latest, key), remaining)
 		resetsAt := latest.ResetsAt[key]
 		var notes []string
 		if previous != nil {
 			if before, ok := previous.Remaining[key]; ok {
 				if previous.ResetsAt[key] != resetsAt && remaining > before {
-					notes = append(notes, usageHourlyWasReset)
+					notes = append(notes, text.usageHourlyWasReset)
 				} else {
-					notes = append(notes, fmt.Sprintf(usageHourlyChange, remaining-before))
+					notes = append(notes, fmt.Sprintf(text.usageHourlyChange, remaining-before))
 				}
 			}
 		}
 		if empty, ok := usageEmptyAt(history, key); ok && (resetsAt <= 0 || empty.Before(time.Unix(resetsAt, 0))) {
-			notes = append(notes, fmt.Sprintf(usageHourlyEmptyAt, formatFollowUpTime(empty)))
+			notes = append(notes, fmt.Sprintf(text.usageHourlyEmptyAt, formatFollowUpTime(empty)))
 		}
 		if resetsAt > 0 {
-			notes = append(notes, fmt.Sprintf(usageHourlyResetAt, formatFollowUpTime(time.Unix(resetsAt, 0))))
+			notes = append(notes, fmt.Sprintf(text.usageHourlyResetAt, formatFollowUpTime(time.Unix(resetsAt, 0))))
 		}
 		if len(notes) > 0 {
-			line += "（" + strings.Join(notes, "・") + "）"
+			line += fmt.Sprintf(text.usageNotes, strings.Join(notes, text.listSeparator))
 		}
 		lines = append(lines, line)
 	}
@@ -316,8 +293,8 @@ func usageEmptyAt(history []state.UsageSample, key string) (time.Time, bool) {
 
 // Falls back to Codex's usual 5-hour and weekly windows for checks that did not
 // keep the length.
-func usageSampleLabel(sample state.UsageSample, key string) string {
-	return usageWindowLabel(key, codex.RateLimitWindow{WindowMinutes: sample.Minutes[key]})
+func usageSampleLabel(text *messages, sample state.UsageSample, key string) string {
+	return usageWindowLabel(text, key, codex.RateLimitWindow{WindowMinutes: sample.Minutes[key]})
 }
 
 func usageSample(at time.Time, windows map[string]codex.RateLimitWindow) state.UsageSample {
@@ -368,7 +345,7 @@ func localHour(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, time.Local)
 }
 
-func usageAlerts(announced map[string]int, windows map[string]codex.RateLimitWindow) (map[string]int, []string) {
+func usageAlerts(text *messages, announced map[string]int, windows map[string]codex.RateLimitWindow) (map[string]int, []string) {
 	next := make(map[string]int, len(windows))
 	var lines []string
 	for _, key := range usageWindowKeys {
@@ -386,21 +363,21 @@ func usageAlerts(announced map[string]int, windows map[string]codex.RateLimitWin
 			// Already announced, or risen since without a full reset.
 			continue
 		}
-		label := usageWindowLabel(key, window)
+		label := usageWindowLabel(text, key, window)
 		if level == 0 {
-			lines = append(lines, fmt.Sprintf(usageExhaustedMessage, label, formatUsageReset(window, usageUnknownReset)))
+			lines = append(lines, fmt.Sprintf(text.usageExhaustedMessage, label, formatUsageReset(text, window)))
 			continue
 		}
 		reset := ""
 		if at := window.ResetTime(); !at.IsZero() {
-			reset = fmt.Sprintf(usageResetSuffix, formatFollowUpTime(at))
+			reset = fmt.Sprintf(text.usageResetSuffix, formatFollowUpTime(at))
 		}
-		lines = append(lines, fmt.Sprintf(usageLowMessage, label, level, reset))
+		lines = append(lines, fmt.Sprintf(text.usageLowMessage, label, level, reset))
 	}
 	return next, lines
 }
 
-func usageDailySummary(usage state.Usage) string {
+func usageDailySummary(text *messages, usage state.Usage) string {
 	day, err := time.ParseInLocation(usageDayLayout, usage.Day, time.Local)
 	if err != nil || len(usage.Windows) == 0 {
 		return ""
@@ -413,14 +390,14 @@ func usageDailySummary(usage state.Usage) string {
 			continue
 		}
 		checks = max(checks, record.Checks)
-		lines = append(lines, fmt.Sprintf(usageDailyLine, record.Label, int(math.Floor(record.First)), int(math.Floor(record.Last)), int(math.Floor(record.Min))))
+		lines = append(lines, fmt.Sprintf(text.usageDailyLine, record.Label, int(math.Floor(record.First)), int(math.Floor(record.Last)), int(math.Floor(record.Min))))
 	}
-	header := fmt.Sprintf(usageDailyHeader, day.Format("1/2"), checks)
+	header := fmt.Sprintf(text.usageDailyHeader, day.Format("1/2"), checks)
 	return header + "\n" + strings.Join(lines, "\n")
 }
 
 func (b *Bot) usageLimitFailure(ctx context.Context) string {
-	retry := usageLimitRetryLater
+	retry := b.text().usageLimitRetryLater
 	var limits *codex.RateLimits
 	if b.config.Usage != nil {
 		var err error
@@ -437,27 +414,27 @@ func (b *Bot) usageLimitFailure(ctx context.Context) string {
 			}
 		}
 		if !latest.IsZero() {
-			retry = fmt.Sprintf(usageLimitRetryAt, formatFollowUpTime(latest))
+			retry = fmt.Sprintf(b.text().usageLimitRetryAt, formatFollowUpTime(latest))
 		}
 	}
-	notice := adminContactText
+	notice := b.text().adminContactText
 	if b.config.ApprovalChannelID != "" {
-		notice = adminNotifiedText
+		notice = b.text().adminNotifiedText
 		if limits != nil {
 			b.recordUsage(ctx, limits)
 		} else {
-			b.alertAdmin(ctx, "usage", usageLimitAdminAlert)
+			b.alertAdmin(ctx, "usage", b.text().usageLimitAdminAlert)
 		}
 	}
-	return fmt.Sprintf(usageLimitFailureMessage, notice, retry)
+	return fmt.Sprintf(b.text().usageLimitFailureMessage, notice, retry)
 }
 
 func (b *Bot) authFailure(ctx context.Context) string {
 	if b.config.ApprovalChannelID == "" {
-		return fmt.Sprintf(authFailureMessage, adminContactText)
+		return fmt.Sprintf(b.text().authFailureMessage, b.text().adminContactText)
 	}
-	b.alertAdmin(ctx, "auth", authAdminAlert)
-	return fmt.Sprintf(authFailureMessage, adminNotifiedText)
+	b.alertAdmin(ctx, "auth", b.text().authAdminAlert)
+	return fmt.Sprintf(b.text().authFailureMessage, b.text().adminNotifiedText)
 }
 
 func (b *Bot) alertAdmin(ctx context.Context, kind, text string) {
@@ -512,32 +489,32 @@ func usageRemaining(window codex.RateLimitWindow) int {
 	return int(math.Max(0, math.Floor(100-window.UsedPercent)))
 }
 
-func usageWindowLabel(key string, window codex.RateLimitWindow) string {
+func usageWindowLabel(text *messages, key string, window codex.RateLimitWindow) string {
 	minutes := window.WindowMinutes
 	switch {
 	case minutes == 7*24*60:
-		return "1週間"
+		return text.durationWeek
 	case minutes > 0 && minutes%(24*60) == 0:
-		return fmt.Sprintf("%d日", minutes/(24*60))
+		return fmt.Sprintf(text.durationDays, minutes/(24*60))
 	case minutes > 0 && minutes%60 == 0:
-		return fmt.Sprintf("%d時間", minutes/60)
+		return fmt.Sprintf(text.durationHours, minutes/60)
 	case minutes > 0:
-		return fmt.Sprintf("%d分", minutes)
+		return fmt.Sprintf(text.durationMinutes, minutes)
 	case key == "primary":
-		return "5時間"
+		return fmt.Sprintf(text.durationHours, 5)
 	default:
-		return "1週間"
+		return text.durationWeek
 	}
 }
 
-func formatUsageReset(window codex.RateLimitWindow, unknown string) string {
+func formatUsageReset(text *messages, window codex.RateLimitWindow) string {
 	if at := window.ResetTime(); !at.IsZero() {
-		return formatFollowUpTime(at) + "にリセットされる"
+		return fmt.Sprintf(text.usageResetsAt, formatFollowUpTime(at))
 	}
-	return unknown
+	return text.usageUnknownReset
 }
 
-func usageSummary(limits *codex.RateLimits) string {
+func usageSummary(text *messages, limits *codex.RateLimits) string {
 	var parts []string
 	windows := usageWindows(limits)
 	for _, key := range usageWindowKeys {
@@ -545,7 +522,7 @@ func usageSummary(limits *codex.RateLimits) string {
 		if !ok {
 			continue
 		}
-		parts = append(parts, fmt.Sprintf("%s %d%%", usageWindowLabel(key, window), usageRemaining(window)))
+		parts = append(parts, fmt.Sprintf("%s %d%%", usageWindowLabel(text, key, window), usageRemaining(window)))
 	}
-	return strings.Join(parts, "・")
+	return strings.Join(parts, text.listSeparator)
 }

@@ -65,7 +65,7 @@ func TestRequestShortcutRefusesWithoutPermission(t *testing.T) {
 
 			bot.HandleInteraction(context.Background(), callback)
 
-			if len(api.calls) != 1 || !strings.HasPrefix(api.calls[0].kind, "ephemeral:") || api.calls[0].text != shortcutForbidden {
+			if len(api.calls) != 1 || !strings.HasPrefix(api.calls[0].kind, "ephemeral:") || api.calls[0].text != japanese.shortcutForbidden {
 				t.Fatalf("calls = %#v, want only a refusal the user alone sees", api.calls)
 			}
 		})

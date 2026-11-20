@@ -14,16 +14,10 @@ import (
 )
 
 const (
-	playbookNoteInvalidNotice = "⚠️ playbook メモの指定を読み取れなかったため、保存していません。"
 	// Notes are meant to bridge edits, not to replace them, so the lesson ends
 	// up in the playbook itself, where every later turn follows it.
 	playbookFoldThreshold = 3
 	maxFoldSummaryRunes   = 300
-
-	playbookFoldedNotice  = "📘 メモが%d件たまったため、playbook「%s」の本文に取り込みました: %s"
-	playbookFoldSkipped   = "📘 playbook「%s」のメモ%d件の取り込みを試みましたが、本文は変わりませんでした: %s"
-	playbookFoldFailed    = "⚠️ playbook「%s」へのメモの取り込みに失敗しました。メモはそのまま残っています。"
-	playbookFoldAdminPost = "📘 playbook「%s」にメモ%d件を取り込みました（%s）: %s"
 )
 
 type playbookFold struct {
@@ -62,7 +56,7 @@ func (b *Bot) currentPlaybooks() ([]playbook.Playbook, error) {
 func (b *Bot) savePlaybookNote(eventKey string, note *codex.PlaybookNote, invalid, sharedWritable bool) (notice string, fold *playbook.Playbook) {
 	if invalid {
 		log.Printf("slackbot: ignore malformed playbook note output %q", eventKey)
-		return playbookNoteInvalidNotice, nil
+		return b.text().playbookNoteInvalidNotice, nil
 	}
 	if note == nil {
 		return "", nil
@@ -74,23 +68,23 @@ func (b *Bot) savePlaybookNote(eventKey string, note *codex.PlaybookNote, invali
 	playbooks, err := b.currentPlaybooks()
 	if err != nil {
 		log.Printf("slackbot: list playbooks for note %q: %v", eventKey, err)
-		return fmt.Sprintf("⚠️ playbook「%s」のメモを保存できませんでした。", note.Target), nil
+		return fmt.Sprintf(b.text().playbookNoteFailed, note.Target), nil
 	}
 	target, ok := playbook.Find(playbooks, note.Target)
 	if !ok {
-		return fmt.Sprintf("⚠️ playbook「%s」が見つからないため、メモを保存していません。", note.Target), nil
+		return fmt.Sprintf(b.text().playbookNoteMissing, note.Target), nil
 	}
 	b.memoryMu.Lock()
 	written, err := playbook.AppendNote(b.playbookNotesDir(), target, note.Body, b.now())
 	b.memoryMu.Unlock()
 	if err != nil {
 		log.Printf("slackbot: append playbook note %q: %v", eventKey, err)
-		return fmt.Sprintf("⚠️ playbook「%s」のメモを保存できませんでした。", target.Name), nil
+		return fmt.Sprintf(b.text().playbookNoteFailed, target.Name), nil
 	}
 	if written == "" {
 		return "", nil
 	}
-	notice = fmt.Sprintf("📝 playbook「%s」のメモを更新しました: %s", target.Name, written)
+	notice = fmt.Sprintf(b.text().playbookNoteSaved, target.Name, written)
 	if current, ok := b.findPlaybook(target.Name); ok && noteCount(current) >= playbookFoldThreshold {
 		fold = &current
 	}
@@ -128,14 +122,14 @@ func (b *Bot) foldPlaybookNotes(ctx context.Context, sessionID string, lease *wo
 	return fold
 }
 
-func (f *playbookFold) notice() string {
+func (f *playbookFold) notice(text *messages) string {
 	switch {
 	case f.changed:
-		return fmt.Sprintf(playbookFoldedNotice, f.notes, f.name, f.summary)
+		return fmt.Sprintf(text.playbookFoldedNotice, f.notes, f.name, f.summary)
 	case f.summary != "":
-		return fmt.Sprintf(playbookFoldSkipped, f.name, f.notes, f.summary)
+		return fmt.Sprintf(text.playbookFoldSkipped, f.name, f.notes, f.summary)
 	default:
-		return fmt.Sprintf(playbookFoldFailed, f.name)
+		return fmt.Sprintf(text.playbookFoldFailed, f.name)
 	}
 }
 
@@ -143,8 +137,8 @@ func (b *Bot) recordPlaybookFold(ctx context.Context, fold *playbookFold, channe
 	if fold == nil || !fold.changed || b.config.ApprovalChannelID == "" {
 		return
 	}
-	link := b.threadLink(ctx, make(map[string]string), channel, threadTS)
-	if err := b.post(ctx, b.config.ApprovalChannelID, "", fmt.Sprintf(playbookFoldAdminPost, fold.name, fold.notes, link, fold.summary)); err != nil {
+	link := b.threadLink(ctx, b.text(), make(map[string]string), channel, threadTS)
+	if err := b.post(ctx, b.config.ApprovalChannelID, "", fmt.Sprintf(b.text().playbookFoldAdminPost, fold.name, fold.notes, link, fold.summary)); err != nil {
 		log.Printf("slackbot: record playbook fold %q: %v", fold.name, err)
 	}
 }
