@@ -73,6 +73,8 @@ type Runner struct {
 	// duplicate it.
 	DeveloperInstructions string
 	GitHub                TurnCredentials
+	// The ebi-x executable; MCP servers run behind its SQL guard when set.
+	SQLGuard string
 }
 
 type TurnCredentials interface {
@@ -95,6 +97,7 @@ func (r *Runner) Run(
 	onThreadStarted func(id string) error,
 	onActivity func(Activity),
 ) (*TurnResult, error) {
+	access.sqlGuard = r.SQLGuard
 	configOverrides, err := loadConfigOverrides(r.ConfigPath, access)
 	if err != nil {
 		return nil, err

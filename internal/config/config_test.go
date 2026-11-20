@@ -173,9 +173,6 @@ func TestLoad(t *testing.T) {
 				if cfg.CodexTimeout != 30*time.Minute {
 					t.Errorf("CodexTimeout = %v, want %v", cfg.CodexTimeout, 30*time.Minute)
 				}
-				if cfg.ThreadSubscriptionReaction != "thread-subete" {
-					t.Errorf("ThreadSubscriptionReaction = %q, want %q", cfg.ThreadSubscriptionReaction, "thread-subete")
-				}
 				if cfg.ThreadSubscriptionTTL != 336*time.Hour {
 					t.Errorf("ThreadSubscriptionTTL = %v, want %v", cfg.ThreadSubscriptionTTL, 336*time.Hour)
 				}
@@ -385,13 +382,12 @@ func TestLoad(t *testing.T) {
 			wantErr: "EBIX_CHECKOUT_IDLE_TTL",
 		},
 		{
-			name: "explicit empty subscription reaction disables subscriptions",
+			name: "subscriptions are off without a reaction",
 			env: map[string]string{
-				"SLACK_BOT_TOKEN":                    "xoxb-test",
-				"SLACK_APP_TOKEN":                    "xapp-test",
-				"SLACK_ALLOWED_USER_IDS":             "U123",
-				"SLACK_THREAD_SUBSCRIPTION_REACTION": "",
-				"SLACK_THREAD_SUBSCRIPTION_TTL":      "0s",
+				"SLACK_BOT_TOKEN":               "xoxb-test",
+				"SLACK_APP_TOKEN":               "xapp-test",
+				"SLACK_ALLOWED_USER_IDS":        "U123",
+				"SLACK_THREAD_SUBSCRIPTION_TTL": "0s",
 			},
 			check: func(t *testing.T, cfg *Config, workingDir string) {
 				t.Helper()
@@ -416,10 +412,11 @@ func TestLoad(t *testing.T) {
 		{
 			name: "non-positive subscription TTL is rejected when subscriptions are enabled",
 			env: map[string]string{
-				"SLACK_BOT_TOKEN":               "xoxb-test",
-				"SLACK_APP_TOKEN":               "xapp-test",
-				"SLACK_ALLOWED_USER_IDS":        "U123",
-				"SLACK_THREAD_SUBSCRIPTION_TTL": "0s",
+				"SLACK_BOT_TOKEN":                    "xoxb-test",
+				"SLACK_APP_TOKEN":                    "xapp-test",
+				"SLACK_ALLOWED_USER_IDS":             "U123",
+				"SLACK_THREAD_SUBSCRIPTION_REACTION": "follow-up",
+				"SLACK_THREAD_SUBSCRIPTION_TTL":      "0s",
 			},
 			wantErr: "SLACK_THREAD_SUBSCRIPTION_TTL",
 		},

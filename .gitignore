@@ -17,3 +17,6 @@ docs/
 
 # Plans and specs written by superpowers skills
 docs/superpowers/
+
+# Words that must not be published (see .githooks/scan)
+/.denylist

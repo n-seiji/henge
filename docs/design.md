@@ -23,6 +23,7 @@ internal/
   memory/ playbook/ usersettings/   memory
   attachment/         checking attachments
   github/             reading PRs, and credentials
+  sqlguard/           sits in front of MCP servers and limits SQL to reads
   slackfmt/           splitting and formatting for Slack
 ```
 
@@ -66,6 +67,7 @@ Unless denied, Codex's commands can read the whole file system. So every run den
 
 - Other threads' working directories are not listed one by one, because a rule per thread would eventually exceed the argument limit.
 - Codex's process environment is an allowlist. A denylist could not guarantee that something like `DATABASE_URL` in the operator's shell does not leak.
+- If the request or thread holds a string shaped like a token, it is stopped before reaching Codex. Anything sent stays with the model provider and in the session history, where the bot cannot remove it. Only formats services issue are checked, not "long random strings", which would also stop hashes and IDs.
 - With a GitHub App configured, only a token minted for the run is placed in a run-only directory, and it is revoked afterwards. Only the bot reads the private key.
 - If the deny list is too long, the run does not start rather than truncating it.
 
@@ -94,6 +96,17 @@ The instructions and limits in `data/channel-rules/channels.yaml` are read for e
 - Only work in the approval channel can write it, and other work cannot read it, because it holds channel IDs and instructions for those channels.
 - `github: false` alone does not stop pushes that use the host's `~/.ssh`. Combine it with `read_only` to stop them for sure.
 - If the file cannot be read, requests outside the approval channel do not start, so nothing runs with its limits lifted. The approval channel works without the file, so it can be fixed there.
+
+`data/channel-rules/settings.yaml` sits in the same place and is changed through conversation in the approval channel, so that each new setting does not add an environment variable. Requests do not stop when it cannot be read, because every default is on the safe side (no SQL writes).
+
+### SQL guard
+
+Every MCP server started with `command` is started through ebi-x itself (`ebi-x mcp-sql-guard`), which limits tool calls that carry SQL to a single read-only statement.
+
+- It does not rely on each server's read-only setting, because the setting's name and existence differ between servers, and forgetting it lets writes through.
+- It wraps every server, not only those that look like databases. Telling them apart by name or arguments would let unrecognized servers through. Calls without SQL pass unchanged.
+- The check is an allowlist of leading keywords plus a denylist of words that write or lock. It does not parse each dialect, and stops anything doubtful. For example, a column named `delete` is stopped unless quoted.
+- Servers connected by `url` cannot be wrapped.
 
 ## Output contract
 

@@ -15,11 +15,9 @@ import (
 )
 
 const (
-	doneReaction          = "done"
 	doneWatchPollInterval = 30 * time.Minute
 	defaultDoneWatchDays  = 1
 	maxDoneWatchDays      = 7
-	doneWatchHour         = 19
 	maxDoneWatchReminders = 5
 	maxDoneWatchesPerUser = 10
 	maxDoneWatchTargets   = 100
@@ -37,9 +35,9 @@ const (
 	doneWatchReminder         = "%s\n:done: のリアクションがまだのようです。対応が済んだら、%sに :done: を付けてください。（%d回目の通知）"
 	doneWatchLastReminder     = "\n%d回通知したため、監視はこれで終了します。"
 	doneWatchCompleted        = "✅ 対象の全員が :done: を付けたため、監視を終了しました。"
-	doneWatchGoneMessage      = "元メッセージが見つからなくなったため、:done: の監視を終了しました。"
-	doneWatchStoppedMessage   = ":done: の監視を終了しました。"
-	doneWatchNothingToStop    = "このスレッドで続けている :done: の監視はありません。"
+	doneWatchGoneMessage      = "元メッセージが見つからなくなったため、リアクションの監視を終了しました。"
+	doneWatchStoppedMessage   = "リアクションの監視を終了しました。"
+	doneWatchNothingToStop    = "このスレッドで続けているリアクションの監視はありません。"
 )
 
 var doneWatchCommand = regexp.MustCompile(`^(?:(毎日)|(\d{1,2})日(おき|ごと|毎)に?)?\s*監視(?:して|お願い(?:します)?|よろしく)?(?:ください)?[。．.!！\s]*$`)
@@ -178,21 +176,23 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 		b.postDoneWatchNotice(ctx, channel, threadTS, fmt.Sprintf(doneWatchLimitNotice, maxDoneWatchesPerUser))
 		return
 	}
-	reacted, err := b.api.ReactionUsers(ctx, channel, messageTS, doneReaction)
+	settings := b.settings()
+	reaction, hour := settings.doneReaction(), settings.doneWatchHour()
+	reacted, err := b.api.ReactionUsers(ctx, channel, messageTS, reaction)
 	if err != nil {
 		log.Printf("slackbot: read reactions of %s: %v", key, err)
 		b.postDoneWatchNotice(ctx, channel, threadTS, doneWatchFailedNotice)
 		return
 	}
 	if len(pendingUsers(targets, reacted)) == 0 {
-		b.postDoneWatchNotice(ctx, channel, threadTS, doneWatchAllDoneNotice)
+		b.postDoneWatchNotice(ctx, channel, threadTS, withReaction(doneWatchAllDoneNotice, reaction))
 		return
 	}
 	now := b.now()
 	watch := state.DoneWatch{
 		Channel: channel, ThreadTS: threadTS, MessageTS: messageTS, AuthorID: authorID,
-		Targets: targets, IntervalDays: days,
-		NextAt: nextDoneWatchReminder(now, days), CreatedAt: now,
+		Targets: targets, IntervalDays: days, Reaction: reaction,
+		NextAt: nextDoneWatchReminder(now, days, hour), CreatedAt: now,
 	}
 	if err := b.store.SetDoneWatch(watch); err != nil {
 		log.Printf("slackbot: save done watch %s: %v", key, err)
@@ -207,12 +207,12 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 	if len(namedOutside) > 0 {
 		outsideNote += fmt.Sprintf(doneWatchNamedOutsideNote, userMentions(namedOutside))
 	}
-	b.postDoneWatchNotice(ctx, channel, threadTS, fmt.Sprintf(doneWatchStartedNotice, len(targets), doneWatchIntervalLabel(days), formatFollowUpTime(watch.NextAt), outsideNote, maxDoneWatchReminders))
+	b.postDoneWatchNotice(ctx, channel, threadTS, withReaction(fmt.Sprintf(doneWatchStartedNotice, len(targets), doneWatchIntervalLabel(days, hour), formatFollowUpTime(watch.NextAt), outsideNote, maxDoneWatchReminders), reaction))
 }
 
-func nextDoneWatchReminder(after time.Time, days int) time.Time {
+func nextDoneWatchReminder(after time.Time, days, hour int) time.Time {
 	local := after.In(time.Local)
-	at := time.Date(local.Year(), local.Month(), local.Day(), doneWatchHour, 0, 0, 0, time.Local)
+	at := time.Date(local.Year(), local.Month(), local.Day(), hour, 0, 0, 0, time.Local)
 	if !at.After(local) {
 		at = at.AddDate(0, 0, 1)
 	}
@@ -280,14 +280,26 @@ func (b *Bot) postDoneWatchNotice(ctx context.Context, channel, threadTS, text s
 	}
 }
 
-func doneWatchIntervalLabel(days int) string {
+func doneWatchIntervalLabel(days, hour int) string {
 	switch days {
 	case 1:
-		return fmt.Sprintf("平日の毎日%d時", doneWatchHour)
+		return fmt.Sprintf("平日の毎日%d時", hour)
 	case 2:
-		return fmt.Sprintf("平日1日おきの%d時", doneWatchHour)
+		return fmt.Sprintf("平日1日おきの%d時", hour)
 	}
-	return fmt.Sprintf("平日%d日ごとの%d時", days, doneWatchHour)
+	return fmt.Sprintf("平日%d日ごとの%d時", days, hour)
+}
+
+// Watches saved before the reaction became a setting have none.
+func watchReaction(watch state.DoneWatch) string {
+	if watch.Reaction == "" {
+		return defaultDoneReaction
+	}
+	return watch.Reaction
+}
+
+func withReaction(text, reaction string) string {
+	return strings.ReplaceAll(text, ":done:", ":"+reaction+":")
 }
 
 func notIn(users, members []string) []string {
@@ -378,7 +390,8 @@ func (b *Bot) checkDoneWatch(ctx context.Context, watch state.DoneWatch) {
 		b.endDoneWatch(ctx, watch, "")
 		return
 	}
-	reacted, err := b.api.ReactionUsers(ctx, watch.Channel, watch.MessageTS, doneReaction)
+	reaction := watchReaction(watch)
+	reacted, err := b.api.ReactionUsers(ctx, watch.Channel, watch.MessageTS, reaction)
 	if err != nil {
 		if response, ok := errors.AsType[slack.SlackErrorResponse](err); ok && response.Err == "message_not_found" {
 			b.endDoneWatch(ctx, watch, doneWatchGoneMessage)
@@ -389,7 +402,7 @@ func (b *Bot) checkDoneWatch(ctx context.Context, watch state.DoneWatch) {
 	}
 	pending := pendingUsers(watch.Targets, reacted)
 	if len(pending) == 0 {
-		b.endDoneWatch(ctx, watch, doneWatchCompleted)
+		b.endDoneWatch(ctx, watch, withReaction(doneWatchCompleted, reaction))
 		return
 	}
 	// A crash after the last reminder was counted leaves the watch behind.
@@ -403,12 +416,13 @@ func (b *Bot) checkDoneWatch(ctx context.Context, watch state.DoneWatch) {
 	// Count the reminder before posting, so a crash cannot remind twice, and
 	// only while the watch is still saved, so a stop during this check wins.
 	now := b.now()
+	hour := b.settings().doneWatchHour()
 	watch, ok, err := b.store.UpdateDoneWatch(key, func(saved *state.DoneWatch) bool {
 		if now.Before(saved.NextAt) {
 			return false
 		}
 		saved.Reminders++
-		saved.NextAt = nextDoneWatchReminder(now, saved.IntervalDays)
+		saved.NextAt = nextDoneWatchReminder(now, saved.IntervalDays, hour)
 		return true
 	})
 	if err != nil {
@@ -424,7 +438,7 @@ func (b *Bot) checkDoneWatch(ctx context.Context, watch state.DoneWatch) {
 	} else {
 		log.Printf("slackbot: link done watch message %s: %v", key, err)
 	}
-	text := fmt.Sprintf(doneWatchReminder, userMentions(pending), original, watch.Reminders)
+	text := withReaction(fmt.Sprintf(doneWatchReminder, userMentions(pending), original, watch.Reminders), reaction)
 	last := watch.Reminders >= maxDoneWatchReminders
 	if last {
 		text += fmt.Sprintf(doneWatchLastReminder, maxDoneWatchReminders)
@@ -464,7 +478,7 @@ func (b *Bot) stopDoneWatches(channel, threadTS string) bool {
 }
 
 func doneWatchSummary(watch state.DoneWatch) string {
-	return fmt.Sprintf("対象%d人、%s（次回 %s）", len(watch.Targets), doneWatchIntervalLabel(watch.IntervalDays), formatFollowUpTime(watch.NextAt))
+	return fmt.Sprintf("対象%d人、%s（次回 %s）", len(watch.Targets), doneWatchIntervalLabel(watch.IntervalDays, watch.NextAt.In(time.Local).Hour()), formatFollowUpTime(watch.NextAt))
 }
 
 func (b *Bot) stopDoneWatchCommand(ctx context.Context, channel, threadTS string) {

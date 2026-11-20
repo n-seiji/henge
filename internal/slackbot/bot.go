@@ -144,6 +144,7 @@ type Config struct {
 	MemoryDir                  string
 	PlaybooksDir               string
 	ChannelRulesFile           string
+	SettingsFile               string
 	ActionRulesFile            string
 	CodexTimeout               time.Duration
 	ThreadSubscriptionReaction string
@@ -447,6 +448,13 @@ func (b *Bot) processTrigger(ctx context.Context, trigger processingTrigger) {
 		}
 		slackThread = formatThreadContext(threadMessages, timestamp)
 	}
+	// Checked before Codex sees anything: once sent, the value is in the
+	// model provider's logs and the session history, beyond the bot's reach.
+	if containsPastedSecret(trigger.message, slackThread) {
+		log.Printf("slackbot: %q holds what looks like a token; not sent to Codex", eventKey)
+		b.fail(ctx, eventKey, state.Received, state.Failed, channel, threadTS, timestamp, pastedSecretMessage)
+		return
+	}
 	files := b.sharedFiles(ctx, trigger, threadMessages)
 	scope := b.channelScope(ctx, channel)
 	output, started, workErr := b.work(ctx, stopCtx, eventKey, channel, threadTS, threadKey, workspaceID, threadID, slackThread, files, scope, trigger)
@@ -629,6 +637,9 @@ func (b *Bot) work(ctx, stopCtx context.Context, eventKey, channel, threadTS, th
 			log.Printf("slackbot: read memory: %v", memErr)
 		}
 		turnPrompt = prompt.BuildTurnPrompt(memoryContext, currentPlaybooks, readActionRules(b.config.ActionRulesFile), slackThread, trigger.authorID, trigger.message, settings, lease.Checkouts, lease.PendingRepos, sharedWritable, b.pullWatchEnabled())
+		if sharedWritable && b.config.SettingsFile != "" {
+			turnPrompt += prompt.SettingsRules(b.config.ChannelRulesFile, b.config.SettingsFile)
+		}
 	} else if trigger.source == pullWatchTrigger {
 		turnPrompt = prompt.BuildPullWatchPrompt(trigger.message, lease.Checkouts, lease.PendingRepos)
 	} else if trigger.followUp != nil {
@@ -711,8 +722,10 @@ func (b *Bot) work(ctx, stopCtx context.Context, eventKey, channel, threadTS, th
 	resultText, memoryAppends, memoryOutputValid := codex.SplitMemoryAppends(resultText)
 	output.text = codex.SanitizeSlackOutput(resultText)
 	if sharedWritable {
-		if notice := b.channelRulesNotice(); notice != "" {
-			output.text += "\n\n" + notice
+		for _, notice := range []string{b.channelRulesNotice(), b.settingsNotice()} {
+			if notice != "" {
+				output.text += "\n\n" + notice
+			}
 		}
 	}
 	if !memoryOutputValid {
@@ -770,6 +783,7 @@ func (b *Bot) runWorkTurn(ctx context.Context, threadID string, lease *workspace
 		sandbox = "read-only"
 	}
 	access := scope.rule.access(scope.slackLimited)
+	access.SQLWriters = b.settings().SQLWriteServers
 	result, err := b.runTurn(ctx, threadID, sandbox, lease.Dir, roots, denied, access, text, onThreadStarted, onActivity)
 	if err != nil {
 		return "", err
@@ -868,7 +882,7 @@ func (w sharedWorkspaces) Denied(workspace.Area) ([]string, error) { return nil,
 
 // Names who lacks access so the author asks the admin rather than retrying.
 func (b *Bot) forbidden(ctx context.Context, event *slackevents.AppMentionEvent, missing []approvalSubject) {
-	contact := "@seiji"
+	contact := "ebi-x の管理者"
 	if b.config.AdminUserID != "" {
 		contact = "<@" + b.config.AdminUserID + ">"
 	}

@@ -2,9 +2,34 @@
 
 How to get ebi-x running, and the settings the operator decides.
 
+## 0. Installation
+
+To install a release binary, use `install.sh` (the README's steps). It checks the checksum, places the binary in `~/.local/bin`, and on macOS re-signs it with the hardened runtime. `EBIX_VERSION=v1.2.3` picks a version and `EBIX_BIN_DIR` the location.
+
+To build from source, install Go (`mise install` sets it up) and run `mise run build`. If you build with `go build` directly, on macOS also run `codesign --force --sign - --options runtime ebi-x` (see [7. Watching PRs](#the-works-github-authentication-github-app) for why).
+
+Run from a terminal, `ebi-x init` asks for the Slack tokens and IDs and writes only the items without defaults to `.env`. Run without a terminal (from a script), it writes `.env.example` with every item described. Neither overwrites existing files.
+
+**One directory, one agent**: ebi-x reads `.env` in the directory it starts in, and keeps `data/` and `.codex/` in `EBIX_HOME` (by default that directory). To run another agent with another Slack app, use another directory and start again from `ebi-x init`. The binary can be shared.
+
+### Keeping it running
+
+There are templates in `examples/`. Both use the agent's directory as the working directory and pass a `PATH` where `codex` and `git` can be found.
+
+| OS | File | Switching to a new binary |
+| --- | --- | --- |
+| Linux (systemd user service) | `examples/ebi-x.service` | run `install.sh`, then `systemctl --user reload ebi-x` |
+| macOS (launchd) | `examples/ebi-x.plist` | run `install.sh`, then `launchctl kill HUP gui/$(id -u)/local.ebi-x` |
+
+The switch behaves like the reload in [9. Operations](#9-operations).
+
+### Releases
+
+Pushing a tag starting with `v` makes GitHub Actions run the tests, then attach Linux and macOS (amd64, arm64) binaries and `checksums.txt` to the release. `install.sh` relies on these file names.
+
 ## 1. Slack app
 
-On Slack's app creation screen, choose "From a manifest" and paste `examples/slack-app-manifest.json` to set up everything below at once. Without the manifest, configure the same by hand.
+On Slack's app creation screen, choose "From a manifest" and paste the `slack-app-manifest.json` that `ebi-x init` writes (`examples/slack-app-manifest.json` in the repository) to set up everything below at once. Without the manifest, configure the same by hand.
 
 | Item | Setting | Used for |
 | --- | --- | --- |
@@ -15,7 +40,7 @@ On Slack's app creation screen, choose "From a manifest" and paste `examples/sla
 | Interactivity & Shortcuts | Interactivity on, Message Shortcut "Ask ebi-x" (Callback ID `ebix_request`) | requests from a message |
 | Agents & AI Apps | switch to Agent App (`features.agent_view` in the manifest) | the agent view in the sidebar and the Messages tab |
 
-- To use `@channel` with `:done:` watches ([usage.md](usage.md#done-watches)), add `channels:read` and `users:read` (plus `groups:read` for private channels), and for user groups such as `@dev_team`, also `usergroups:read`. The manifest includes them.
+- To use `@channel` with reaction watches ([usage.md](usage.md#reaction-watches)), add `channels:read` and `users:read` (plus `groups:read` for private channels), and for user groups such as `@dev_team`, also `usergroups:read`. The manifest includes them.
 - Private channels and Slack Connect channels need `groups:read`, `groups:history` and `message.groups` (included in the manifest).
 - Switching to an Agent App cannot be undone, and needs a paid Slack plan.
 - After changing scopes, reinstall the app in the workspace. If the Bot Token changes, update `.env` too.
@@ -24,7 +49,7 @@ After installing, get the Bot Token (`xoxb-`) and the App Token for Socket Mode 
 
 ## 2. `.env`
 
-Copy `.env.example` to `.env` and fill it in. The main items are below; `.env.example` also describes each one.
+Fill in the `.env` that `ebi-x init` wrote (to run from the repository, copy `.env.example`). The main items are below; `.env.example` also describes each one.
 
 | Variable | Default | Contents |
 | --- | --- | --- |
@@ -32,8 +57,8 @@ Copy `.env.example` to `.env` and fill it in. The main items are below; `.env.ex
 | `SLACK_ALLOWED_USER_IDS` / `SLACK_ALLOWED_CHANNEL_IDS` | none | users and channels always allowed. Without an approval channel, at least one of each is required |
 | `SLACK_APPROVAL_CHANNEL_ID` / `SLACK_APPROVER_USER_IDS` | none | the approval channel and approvers (see below) |
 | `SLACK_ALLOW_WORKFLOWS` / `SLACK_ALLOWED_WORKFLOW_IDS` | `false` / none | whether to accept mentions from Workflow Builder, and which workflows |
-| `SLACK_ADMIN_USER_ID` | none | the user shown to people without permission as the one to ask. Unset, the text `@seiji` is shown |
-| `SLACK_THREAD_SUBSCRIPTION_REACTION` / `SLACK_THREAD_SUBSCRIPTION_TTL` | `thread-subete` / `336h` | thread subscriptions that also handle replies without a mention. An empty reaction turns them off |
+| `SLACK_ADMIN_USER_ID` | none | the user shown to people without permission as the one to ask. Unset, the words "the ebi-x administrator" are shown |
+| `SLACK_THREAD_SUBSCRIPTION_REACTION` / `SLACK_THREAD_SUBSCRIPTION_TTL` | none / `336h` | the reaction name and duration for thread subscriptions, which also handle replies without a mention. Without a reaction they are off |
 | `CODEX_COMMAND` | `codex` | the Codex executable (no arguments) |
 | `CODEX_MODEL` | Codex's default | the model to use |
 | `CODEX_TIMEOUT` | `30m` | the time limit for one Codex run |
@@ -138,6 +163,17 @@ Write them per channel ID in `$EBIX_HOME/data/channel-rules/channels.yaml` (see 
 | `repositories` | the repositories that can be read (directory names or paths). Other repositories and their clones cannot be read |
 | `mcp_servers` | the names of usable MCP servers. `[]` turns them all off |
 
+### Global settings
+
+Write them in `$EBIX_HOME/data/channel-rules/settings.yaml` (see `examples/settings.yaml`). Ask in the approval channel, for example `@ebi-x make the watch reaction ok_hand and the time 9`, and ebi-x shows the change before rewriting the file. Writing it by hand is fine too.
+
+| Item | Contents |
+| --- | --- |
+| `done_watch.reaction` / `done_watch.hour` | the reaction "監視して" (watch this) waits for, and the hour to notify ([usage.md](usage.md#reaction-watches)) |
+| `sql_write_servers` | the names of MCP servers allowed to run SQL that writes or locks |
+
+If the file cannot be read, ebi-x runs with the defaults and says so in its replies in the approval channel.
+
 - It is reread for every request, so no restart is needed.
 - Only requests from the approval channel can change it.
 - If the file cannot be read (a YAML error, or an unknown item), requests outside the approval channel do not start ([design.md](design.md#per-channel-settings)).
@@ -149,7 +185,7 @@ A playbook is Markdown describing how to do a specific kind of work. Put it dire
 
 ```markdown
 ---
-name: slides
+name: release-notes
 description: state concretely which requests it is for
 ---
 
@@ -161,11 +197,8 @@ description: state concretely which requests it is for
 
 | Example | Contents |
 | --- | --- |
-| `slides.md` | create, revise and deliver slides in a slides repository that builds images, PDF and pptx from Markdown drafts |
 | `playbook-from-thread.md` | turn what was done in a thread into a playbook, or fix an existing one |
 | `request-discovery.md` | interview about an improvement request one question at a time and summarize it |
-
-To use `slides.md`, clone the slides repository, add it to `EBIX_WRITABLE_ROOTS`, set up the Node, pnpm, Python, Chrome, LibreOffice and fonts its build needs, and run `pnpm install`.
 
 Only the approval channel can change playbooks from Slack. `data/` is outside Git, so keep playbooks safe in the running environment.
 
@@ -190,20 +223,13 @@ With `EBIX_GITHUB_APP_ID` and `EBIX_GITHUB_APP_PRIVATE_KEY` set, the bot mints a
   - After a rebuild, the Keychain sees a different app. So after a reload, at startup you are asked "ebi-x wants to use confidential information stored in your keychain"; press "Always Allow". The key is read only once at startup, and startup waits until then (it is logged).
   - On macOS, `mise run build` adds the hardened runtime (`codesign --sign - --options runtime`), so a debugger, that is Codex's work, cannot attach to ebi-x and read the key from memory. If you build with `go build` directly, run the same `codesign`.
 
-## 8. MCP (BigQuery and others)
+## 8. MCP
 
 Codex's MCP servers are configured in `$EBIX_HOME/.codex/config.toml`. `~/.codex/config.toml` is not read.
 
-To run SQL with the prebuilt BigQuery server of [MCP Toolbox](https://github.com/googleapis/genai-toolbox), expose all its tools by not writing `enabled_tools`.
+MCP servers started with `command` are started through ebi-x's SQL guard. When a tool call carries SQL (an `sql` or `statement` argument, or `query` on a tool whose name contains sql, query or execute), only a single read statement such as SELECT, WITH, SHOW or EXPLAIN that does not write or lock passes; anything else is returned as a tool error. List servers that need to write in `sql_write_servers` in `settings.yaml`.
 
-```toml
-[mcp_servers.bigquery]
-# keep command / args / env as they are; do not write enabled_tools
-```
-
-Toolbox's `execute_sql` runs any statement, so when a Toolbox BigQuery server (one with `BIGQUERY_PROJECT` in `env`, or started with `--prebuilt bigquery`) has neither `BIGQUERY_WRITE_MODE` nor `BIGQUERY_READONLY`, ebi-x starts it with `BIGQUERY_WRITE_MODE="blocked"`. In that state only SELECT runs. If you start it through a wrapper script that does not match these conditions, write it in `env` yourself.
-
-With Google Cloud's remote BigQuery MCP (`https://bigquery.googleapis.com/mcp`), remove the tools that can modify data with `disabled_tools = ["execute_sql"]`, and use `execute_sql_readonly`.
+The guard cannot be put in front of MCP servers connected by `url`. Remove their tools that can write with `enabled_tools` or `disabled_tools`, or with the server's own read-only setting.
 
 When a needed tool is not exposed, Codex tells the requester that it is "not exposed", not that it "cannot connect".
 

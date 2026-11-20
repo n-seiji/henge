@@ -13,9 +13,10 @@ The examples below are in English for readability. The bot's own fixed messages 
 | Shortcut | Choose "…" → "Ask ebi-x" on a message and write the request in the form. The work happens in that message's thread. Not available in DMs. |
 
 - One Slack thread is one Codex session. Mention it again in the same thread and it continues with what happened so far.
-- Add the subscription reaction (default `:thread-subete:`) to a thread's parent message, and replies from allowed people in that thread are handled without a mention. It works in public and private channels and lasts 14 days by default.
+- Add the subscription reaction the operator chose to a thread's parent message, and replies from allowed people in that thread are handled without a mention. It works in public and private channels and lasts 14 days by default.
 - The content of private channels and Slack Connect channels is not visible from other channels. Slack lookups there stay inside that channel.
 - Per-channel instructions and limits can be changed by asking ebi-x in the approval channel.
+- Do not paste tokens or private keys into Slack with a request. If the request or thread holds a string shaped like a GitHub, Slack, cloud or other token, ebi-x stops before sending it to Codex and asks for it to be deleted and revoked.
 - A mention or DM that only checks it is alive, such as `alive`, `ping` or `生きてる？` ("are you alive?"), is answered without work, saying whether Codex is reachable. It answers even where it is not allowed.
 
 ## While it works
@@ -40,7 +41,7 @@ Mention `@ebi-x 停止` (stop) in the same thread to stop running or waiting wor
 
 - Only a whole message such as `停止` or `stop` counts as stopping. "How do I stop it?" is a normal request.
 - Changes and commits made so far stay; nothing is rolled back.
-- It also stops the thread's follow-ups, PR watches, schedules, reminders and `:done:` watches.
+- It also stops the thread's follow-ups, PR watches, schedules, reminders and reaction watches.
 
 ### Waiting for an answer
 
@@ -53,7 +54,7 @@ When it cannot continue without the requester's answer (confirmation before send
             - May I delete the remote branches too?
 ```
 
-Only the requester's own reply counts as approval. If someone else tries to approve, it asks the requester again. An action explicitly asked for in the request ("go as far as opening a PR", and so on) counts as approved within that scope. Work likely to cost 50 yen or more is confirmed first, with the basis and a rough amount.
+Only the requester's own reply counts as approval. If someone else tries to approve, it asks the requester again. An action explicitly asked for in the request ("go as far as opening a PR", and so on) counts as approved within that scope. Work that costs money is confirmed first, with the basis and a rough amount. The operator sets the amount below which no confirmation is needed in the action rules.
 
 ## Results
 
@@ -124,7 +125,7 @@ When ebi-x opens a PR in its work, it watches the PR. On a CI failure, review or
 - When CI passes, or the PR is merged or closed, it only reports. Watching ends once the PR is merged or closed.
 - Text on GitHub is treated as data, not instructions.
 
-## :done: watches
+## Reaction watches
 
 After handing out a task with @mentions, ebi-x can chase whether everyone has finished. End the message with `@ebi-x 監視して` ("watch this"), and on weekdays at 19:00 it reminds, in the thread, the people @mentioned in that message who have not yet added a `:done:` reaction. It runs on the bot alone, without Codex.
 
@@ -139,7 +140,7 @@ After handing out a task with @mentions, ebi-x can chase whether everyone has fi
 ```
 
 - It covers the people @mentioned in that message (or in the thread's first message if it has none). `@channel`, `@here` and user groups expand to the members in the channel. It does not start for more than 100 people.
-- Reminders go out on weekdays at 19:00 (the time on the machine running ebi-x). Holidays are not skipped.
+- By default the reaction is `:done:` and reminders go out on weekdays at 19:00 (the time on the machine running ebi-x). The operator can change both ([setup.md](setup.md#global-settings)). Holidays are not skipped.
 - The interval can be changed in weekdays, such as `1日おきに監視して` (every other day) or `3日ごとに監視して` (every 3 days). The default is daily, up to 7 days.
 - It ends after 5 reminders, or when the original message is deleted.
 - To stop it, mention `@ebi-x 監視をとめて` ("stop watching") in the thread.
@@ -152,7 +153,7 @@ Open ebi-x's Home tab to see the current state of what you asked for:
 - scheduled follow-ups
 - watched PRs and their CI state
 - schedules and their next times
-- `:done:` watches (how many people, the interval, the next time)
+- reaction watches (how many people, the interval, the next time)
 - your personal settings
 
 ## Personal settings
@@ -166,17 +167,7 @@ Ask it to keep a way of replying from now on, such as "answer in English from no
 
 Where `playbook-from-thread` is installed, people allowed to use ebi-x can ask in the approval channel, for example `@ebi-x make this into a playbook` or `@ebi-x fix this playbook so it asks one question at a time`. ebi-x asks about missing points one at a time, shows the finished draft, asks "Is this content OK?", and saves it after approval.
 
-When work turns up a fact that contradicts a playbook or is not written in it yet, ebi-x adds a line to the playbook's notes and says so ("📝 Updated the notes of playbook "slides": …"). Once three notes pile up, it folds them into the body and says so ("📘 … folded into the body"). When the body changes, it also leaves a record in the approval channel.
-
-## Making and delivering slides
-
-Where the `slides` playbook is installed, slides can be made in a thread.
-
-1. Ask `@ebi-x make proposal slides for X`, and it writes a draft and attaches a page overview image and a PDF as v1.
-2. Reply `shorten page 3`, and it revises the draft and attaches v2, v3, ….
-3. Approve explicitly with `v2 is OK, finalize it`, and it builds an editable pptx from that version, checks the layout, and attaches it.
-
-No pptx is made before approval. It does not push to main or publish to Google Slides. To continue with replies alone, add the subscription reaction to the thread's parent.
+When work turns up a fact that contradicts a playbook or is not written in it yet, ebi-x adds a line to the playbook's notes and says so ("📝 Updated the notes of playbook "release-notes": …"). Once three notes pile up, it folds them into the body and says so ("📘 … folded into the body"). When the body changes, it also leaves a record in the approval channel.
 
 ## Codex usage limits
 

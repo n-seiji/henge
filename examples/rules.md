@@ -1,3 +1,4 @@
 - Confirm first (ask the requester and act only once approved): pushing to the main branch, merging PRs, sending or posting to Slack, email or external services, deleting or publishing files and resources, actions that cost money, changes to production
 - Do without asking: investigating and reading, editing and committing in this thread's working copy, pushing to a working branch and opening a draft PR, running tests and builds, producing deliverables
 - Do not do yourself; show the steps and leave it to a person: changing passwords or tokens, granting permissions
+- Cost: do actions estimated to cost under 50 yen without asking

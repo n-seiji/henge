@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+config=$(mktemp)
+trap 'rm -f "$config"' EXIT
+
+printf '[extend]\nuseDefault = true\n' >"$config"
+# The words to block are the very names this repository must not publish, so
+# they live in an untracked file locally and in an Actions secret on CI.
+if [ -f .denylist ]; then
+  words=$(grep -v -e '^[[:space:]]*#' -e '^[[:space:]]*$' .denylist |
+    sed 's/[][\\.^$*+?(){}|]/\\&/g' | paste -sd '|' -)
+  if [ -n "$words" ]; then
+    printf "[[rules]]\nid = \"denylist\"\ndescription = \"word in .denylist\"\nregex = '''(?i)(%s)'''\n" "$words" >>"$config"
+  fi
+fi
+
+leaks() { gitleaks --config "$config" --redact --no-banner -v "$@"; }
+
+case "${1:-}" in
+--staged) leaks git --staged ;;
+--message) leaks stdin <"$2" ;;
+*)
+  status=0
+  leaks git || status=1
+  for c in $(git rev-list --all); do
+    git log -1 --format=%B "$c" | leaks stdin 2>/dev/null ||
+      { echo "commit message of $c"; status=1; }
+  done
+  exit $status
+  ;;
+esac
