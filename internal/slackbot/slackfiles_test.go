@@ -53,7 +53,7 @@ func TestMentionImageIsSavedForTheTurn(t *testing.T) {
 	if len(runner.prompts) != 1 {
 		t.Fatalf("runner prompts = %d, want 1", len(runner.prompts))
 	}
-	for _, want := range []string{sharedFilesHeading, "- " + path + "（image/png、100.1 の発言）"} {
+	for _, want := range []string{sharedFilesHeading, "- " + path + " (image/png, message 100.1)"} {
 		if !strings.Contains(runner.prompts[0], want) {
 			t.Errorf("prompt does not contain %q:\n%s", want, runner.prompts[0])
 		}
@@ -87,7 +87,7 @@ func TestSignInPageIsReportedAsMissingScope(t *testing.T) {
 
 	bot.HandleMention(context.Background(), mention())
 
-	for _, want := range []string{"receipt.jpg（100.1 の発言）: Slack から取得できませんでした（ebi-x の Slack アプリに files:read 権限が必要です）", sharedFilesMissing} {
+	for _, want := range []string{"receipt.jpg (message 100.1): could not be fetched from Slack (the ebi-x Slack app needs the files:read scope)", sharedFilesMissing} {
 		if !strings.Contains(runner.prompts[0], want) {
 			t.Errorf("prompt does not contain %q:\n%s", want, runner.prompts[0])
 		}
@@ -119,7 +119,7 @@ func TestFirstTurnSavesEarlierThreadFiles(t *testing.T) {
 		t.Errorf("message reads = %d, want the current message taken from the thread", api.messageCalls)
 	}
 	got := runner.prompts[0]
-	for _, want := range []string{"[100.1 / U2]\n（添付: screen.png）", filepath.Join(dir, sharedFilesDir, "100-1-screen.png")} {
+	for _, want := range []string{"[100.1 / U2]\n(attached: screen.png)", filepath.Join(dir, sharedFilesDir, "100-1-screen.png")} {
 		if !strings.Contains(got, want) {
 			t.Errorf("prompt does not contain %q:\n%s", want, got)
 		}
@@ -134,7 +134,7 @@ func TestSharedWorkspaceDoesNotSaveFiles(t *testing.T) {
 	runner := doneRunner()
 	newTestBot(t, &fakeStore{claim: true}, api, runner).HandleMention(context.Background(), mention())
 
-	if !strings.Contains(runner.prompts[0], "a.png（100.1 の発言）: 作業領域がスレッド専用でないため取得していません") {
+	if !strings.Contains(runner.prompts[0], "a.png (message 100.1): not fetched, because the working area is not this thread's own") {
 		t.Errorf("prompt = %s, want the file listed as not saved", runner.prompts[0])
 	}
 }

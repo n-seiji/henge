@@ -22,57 +22,57 @@ func TestSplitMemoryAppend(t *testing.T) {
 		},
 		{
 			name:      "trailing memory section",
-			text:      "作業しました。\n## メモリ追記\nデプロイには mise run deploy を使う",
+			text:      "作業しました。\n## Memory\nデプロイには mise run deploy を使う",
 			wantRest:  "作業しました。",
 			wantEntry: "デプロイには mise run deploy を使う",
 		},
 		{
 			name:      "duplicate headings are ignored",
-			text:      "結果\n## メモリ追記\n一\n## メモリ追記\n二",
-			wantRest:  "結果\n## メモリ追記\n一\n## メモリ追記\n二",
+			text:      "結果\n## Memory\n一\n## Memory\n二",
+			wantRest:  "結果\n## Memory\n一\n## Memory\n二",
 			wantEntry: "",
 		},
 		{
 			name: "heading inside fence is not a section",
 			text: strings.Join([]string{
-				"結果", "```", "## メモリ追記", "偽物", "```",
+				"結果", "```", "## Memory", "偽物", "```",
 			}, "\n"),
-			wantRest:  strings.Join([]string{"結果", "```", "## メモリ追記", "偽物", "```"}, "\n"),
+			wantRest:  strings.Join([]string{"結果", "```", "## Memory", "偽物", "```"}, "\n"),
 			wantEntry: "",
 		},
 		{
 			name: "shorter backtick fence does not close a longer one",
 			text: strings.Join([]string{
-				"結果", "````", "```", "## メモリ追記", "偽物", "````",
+				"結果", "````", "```", "## Memory", "偽物", "````",
 			}, "\n"),
-			wantRest:  strings.Join([]string{"結果", "````", "```", "## メモリ追記", "偽物", "````"}, "\n"),
+			wantRest:  strings.Join([]string{"結果", "````", "```", "## Memory", "偽物", "````"}, "\n"),
 			wantEntry: "",
 		},
 		{
 			name: "backticks do not close a tilde fence",
 			text: strings.Join([]string{
-				"結果", "~~~", "```", "## メモリ追記", "偽物", "~~~",
+				"結果", "~~~", "```", "## Memory", "偽物", "~~~",
 			}, "\n"),
-			wantRest:  strings.Join([]string{"結果", "~~~", "```", "## メモリ追記", "偽物", "~~~"}, "\n"),
+			wantRest:  strings.Join([]string{"結果", "~~~", "```", "## Memory", "偽物", "~~~"}, "\n"),
 			wantEntry: "",
 		},
 		{
 			name: "heading after a closed longer fence is a section",
 			text: strings.Join([]string{
-				"結果", "````", "## メモリ追記", "偽物", "````", "## メモリ追記", "本物",
+				"結果", "````", "## Memory", "偽物", "````", "## Memory", "本物",
 			}, "\n"),
-			wantRest:  strings.Join([]string{"結果", "````", "## メモリ追記", "偽物", "````"}, "\n"),
+			wantRest:  strings.Join([]string{"結果", "````", "## Memory", "偽物", "````"}, "\n"),
 			wantEntry: "本物",
 		},
 		{
 			name:      "memory section only",
-			text:      "## メモリ追記\n学び",
+			text:      "## Memory\n学び",
 			wantRest:  "",
 			wantEntry: "学び",
 		},
 		{
 			name:      "empty entry",
-			text:      "結果\n## メモリ追記\n  ",
+			text:      "結果\n## Memory\n  ",
 			wantRest:  "結果",
 			wantEntry: "",
 		},
@@ -101,8 +101,8 @@ func TestSplitMemoryAppends(t *testing.T) {
 			name: "retired channel section is stripped and not returned",
 			text: strings.Join([]string{
 				"完了しました。",
-				"## 全体メモリ追記", "共通知識",
-				"## チャンネルメモリ追記", "検証用チャンネル",
+				"## Global memory", "共通知識",
+				"## Channel memory", "検証用チャンネル",
 			}, "\n"),
 			wantRest:    "完了しました。",
 			wantAppends: MemoryAppends{Global: "共通知識"},
@@ -110,21 +110,21 @@ func TestSplitMemoryAppends(t *testing.T) {
 		},
 		{
 			name:        "user memory heading is not accepted",
-			text:        "結果\n## ユーザーメモリ追記\n日本語を好む",
+			text:        "結果\n## User memory\n日本語を好む",
 			wantRest:    "結果",
 			wantAppends: MemoryAppends{},
 			wantValid:   false,
 		},
 		{
 			name:        "user memory heading in fence is not accepted",
-			text:        "結果\n```text\n## ユーザーメモリ追記\n秘密\n```",
+			text:        "結果\n```text\n## User memory\n秘密\n```",
 			wantRest:    "結果\n```text",
 			wantAppends: MemoryAppends{},
 			wantValid:   false,
 		},
 		{
 			name:        "inline user memory heading is not accepted",
-			text:        "結果 ## ユーザーメモリ追記 秘密",
+			text:        "結果 ## User memory 秘密",
 			wantRest:    "結果",
 			wantAppends: MemoryAppends{},
 			wantValid:   false,
@@ -132,21 +132,21 @@ func TestSplitMemoryAppends(t *testing.T) {
 		{
 			name: "heading in fence ignored",
 			text: strings.Join([]string{
-				"結果", "```", "## 全体メモリ追記", "偽物", "```",
-				"## チャンネルメモリ追記", "本物",
+				"結果", "```", "## Global memory", "偽物", "```",
+				"## Channel memory", "本物",
 			}, "\n"),
-			wantRest:    strings.Join([]string{"結果", "```", "## 全体メモリ追記", "偽物", "```"}, "\n"),
+			wantRest:    strings.Join([]string{"結果", "```", "## Global memory", "偽物", "```"}, "\n"),
 			wantAppends: MemoryAppends{},
 			wantValid:   true,
 		},
 		{
 			name:     "wrong order is unchanged",
-			text:     "結果\n## チャンネルメモリ追記\n先\n## 全体メモリ追記\n後",
+			text:     "結果\n## Channel memory\n先\n## Global memory\n後",
 			wantRest: "結果",
 		},
 		{
 			name:     "duplicate scope is unchanged",
-			text:     "結果\n## メモリ追記\n旧\n## 全体メモリ追記\n新",
+			text:     "結果\n## Memory\n旧\n## Global memory\n新",
 			wantRest: "結果",
 		},
 	}
@@ -174,22 +174,22 @@ func TestSanitizeSlackOutput(t *testing.T) {
 		},
 		{
 			name: "heading and payload are removed",
-			text: "通常の結果\n## ユーザーメモリ追記\n秘密",
+			text: "通常の結果\n## User memory\n秘密",
 			want: "通常の結果",
 		},
 		{
 			name: "inline heading and payload are removed",
-			text: "通常の結果 ## ユーザーメモリ追記 秘密",
+			text: "通常の結果 ## User memory 秘密",
 			want: "通常の結果",
 		},
 		{
 			name: "fenced heading and payload are removed",
-			text: "通常の結果\n```text\n## ユーザーメモリ追記\n秘密\n```",
+			text: "通常の結果\n```text\n## User memory\n秘密\n```",
 			want: "通常の結果\n```text",
 		},
 		{
 			name: "heading at start removes all output",
-			text: "## ユーザーメモリ追記\n秘密",
+			text: "## User memory\n秘密",
 			want: "",
 		},
 	}
@@ -219,72 +219,72 @@ func TestSplitAttachments(t *testing.T) {
 		},
 		{
 			name:      "trailing section",
-			text:      "v2を添付します。\n\n## 添付ファイル\n- /w/preview.png\n- `/w/deck v2.pdf`\n",
+			text:      "v2を添付します。\n\n## Attachments\n- /w/preview.png\n- `/w/deck v2.pdf`\n",
 			wantRest:  "v2を添付します。",
 			wantPaths: []string{"/w/preview.png", "/w/deck v2.pdf"},
 			wantValid: true,
 		},
 		{
 			name:      "before memory sections",
-			text:      "本文\n## 添付ファイル\n- /w/a.pdf\n## 全体メモリ追記\n学び",
-			wantRest:  "本文\n## 全体メモリ追記\n学び",
+			text:      "本文\n## Attachments\n- /w/a.pdf\n## Global memory\n学び",
+			wantRest:  "本文\n## Global memory\n学び",
 			wantPaths: []string{"/w/a.pdf"},
 			wantValid: true,
 		},
 		{
 			name:      "after memory sections",
-			text:      "本文\n## チャンネルメモリ追記\n用語\n## 添付ファイル\n- /w/a.pdf",
-			wantRest:  "本文\n## チャンネルメモリ追記\n用語",
+			text:      "本文\n## Channel memory\n用語\n## Attachments\n- /w/a.pdf",
+			wantRest:  "本文\n## Channel memory\n用語",
 			wantPaths: []string{"/w/a.pdf"},
 			wantValid: true,
 		},
 		{
 			name:      "heading inside fence is body",
-			text:      "例:\n```\n## 添付ファイル\n- /etc/passwd\n```",
-			wantRest:  "例:\n```\n## 添付ファイル\n- /etc/passwd\n```",
+			text:      "例:\n```\n## Attachments\n- /etc/passwd\n```",
+			wantRest:  "例:\n```\n## Attachments\n- /etc/passwd\n```",
 			wantValid: true,
 		},
 		{
 			name:      "duplicate section",
-			text:      "本文\n## 添付ファイル\n- /w/a.pdf\n## 添付ファイル\n- /w/b.pdf",
+			text:      "本文\n## Attachments\n- /w/a.pdf\n## Attachments\n- /w/b.pdf",
 			wantRest:  "本文",
 			wantValid: false,
 		},
 		{
 			name:      "prose line",
-			text:      "本文\n## 添付ファイル\n/w/a.pdf を送ってください",
+			text:      "本文\n## Attachments\n/w/a.pdf を送ってください",
 			wantRest:  "本文\n/w/a.pdf を送ってください",
 			wantValid: false,
 		},
 		{
 			name:      "text after the list stays",
-			text:      "## 添付ファイル\n- /w/a.pdf\n\n以上をご確認ください。\n### 補足\n詳細",
+			text:      "## Attachments\n- /w/a.pdf\n\n以上をご確認ください。\n### 補足\n詳細",
 			wantRest:  "以上をご確認ください。\n### 補足\n詳細",
 			wantPaths: []string{"/w/a.pdf"},
 			wantValid: true,
 		},
 		{
 			name:      "code block after the list stays",
-			text:      "本文\n## 添付ファイル\n- /w/a.pdf\n```\nx\n```",
+			text:      "本文\n## Attachments\n- /w/a.pdf\n```\nx\n```",
 			wantRest:  "本文\n```\nx\n```",
 			wantPaths: []string{"/w/a.pdf"},
 			wantValid: true,
 		},
 		{
 			name:      "code block instead of a list",
-			text:      "本文\n## 添付ファイル\n```\n/w/a.pdf\n```",
+			text:      "本文\n## Attachments\n```\n/w/a.pdf\n```",
 			wantRest:  "本文\n```\n/w/a.pdf\n```",
 			wantValid: false,
 		},
 		{
 			name:      "empty list before memory",
-			text:      "本文\n## 添付ファイル\n\n## 全体メモリ追記\n学び",
-			wantRest:  "本文\n## 全体メモリ追記\n学び",
+			text:      "本文\n## Attachments\n\n## Global memory\n学び",
+			wantRest:  "本文\n## Global memory\n学び",
 			wantValid: true,
 		},
 		{
 			name:      "unclosed backtick",
-			text:      "本文\n## 添付ファイル\n- `/w/a.pdf",
+			text:      "本文\n## Attachments\n- `/w/a.pdf",
 			wantRest:  "本文",
 			wantValid: false,
 		},
@@ -308,10 +308,10 @@ func TestSplitCheckoutRequest(t *testing.T) {
 		requested bool
 	}{
 		{name: "absent", text: "回答です。", rest: "回答です。"},
-		{name: "heading only", text: "## 作業用クローン要求", rest: "", requested: true},
-		{name: "with text", text: "変更が必要です。\n\n  ## 作業用クローン要求  \n", rest: "変更が必要です。", requested: true},
-		{name: "fenced is ignored", text: "```\n## 作業用クローン要求\n```", rest: "```\n## 作業用クローン要求\n```"},
-		{name: "inline is ignored", text: "見出し「## 作業用クローン要求」を使います。", rest: "見出し「## 作業用クローン要求」を使います。"},
+		{name: "heading only", text: "## Checkout request", rest: "", requested: true},
+		{name: "with text", text: "変更が必要です。\n\n  ## Checkout request  \n", rest: "変更が必要です。", requested: true},
+		{name: "fenced is ignored", text: "```\n## Checkout request\n```", rest: "```\n## Checkout request\n```"},
+		{name: "inline is ignored", text: "見出し「## Checkout request」を使います。", rest: "見出し「## Checkout request」を使います。"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -338,26 +338,26 @@ func TestSplitFollowUp(t *testing.T) {
 		},
 		{
 			name:     "valid section before memory",
-			text:     "CIを待っています。\n\n## フォローアップ\n- いつ: 30m\n- やること：CIの結果を確認して報告する\n\n## チャンネルメモリ追記\n- x",
-			wantRest: "CIを待っています。\n\n## チャンネルメモリ追記\n- x",
+			text:     "CIを待っています。\n\n## Follow-up\n- When: 30m\n- Task：CIの結果を確認して報告する\n\n## Channel memory\n- x",
+			wantRest: "CIを待っています。\n\n## Channel memory\n- x",
 			want:     &FollowUpRequest{When: "30m", Task: "CIの結果を確認して報告する"},
 		},
 		{
 			name:        "missing task",
-			text:        "本文\n## フォローアップ\n- いつ: 1h",
+			text:        "本文\n## Follow-up\n- When: 1h",
 			wantRest:    "本文",
 			wantInvalid: true,
 		},
 		{
 			name:        "duplicate heading",
-			text:        "本文\n## フォローアップ\n- いつ: 1h\n- やること: a\n## フォローアップ\n- いつ: 2h\n- やること: b",
+			text:        "本文\n## Follow-up\n- When: 1h\n- Task: a\n## Follow-up\n- When: 2h\n- Task: b",
 			wantRest:    "本文",
 			wantInvalid: true,
 		},
 		{
 			name:     "heading inside code is ignored",
-			text:     "```\n## フォローアップ\n- いつ: 1h\n```",
-			wantRest: "```\n## フォローアップ\n- いつ: 1h\n```",
+			text:     "```\n## Follow-up\n- When: 1h\n```",
+			wantRest: "```\n## Follow-up\n- When: 1h\n```",
 		},
 	}
 	for _, test := range tests {
@@ -399,7 +399,7 @@ func TestFollowUpDueAt(t *testing.T) {
 			t.Errorf("FollowUpDueAt(%q) = %v, %v; want %v", test.when, got, err, test.want)
 		}
 	}
-	if got := FollowUpRange(); got != "5m後から7日後まで" {
+	if got := FollowUpRange(); got != "5m to 7 days ahead" {
 		t.Errorf("FollowUpRange() = %q", got)
 	}
 }
@@ -415,28 +415,28 @@ func TestSplitQuestions(t *testing.T) {
 		{name: "none", text: "答え", wantRest: "答え"},
 		{
 			name:          "section before memory",
-			text:          "調べました。\n\n## 回答待ち\n- 本番に適用してよいですか？\n\n## チャンネルメモリ追記\n- x",
-			wantRest:      "調べました。\n\n## チャンネルメモリ追記\n- x",
+			text:          "調べました。\n\n## Questions\n- 本番に適用してよいですか？\n\n## Channel memory\n- x",
+			wantRest:      "調べました。\n\n## Channel memory\n- x",
 			wantQuestions: []string{"本番に適用してよいですか？"},
 			wantWaiting:   true,
 		},
 		{
 			name:        "heading without bullets",
-			text:        "本文\n## 回答待ち\n続きの文章",
+			text:        "本文\n## Questions\n続きの文章",
 			wantRest:    "本文\n続きの文章",
 			wantWaiting: true,
 		},
 		{
 			name:          "only the first section's questions",
-			text:          "本文\n## 回答待ち\n- a\n## 回答待ち\n- b",
+			text:          "本文\n## Questions\n- a\n## Questions\n- b",
 			wantRest:      "本文",
 			wantQuestions: []string{"a"},
 			wantWaiting:   true,
 		},
 		{
 			name:     "heading in a code block",
-			text:     "例:\n```\n## 回答待ち\n- a\n```",
-			wantRest: "例:\n```\n## 回答待ち\n- a\n```",
+			text:     "例:\n```\n## Questions\n- a\n```",
+			wantRest: "例:\n```\n## Questions\n- a\n```",
 		},
 	}
 	for _, test := range tests {
@@ -459,20 +459,20 @@ func TestSplitPullWatches(t *testing.T) {
 		{name: "none", text: "答え", wantRest: "答え"},
 		{
 			name:     "section before memory",
-			text:     "PR を作りました。\n\n## PR の見守り\n- https://github.com/o/r/pull/1\n- `https://github.com/o/r/pull/2`\n\n## チャンネルメモリ追記\n- x",
-			wantRest: "PR を作りました。\n\n## チャンネルメモリ追記\n- x",
+			text:     "PR を作りました。\n\n## Watch PRs\n- https://github.com/o/r/pull/1\n- `https://github.com/o/r/pull/2`\n\n## Channel memory\n- x",
+			wantRest: "PR を作りました。\n\n## Channel memory\n- x",
 			wantURLs: []string{"https://github.com/o/r/pull/1", "https://github.com/o/r/pull/2"},
 		},
 		{
 			name:     "repeated sections and URLs",
-			text:     "本文\n## PR の見守り\n- <https://github.com/o/r/pull/1>\n## PR の見守り\n- https://github.com/o/r/pull/1",
+			text:     "本文\n## Watch PRs\n- <https://github.com/o/r/pull/1>\n## Watch PRs\n- https://github.com/o/r/pull/1",
 			wantRest: "本文",
 			wantURLs: []string{"https://github.com/o/r/pull/1"},
 		},
 		{
 			name:     "heading in a code block",
-			text:     "```\n## PR の見守り\n- x\n```",
-			wantRest: "```\n## PR の見守り\n- x\n```",
+			text:     "```\n## Watch PRs\n- x\n```",
+			wantRest: "```\n## Watch PRs\n- x\n```",
 		},
 	}
 	for _, test := range tests {
@@ -513,26 +513,41 @@ func TestReminderDueAt(t *testing.T) {
 			t.Errorf("ReminderDueAt(%q) = %v, %v; want %v", test.when, got, err, test.want)
 		}
 	}
-	if got := ReminderRange(); got != "1分後から366日後まで" {
+	if got := ReminderRange(); got != "1m to 366 days ahead" {
 		t.Errorf("ReminderRange() = %q", got)
 	}
 }
 
 func TestSplitReminder(t *testing.T) {
-	rest, request, invalid := SplitReminder("リマインドします。\n\n## リマインダー\n- いつ: 2026-11-19T10:00:00+09:00\n- 内容: 見積もりを送る\n\n以上")
+	rest, request, invalid := SplitReminder("リマインドします。\n\n## Reminder\n- When: 2026-11-19T10:00:00+09:00\n- Text: 見積もりを送る\n\n以上")
 	if invalid || request == nil || request.When != "2026-11-19T10:00:00+09:00" || request.Text != "見積もりを送る" || request.Stop {
 		t.Fatalf("SplitReminder() = %#v, %v", request, invalid)
 	}
 	if rest != "リマインドします。\n\n以上" {
 		t.Fatalf("rest = %q", rest)
 	}
-	if _, request, invalid := SplitReminder("取り消します。\n## リマインダー\n- いつ: 停止"); invalid || request == nil || !request.Stop {
+	if _, request, invalid := SplitReminder("取り消します。\n## Reminder\n- When: stop"); invalid || request == nil || !request.Stop {
 		t.Fatalf("stop = %#v, %v", request, invalid)
 	}
-	if _, request, invalid := SplitReminder("## リマインダー\n- いつ: 1h"); !invalid || request != nil {
+	if _, request, invalid := SplitReminder("## Reminder\n- When: 1h"); !invalid || request != nil {
 		t.Fatalf("missing text = %#v, %v", request, invalid)
 	}
 	if rest, request, invalid := SplitReminder("本文だけ"); invalid || request != nil || rest != "本文だけ" {
 		t.Fatalf("no section = %q, %#v, %v", rest, request, invalid)
+	}
+}
+
+func TestLegacyJapaneseContractIsStillRead(t *testing.T) {
+	if _, request, invalid := SplitFollowUp("## フォローアップ\n- いつ: 1h\n- やること: CI を確認する"); invalid || request == nil || request.When != "1h" || request.Task != "CI を確認する" {
+		t.Errorf("SplitFollowUp() = %#v, %v", request, invalid)
+	}
+	if _, request, invalid := SplitReminder("## リマインダー\n- いつ: 停止"); invalid || request == nil || !request.Stop {
+		t.Errorf("SplitReminder() = %#v, %v", request, invalid)
+	}
+	if rest, questions, waiting := SplitQuestions("本文\n## 回答待ち\n- どちらですか"); !waiting || rest != "本文" || len(questions) != 1 {
+		t.Errorf("SplitQuestions() = %q, %q, %v", rest, questions, waiting)
+	}
+	if got := SanitizeSlackOutput("本文\n## ユーザーメモリ追記\n- secret"); got != "本文" {
+		t.Errorf("SanitizeSlackOutput() = %q", got)
 	}
 }

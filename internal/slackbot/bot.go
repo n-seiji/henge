@@ -1032,7 +1032,7 @@ func formatThreadContext(messages []ThreadMessage, currentTimestamp string) stri
 		}
 		text := message.Text
 		for _, file := range message.Files {
-			text += "\n（添付: " + safeFileName(file.Name) + "）"
+			text += "\n(attached: " + safeFileName(file.Name) + ")"
 		}
 		parts = append(parts, fmt.Sprintf("[%s / %s]\n%s", message.Timestamp, message.AuthorID, strings.TrimLeft(text, "\n")))
 	}
@@ -1044,7 +1044,7 @@ func truncateThreadContext(text string, limit int) string {
 	if len(runes) <= limit {
 		return text
 	}
-	const omission = "\n\n... 長いスレッドの中間を省略 ...\n\n"
+	const omission = "\n\n... middle of a long thread omitted ...\n\n"
 	omissionRunes := []rune(omission)
 	available := limit - len(omissionRunes)
 	if available <= 0 {

@@ -24,7 +24,7 @@ const (
 	scheduleStartMessage  = "🔁 定期実行（%s）: %s"
 	scheduleOriginLink    = "\n設定したスレッド: <%s|こちら>（止める場合はそこで「停止」と mention してください）"
 	scheduleStoppedMsg    = "定期実行を止めました。"
-	scheduleRunPrefix     = "（依頼者が「%s」の定期実行として設定した作業です。前回までの結果はこのスレッドにはありません）\n"
+	scheduleRunPrefix     = "(This is work the requester scheduled to run %s. Earlier runs' results are not in this thread.)\n"
 )
 
 // Only a person's request may change a schedule, so unattended turns cannot

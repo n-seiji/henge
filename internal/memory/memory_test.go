@@ -48,7 +48,7 @@ func TestReadCapsOversizedContent(t *testing.T) {
 	if !utf8.ValidString(got) {
 		t.Fatal("Read() returned invalid UTF-8")
 	}
-	if !strings.Contains(got, "省略") {
+	if !strings.Contains(got, "omitted for size") {
 		t.Error("Read() missing truncation marker")
 	}
 	if strings.Contains(got, "old-entry") || !strings.Contains(got, "new-entry") {
@@ -121,7 +121,7 @@ func TestAppendTruncatesOversizedEntry(t *testing.T) {
 	if !utf8.ValidString(written) {
 		t.Fatal("Append() wrote invalid UTF-8")
 	}
-	if !strings.Contains(written, "切り詰め") {
+	if !strings.Contains(written, "truncated for size") {
 		t.Error("Append() missing truncation marker")
 	}
 }

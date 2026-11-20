@@ -1,185 +1,187 @@
-# 使い方
+# Usage
 
-Slack から ebi-x に頼む方法です。導入と設定は [setup.md](setup.md) にあります。
+How to ask ebi-x for things in Slack. For installation and settings, see [setup.md](setup.md).
 
-## 頼み方
+The examples below are in English for readability. The bot's own fixed messages are in Japanese, and some commands are Japanese words; those are shown with their meaning.
 
-| 方法 | 使い方 |
+## How to ask
+
+| Method | How |
 | --- | --- |
-| mention | 許可されたチャンネルで `@ebi-x ○○して` と書きます。 |
-| DM | ebi-x の Messages タブに mention なしで書きます。スレッドの外に書くと新しい依頼、スレッドに返信すると続きになります。グループ DM には反応しません。 |
-| ショートカット | メッセージの「…」→「ebi-x に頼む」を選び、フォームに依頼を書きます。そのメッセージのスレッドで作業します。DM では使えません。 |
+| Mention | Write `@ebi-x do X` in an allowed channel. |
+| DM | Write in ebi-x's Messages tab without a mention. Outside a thread it is a new request; a reply in a thread continues it. Group DMs are ignored. |
+| Shortcut | Choose "…" → "Ask ebi-x" on a message and write the request in the form. The work happens in that message's thread. Not available in DMs. |
 
-- 1つの Slack スレッドは1つの Codex セッションです。同じスレッドで mention すると、作業の経緯を引き継いで続けます。
-- スレッドの親メッセージに運用者が決めた購読リアクションを付けると、そのスレッドでは許可された人の返信を mention なしで処理します。パブリックチャンネルとプライベートチャンネルで使え、既定で14日間有効です。
-- プライベートチャンネルと Slack Connect チャンネルの内容は、ほかのチャンネルからは見えません。そこでの Slack の調べものは、そのチャンネルの中だけです。
-- チャンネルごとの指示や制限は、承認チャンネルで ebi-x に頼むと変えられます。
-- トークンや秘密鍵を Slack に貼って頼まないでください。依頼やスレッドに GitHub・Slack・クラウドなどのトークンの形をした文字列があると、ebi-x は Codex に送らずに止め、削除と失効を頼みます。
-- `生きてる？` `alive` `ping` など、生存確認だけの mention や DM には、作業をせずに Codex につながるかを答えます。許可のない場所からでも答えます。
+- One Slack thread is one Codex session. Mention it again in the same thread and it continues with what happened so far.
+- Add the subscription reaction the operator chose to a thread's parent message, and replies from allowed people in that thread are handled without a mention. It works in public and private channels and lasts 14 days by default.
+- The content of private channels and Slack Connect channels is not visible from other channels. Slack lookups there stay inside that channel.
+- Per-channel instructions and limits can be changed by asking ebi-x in the approval channel.
+- Do not paste tokens or private keys into Slack with a request. If the request or thread holds a string shaped like a GitHub, Slack, cloud or other token, ebi-x stops before sending it to Codex and asks for it to be deleted and revoked.
+- A mention or DM that only checks it is alive, such as `alive`, `ping` or `生きてる？` ("are you alive?"), is answered without work, saying whether Codex is reachable. It answers even where it is not allowed.
 
-## 作業中
+## While it works
 
-### 進捗の表示
+### Progress
 
-作業中は、スレッドのステータスに Codex がいま何をしているかを出します。
-
-```text
-ebi-x が「原因を調べる」を進めています… 1/4 完了
-ebi-x がコマンドを実行しています（go test）… 1/4 完了
-ebi-x がファイルを編集しています（bot.go ほか2件）… 2/4 完了
-```
-
-コマンドの引数は出しません（トークンが含まれうるため）。
-
-同時に動かせるスレッドの数には上限があり、上限に達している間は順番待ちと表示します。同じスレッドの依頼は1件ずつ処理します。
-
-### 停止
-
-同じスレッドで `@ebi-x 停止` と mention すると、実行中・順番待ちの作業を止めます。購読スレッドでは mention なしの「停止」でも止まります。
-
-- メッセージ全体が `停止` `stop` などのときだけ停止として扱います。「停止の仕方を教えて」は普通の依頼です。
-- 途中までの変更やコミットは残り、巻き戻しません。
-- そのスレッドのフォローアップ、PR の見守り、定期実行、リマインダー、リアクションの監視も止めます。
-
-### 回答待ち
-
-依頼者の答えがないと進めないとき（外部への送信や削除の前の確認、解釈が大きく分かれるときなど）、ebi-x は ✅ ではなく 🙋 を付けて質問します。
+While working, the thread's status shows what Codex is doing now.
 
 ```text
-@tanaka  @ebi-x 古いブランチを整理して
-  └ @ebi-x  マージ済みのブランチが12本あります。…
-            🙋 @tanaka 回答待ちです。このスレッドで ebi-x に mention して答えてください。
-            - リモートのブランチも削除してよいですか？
+ebi-x is working on "find the cause"… 1/4 done
+ebi-x is running a command (go test)… 1/4 done
+ebi-x is editing files (bot.go and 2 more)… 2/4 done
 ```
 
-承認として扱うのは依頼者本人の返事だけです。ほかの人が許可しようとしても、依頼者に聞き直します。依頼文で明示的に頼んだ操作（「PR まで作って」など）は、その範囲で承認済みとして扱います。費用がかかる作業は、根拠と概算額を示して確認します。確認しなくてよい金額の目安は、運用者が操作ルールで決めます。
+Command arguments are not shown, because they may contain tokens.
 
-## 結果
+There is a limit on how many threads run at once; while it is reached, requests show as waiting their turn. Requests in the same thread are handled one at a time.
 
-- 完了は ✅、失敗や中断は ❌ が mention に付きます。
-- Codex が作った PDF・画像・pptx・CSV はスレッドへ添付します。添付に失敗しても、ファイルは作業場所に残るので「添付を再送して」と頼めます。
+### Stopping
 
-## 後で続ける
+Mention `@ebi-x 停止` (stop) in the same thread to stop running or waiting work. In subscribed threads, "停止" without a mention also works.
 
-### フォローアップ
+- Only a whole message such as `停止` or `stop` counts as stopping. "How do I stop it?" is a normal request.
+- Changes and commits made so far stay; nothing is rolled back.
+- It also stops the thread's follow-ups, PR watches, schedules, reminders and reaction watches.
 
-CI やデプロイの完了待ち、時間をおいた再確認、指定した時刻の作業などでは、ebi-x が自分で「後で確認する」予定を立て、その時刻に同じセッションで続きをします。
+### Waiting for an answer
+
+When it cannot continue without the requester's answer (confirmation before sending something outside or deleting, a request that splits into very different readings, and so on), ebi-x adds 🙋 instead of ✅ and asks.
 
 ```text
-@tanaka  @ebi-x デプロイして、終わったら教えて
-  └ @ebi-x  デプロイを開始しました。…
-            ⏰ 10/9 16:30 JST ごろにフォローアップします: デプロイの完了を確認して報告する
-  └ @ebi-x  ⏰ 予定していたフォローアップを始めます: デプロイの完了を確認して報告する
-  └ @ebi-x  デプロイが完了しました。…
+@alice  @ebi-x clean up old branches
+  └ @ebi-x  There are 12 merged branches. …
+            🙋 @alice is being waited on. Mention ebi-x in this thread to answer.
+            - May I delete the remote branches too?
 ```
 
-- 予定は5分後から7日後まで、スレッドに1件です。人の発言なしに続けられるのは10回までです。
+Only the requester's own reply counts as approval. If someone else tries to approve, it asks the requester again. An action explicitly asked for in the request ("go as far as opening a PR", and so on) counts as approved within that scope. Work that costs money is confirmed first, with the basis and a rough amount. The operator sets the amount below which no confirmation is needed in the action rules.
 
-### 定期実行
+## Results
 
-「平日の朝9時に CI の失敗を確認して」のように頼むと、決まった曜日と時刻に作業します。
+- The mention gets ✅ when done, and ❌ on failure or interruption.
+- PDFs, images, pptx and CSV files Codex made are attached to the thread. If attaching fails, the files stay in the working area, so you can ask it to resend the attachments.
+
+## Continuing later
+
+### Follow-ups
+
+When waiting for CI or a deploy, checking again after a while, or doing something at a given time, ebi-x plans its own "check later" and continues in the same session at that time.
 
 ```text
-@tanaka  @ebi-x 平日の朝9時に main の CI の失敗を確認して報告して
-  └ @ebi-x  🔁 定期実行を設定しました: 平日 09:00 に「main の CI の失敗を確認して報告する」（次回 10/12 09:00 JST）
-（平日 9:00、同じチャンネルに）
-@ebi-x  🔁 定期実行（平日 09:00）: main の CI の失敗を確認して報告する
-  └ @ebi-x  昨日からの失敗はありません。…
+@alice  @ebi-x deploy it and tell me when it's done
+  └ @ebi-x  I started the deploy. …
+            ⏰ Follow-up around 10/9 16:30 JST: check that the deploy finished and report
+  └ @ebi-x  ⏰ Starting the scheduled follow-up: check that the deploy finished and report
+  └ @ebi-x  The deploy finished. …
 ```
 
-- `毎日` `平日` `週末` `毎週月水金` と時刻で指定します。1日1回より細かくはできません。
-- 毎回、新しいスレッドで前回を引き継がずに作業します。
-- 止めるには、設定したスレッドで「停止」と mention します。
+- A follow-up is due between 5 minutes and 7 days ahead, one per thread. It can chain up to 10 times without a human message.
 
-### リマインダー
+### Schedules
 
-「明日の10時に見積もりを送るようリマインドして」のように頼むと、その時刻に同じスレッドで依頼者に mention して1回だけ知らせます。作業はしません。
+Ask something like "check CI failures at 9 on weekday mornings", and it works on the given weekdays and time.
 
 ```text
-@tanaka  @ebi-x 明日の10時に見積もりを送るようリマインドして
-  └ @ebi-x  🔔 11/19 10:00 JST にこのスレッドでリマインドします: 見積もりを送る
-（11/19 10:00、同じスレッドに）
-  └ @ebi-x  @tanaka 🔔 リマインダー: 見積もりを送る
+@alice  @ebi-x every weekday at 9am, check main's CI failures and report
+  └ @ebi-x  🔁 Schedule set: weekdays 09:00, "check main's CI failures and report" (next 10/12 09:00 JST)
+(weekdays at 9:00, in the same channel)
+@ebi-x  🔁 Schedule (weekdays 09:00): check main's CI failures and report
+  └ @ebi-x  No failures since yesterday. …
 ```
 
-- 1分後から366日後まで指定できます。
-- 時刻になったら作業してほしいときはフォローアップ、繰り返しは定期実行を頼んでください。
-- 取り消すには、設定したスレッドで「リマインダーを取り消して」と頼むか、「停止」と mention します。
+- Days are daily, weekdays, weekends, or a list of weekdays, with a time. Nothing more frequent than once a day.
+- Each run works in a new thread without carrying over the previous one.
+- To stop it, mention "停止" (stop) in the thread where it was set.
 
-### PR の見守り
+### Reminders
 
-ebi-x が作業で PR を作ると、その PR を見守ります。CI が失敗したり、レビューやコメントが付いたりすると、同じセッションで対応して報告します。
+Ask something like "remind me to send the estimate at 10 tomorrow", and at that time it mentions the requester once in the same thread. It does no work.
 
 ```text
-@tanaka  @ebi-x このバグを直して PR を出して
-  └ @ebi-x  修正して PR を作成しました。…
-            👀 次の PR を見守ります。CI の失敗やレビュー・コメントがあれば、このスレッドで対応して報告します。
-  └ @ebi-x  🔔 PR に動きがありました（…/pull/42）: CI が失敗しました（失敗したチェック: test）。対応を始めます。
-  └ @ebi-x  テストの失敗はタイムゾーンの扱いが原因でした。修正して push しました。…
-  └ @ebi-x  🎉 PR がマージされました: …/pull/42
+@alice  @ebi-x remind me to send the estimate at 10 tomorrow
+  └ @ebi-x  🔔 I'll remind you in this thread at 11/19 10:00 JST: send the estimate
+(11/19 10:00, in the same thread)
+  └ @ebi-x  @alice 🔔 Reminder: send the estimate
 ```
 
-- 再開するのは、head のコミットの CI の失敗と、リポジトリに書き込み権限のある人（OWNER・MEMBER・COLLABORATOR）のレビューやコメントです。公開リポジトリで誰でもコメントできても、それだけでは動きません。
-- CI が通った、マージされた、閉じられたときは報告だけします。マージか閉じた時点で見守りは終わります。
-- GitHub 上の文章は指示ではなくデータとして扱います。
+- It can be set from 1 minute to 366 days ahead.
+- For work at a given time ask for a follow-up, and for repetition a schedule.
+- To cancel, ask it to cancel the reminder in the thread where it was set, or mention "停止" (stop).
 
-## リアクションの監視
+### Watching PRs
 
-依頼を @メンションで配ったあと、全員が終わったかを ebi-x に追いかけてもらえます。メッセージの末尾に `@ebi-x 監視して` と書くと、そのメッセージで @メンションした人のうち、まだ `:done:` のリアクションを付けていない人に、平日の毎日19時にスレッドで知らせます。Codex は使わず、bot だけで動きます。
+When ebi-x opens a PR in its work, it watches the PR. On a CI failure, review or comment, it handles it in the same session and reports.
 
 ```text
-@tanaka  @sato @suzuki 年末調整の書類を出してください。出したら :done: をお願いします @ebi-x 監視して
-  └ @ebi-x  👀 :done: の監視を始めます。対象は元メッセージで @メンションされた2人です。平日の毎日19時に、…
-（次の平日の19時）
-  └ @ebi-x  @suzuki
-            :done: のリアクションがまだのようです。対応が済んだら、元メッセージに :done: を付けてください。（1回目の通知）
-（全員が :done: を付けたら）
-  └ @ebi-x  ✅ 対象の全員が :done: を付けたため、監視を終了しました。
+@alice  @ebi-x fix this bug and open a PR
+  └ @ebi-x  I fixed it and opened a PR. …
+            👀 Watching the PR below. I'll handle CI failures, reviews and comments in this thread and report.
+  └ @ebi-x  🔔 The PR has activity (…/pull/42): CI failed (failed check: test). Starting on it.
+  └ @ebi-x  The test failure was caused by time zone handling. I fixed it and pushed. …
+  └ @ebi-x  🎉 The PR was merged: …/pull/42
 ```
 
-- 対象は、そのメッセージ（@メンションがなければスレッドの最初のメッセージ）で @メンションされた人です。`@channel`・`@here` とユーザーグループは、チャンネルにいるメンバーに展開します。100人を超えると始めません。
-- 既定のリアクションは `:done:`、通知は平日の19時（ebi-x を動かしているマシンの時刻）です。どちらも運用者が変えられます（[setup.md](setup.md#全体の設定)）。祝日は飛ばしません。
-- 間隔は `1日おきに監視して` `3日ごとに監視して` のように平日の数で変えられます。既定は毎日、最長7日です。
-- 5回通知するか、元のメッセージが消されると終わります。
-- 止めるには、そのスレッドで `@ebi-x 監視をとめて` と mention します。
+- Work resumes on CI failures of the head commit, and on reviews and comments from people with write access to the repository (OWNER, MEMBER, COLLABORATOR). In a public repository where anyone can comment, comments alone do not start it.
+- When CI passes, or the PR is merged or closed, it only reports. Watching ends once the PR is merged or closed.
+- Text on GitHub is treated as data, not instructions.
 
-## Home タブ
+## Reaction watches
 
-ebi-x の Home タブを開くと、自分が頼んだものの今の状況が出ます。
+After handing out a task with @mentions, ebi-x can chase whether everyone has finished. End the message with `@ebi-x 監視して` ("watch this"), and on weekdays at 19:00 it reminds, in the thread, the people @mentioned in that message who have not yet added a `:done:` reaction. It runs on the bot alone, without Codex.
 
-- 作業中・順番待ちの依頼とスレッドへのリンク
-- 予定中のフォローアップ
-- 見守り中の PR と CI の状態
-- 定期実行と次回の時刻
-- リアクションの監視（対象の人数、間隔、次回の時刻）
-- 自分の個人設定
+```text
+@alice  @bob @carol please submit the year-end forms. Add :done: when you have @ebi-x 監視して
+  └ @ebi-x  👀 Starting the :done: watch. It covers the 2 people @mentioned in the original message. On weekdays at 19:00, …
+(the next weekday at 19:00)
+  └ @ebi-x  @carol
+            It looks like you have not added :done: yet. Once you're done, add :done: to the original message. (reminder 1)
+(once everyone has added :done:)
+  └ @ebi-x  ✅ Everyone added :done:, so the watch has ended.
+```
 
-## 個人設定
+- It covers the people @mentioned in that message (or in the thread's first message if it has none). `@channel`, `@here` and user groups expand to the members in the channel. It does not start for more than 100 people.
+- By default the reaction is `:done:` and reminders go out on weekdays at 19:00 (the time on the machine running ebi-x). The operator can change both ([setup.md](setup.md#global-settings)). Holidays are not skipped.
+- The interval can be changed in weekdays, such as `1日おきに監視して` (every other day) or `3日ごとに監視して` (every 3 days). The default is daily, up to 7 days.
+- It ends after 5 reminders, or when the original message is deleted.
+- To stop it, mention `@ebi-x 監視をとめて` ("stop watching") in the thread.
 
-「今後は英語で答えて」「もっと短く」のように、返答の仕方を今後も続けるよう頼むと、その人の設定として保存します。
+## Home tab
 
-- 内容はスレッドに出さず、本人にだけ見えるメッセージで伝えます。
-- スレッドに複数の人がいても、そのとき発言した人の設定だけを使います。
+Open ebi-x's Home tab to see the current state of what you asked for:
 
-## playbook を Slack から作る・直す
+- requests working or waiting their turn, with links to their threads
+- scheduled follow-ups
+- watched PRs and their CI state
+- schedules and their next times
+- reaction watches (how many people, the interval, the next time)
+- your personal settings
 
-`playbook-from-thread` を置いた環境の承認チャンネルでは、ebi-x の利用を許可された人が `@ebi-x この対応を playbook にして` や `@ebi-x この playbook を修正して。質問は1問ずつにして` と頼めます。ebi-x は足りない点を1問ずつ聞き、完成案を見せて「この内容でいいですか？」と確認し、承認されてから保存します。
+## Personal settings
 
-作業中に playbook と食い違う事実や、まだ書かれていない事実が分かると、ebi-x は playbook のメモに1行足し、「📝 playbook「release-notes」のメモを更新しました: …」と伝えます。メモが3件たまると本文に取り込み、「📘 … 本文に取り込みました」と伝えます。本文が変わったときは承認チャンネルにも記録を残します。
+Ask it to keep a way of replying from now on, such as "answer in English from now on" or "keep it shorter", and it saves that as your setting.
 
-## Codex の利用枠
+- The content is not shown in the thread; it is told to you in a message only you can see.
+- Even with several people in a thread, only the current speaker's settings are used.
 
-承認チャンネルがあると、ebi-x は30分ごとに Codex の利用枠（5時間と1週間）を確かめ、承認チャンネルに次のことをします。
+## Making and fixing playbooks from Slack
 
-- 毎時、枠ごとの残りと直近12時間の推移を投稿する（変化のない時間は省く）
-- 残りが10%を切ったとき、使い切ったときに知らせる
-- 日付が変わったら前の日のまとめを投稿する
-- 「残り」「usage」などと mention されたら、今の残りを答える
+Where `playbook-from-thread` is installed, people allowed to use ebi-x can ask in the approval channel, for example `@ebi-x make this into a playbook` or `@ebi-x fix this playbook so it asks one question at a time`. ebi-x asks about missing points one at a time, shows the finished draft, asks "Is this content OK?", and saves it after approval.
 
-土日は投稿もお知らせもせず、月曜の最初の確認でまだ残りが少なければそこで知らせます。
+When work turns up a fact that contradicts a playbook or is not written in it yet, ebi-x adds a line to the playbook's notes and says so ("📝 Updated the notes of playbook "release-notes": …"). Once three notes pile up, it folds them into the body and says so ("📘 … folded into the body"). When the body changes, it also leaves a record in the approval channel.
 
-利用枠は同じアカウントを ebi-x の外で使った分も含みます。API キーでログインしているときは利用枠がないので何もしません。
+## Codex usage limits
 
-作業が利用上限やログイン切れで止まると、依頼したスレッドにその旨と、いつ頼み直せるかを返し、承認チャンネルにも知らせます（同じ種類は1時間に1回まで）。
+With an approval channel, ebi-x checks Codex's usage limits (5 hours and 1 week) every 30 minutes and, in the approval channel:
 
-それ以外の理由で失敗した依頼が1時間に3件たまったときも、設定や環境の問題を疑って承認チャンネルに知らせます。
+- posts every hour what is left in each window and the trend over the last 12 hours (hours without change are skipped)
+- notifies when less than 10% is left, and when it is used up
+- posts a summary of the previous day after midnight
+- answers with what is left now when mentioned with "usage", "残り" (remaining) and the like
+
+On weekends it posts and notifies nothing; if usage is still low at Monday's first check, it notifies then.
+
+The limits include use of the same account outside ebi-x. When signed in with an API key there are no usage limits, so it does nothing.
+
+When work stops on a usage limit or an expired sign-in, it says so in the request's thread along with when to ask again, and notifies the approval channel too (at most once an hour per kind).
+
+When three requests fail for other reasons within an hour, it also notifies the approval channel, suspecting a settings or environment problem.

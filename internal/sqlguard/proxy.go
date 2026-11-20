@@ -165,7 +165,7 @@ func toolError(id json.RawMessage, reason error) []byte {
 			"isError": true,
 			"content": []map[string]string{{
 				"type": "text",
-				"text": "ebi-x がこの SQL を止めました: " + reason.Error() + "。ebi-x からは読み取りの SQL だけを実行できます。書き込みが必要なら、運用者に設定を頼むよう依頼者に伝えてください。",
+				"text": "ebi-x stopped this SQL: " + reason.Error() + ". Only read-only SQL can run through ebi-x. If writes are needed, tell the requester to ask the operator to change the settings.",
 			}},
 		},
 	})

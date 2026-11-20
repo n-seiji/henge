@@ -1,267 +1,267 @@
-# 導入と設定
+# Installation and settings
 
-ebi-x を動かすまでの手順と、運用者が決める設定です。
+How to get ebi-x running, and the settings the operator decides.
 
-## 0. インストール
+## 0. Installation
 
-リリースのバイナリを入れるなら `install.sh` を使います（README の手順）。チェックサムを確かめてから `~/.local/bin` に置き、macOS では hardened runtime 付きで署名し直します。`EBIX_VERSION=v1.2.3` で版を、`EBIX_BIN_DIR` で置き場所を変えられます。
+To install a release binary, use `install.sh` (the README's steps). It checks the checksum, places the binary in `~/.local/bin`, and on macOS re-signs it with the hardened runtime. `EBIX_VERSION=v1.2.3` picks a version and `EBIX_BIN_DIR` the location.
 
-ソースからビルドするときは、Go（`mise install` で揃います）を入れて `mise run build` を実行します。`go build` で直接ビルドしたときは、macOS では `codesign --force --sign - --options runtime ebi-x` も実行します（理由は [7. PR の見守り](#作業の-github-認証github-app)）。
+To build from source, install Go (`mise install` sets it up) and run `mise run build`. If you build with `go build` directly, on macOS also run `codesign --force --sign - --options runtime ebi-x` (see [7. Watching PRs](#the-works-github-authentication-github-app) for why).
 
-`ebi-x init` は端末から実行すると Slack のトークンと ID を聞き、既定値のない項目だけを `.env` に書きます。端末でなければ（スクリプトから実行したとき）、全項目の説明つきの `.env.example` をそのまま書き出します。どちらも既にあるファイルは上書きしません。
+Run from a terminal, `ebi-x init` asks for the Slack tokens and IDs and writes only the items without defaults to `.env`. Run without a terminal (from a script), it writes `.env.example` with every item described. Neither overwrites existing files.
 
-**1ディレクトリ1エージェント**：ebi-x は起動したディレクトリの `.env` を読み、`EBIX_HOME`（既定はそのディレクトリ）に `data/` と `.codex/` を置きます。別の Slack App で別のエージェントを動かすときは、ディレクトリを分けて `ebi-x init` からやり直します。バイナリは共有できます。
+**One directory, one agent**: ebi-x reads `.env` in the directory it starts in, and keeps `data/` and `.codex/` in `EBIX_HOME` (by default that directory). To run another agent with another Slack app, use another directory and start again from `ebi-x init`. The binary can be shared.
 
-### 常駐させる
+### Keeping it running
 
-`examples/` に雛形があります。どちらも作業ディレクトリをエージェントのディレクトリにし、`codex` と `git` が見つかる `PATH` を渡します。
+There are templates in `examples/`. Both use the agent's directory as the working directory and pass a `PATH` where `codex` and `git` can be found.
 
-| OS | ファイル | 新しいバイナリへの入れ替え |
+| OS | File | Switching to a new binary |
 | --- | --- | --- |
-| Linux（systemd のユーザーサービス） | `examples/ebi-x.service` | `install.sh` を実行してから `systemctl --user reload ebi-x` |
-| macOS（launchd） | `examples/ebi-x.plist` | `install.sh` を実行してから `launchctl kill HUP gui/$(id -u)/local.ebi-x` |
+| Linux (systemd user service) | `examples/ebi-x.service` | run `install.sh`, then `systemctl --user reload ebi-x` |
+| macOS (launchd) | `examples/ebi-x.plist` | run `install.sh`, then `launchctl kill HUP gui/$(id -u)/local.ebi-x` |
 
-入れ替えの動きは [9. 運用](#9-運用) のリロードと同じです。
+The switch behaves like the reload in [9. Operations](#9-operations).
 
-### リリース
+### Releases
 
-`v` で始まるタグを push すると、GitHub Actions がテストを通してから Linux と macOS（amd64・arm64）のバイナリと `checksums.txt` をリリースに載せます。`install.sh` はこのファイル名を前提にしています。
+Pushing a tag starting with `v` makes GitHub Actions run the tests, then attach Linux and macOS (amd64, arm64) binaries and `checksums.txt` to the release. `install.sh` relies on these file names.
 
-## 1. Slack App
+## 1. Slack app
 
-Slack App の作成画面で「From a manifest」を選び、`ebi-x init` が書き出す `slack-app-manifest.json`（リポジトリでは `examples/slack-app-manifest.json`）を貼り付けると、以下がまとめて入ります。manifest を使わない場合は、同じものを手で設定します。
+On Slack's app creation screen, choose "From a manifest" and paste the `slack-app-manifest.json` that `ebi-x init` writes (`examples/slack-app-manifest.json` in the repository) to set up everything below at once. Without the manifest, configure the same by hand.
 
-| 項目 | 設定 | 用途 |
+| Item | Setting | Used for |
 | --- | --- | --- |
-| Socket Mode | 有効 | 公開 URL なしでイベントを受ける |
-| Bot Token Scopes | `app_mentions:read` `chat:write` `reactions:read` `reactions:write` `channels:history` `files:read` `files:write` `im:history` `assistant:write` `commands` | mention・投稿・リアクション、依頼に添付された画像などの取得、成果物の添付、DM とエージェント表示、ショートカット |
-| Event Subscriptions | `app_mention` `message.channels` `message.groups` `message.im` `app_home_opened` | mention、購読スレッドの返信（プライベートチャンネルを含む）、DM、Home タブ |
-| App Home | Home Tab と Messages Tab を有効、「Allow users to send Slash commands and messages from the messages tab」をオン | Home タブと DM |
-| Interactivity & Shortcuts | Interactivity をオン、Message Shortcut「ebi-x に頼む」（Callback ID `ebix_request`） | メッセージから依頼する |
-| Agents & AI Apps | Agent App に切り替え（manifest では `features.agent_view`） | サイドバーと Messages タブでのエージェント表示 |
+| Socket Mode | on | receiving events without a public URL |
+| Bot Token Scopes | `app_mentions:read` `chat:write` `reactions:read` `reactions:write` `channels:history` `files:read` `files:write` `im:history` `assistant:write` `commands` | mentions, posts and reactions; fetching images and other files attached to requests; attaching deliverables; DMs and the agent view; shortcuts |
+| Event Subscriptions | `app_mention` `message.channels` `message.groups` `message.im` `app_home_opened` | mentions, replies in subscribed threads (including private channels), DMs, the Home tab |
+| App Home | Home Tab and Messages Tab on, "Allow users to send Slash commands and messages from the messages tab" on | the Home tab and DMs |
+| Interactivity & Shortcuts | Interactivity on, Message Shortcut "Ask ebi-x" (Callback ID `ebix_request`) | requests from a message |
+| Agents & AI Apps | switch to Agent App (`features.agent_view` in the manifest) | the agent view in the sidebar and the Messages tab |
 
-- リアクションの監視（[usage.md](usage.md#リアクションの監視)）で `@channel` を使うときは `channels:read` と `users:read`（プライベートチャンネルでは `groups:read` も）を、`@dev_team` のようなユーザーグループを使うときはさらに `usergroups:read` を追加します。manifest には入っています。
-- プライベートチャンネルと Slack Connect チャンネルには `groups:read`・`groups:history`・`message.groups` が要ります（manifest に入っています）。
-- Agent App への切り替えは元に戻せません。Slack の有料プランが必要です。
-- scope を変えたらワークスペースへ再インストールします。Bot Token が変わった場合は `.env` も更新します。
+- To use `@channel` with reaction watches ([usage.md](usage.md#reaction-watches)), add `channels:read` and `users:read` (plus `groups:read` for private channels), and for user groups such as `@dev_team`, also `usergroups:read`. The manifest includes them.
+- Private channels and Slack Connect channels need `groups:read`, `groups:history` and `message.groups` (included in the manifest).
+- Switching to an Agent App cannot be undone, and needs a paid Slack plan.
+- After changing scopes, reinstall the app in the workspace. If the Bot Token changes, update `.env` too.
 
-インストール後、Bot Token（`xoxb-`）と、Socket Mode 用の App Token（`xapp-`、`connections:write`）を取得します。
+After installing, get the Bot Token (`xoxb-`) and the App Token for Socket Mode (`xapp-`, `connections:write`).
 
 ## 2. `.env`
 
-`ebi-x init` が書き出した `.env` に書きます（リポジトリから動かすなら `.env.example` をコピーします）。主な項目は次のとおりです。各項目の説明は `.env.example` にもあります。
+Fill in the `.env` that `ebi-x init` wrote (to run from the repository, copy `.env.example`). The main items are below; `.env.example` also describes each one.
 
-| 変数 | 既定 | 内容 |
+| Variable | Default | Contents |
 | --- | --- | --- |
-| `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` | なし（必須） | Slack のトークン |
-| `SLACK_ALLOWED_USER_IDS` / `SLACK_ALLOWED_CHANNEL_IDS` | なし | 常に許可する user と channel。承認チャンネルを使わないときは、それぞれ1件以上必須 |
-| `SLACK_APPROVAL_CHANNEL_ID` / `SLACK_APPROVER_USER_IDS` | なし | 承認チャンネルと承認者（後述） |
-| `SLACK_ALLOW_WORKFLOWS` / `SLACK_ALLOWED_WORKFLOW_IDS` | `false` / なし | Workflow Builder からの mention を受けるか、受ける Workflow |
-| `SLACK_ADMIN_USER_ID` | なし | 権限がない人に「許可を頼む相手」として示す user。未設定なら「ebi-x の管理者」という言葉 |
-| `SLACK_THREAD_SUBSCRIPTION_REACTION` / `SLACK_THREAD_SUBSCRIPTION_TTL` | なし / `336h` | mention なしの返信も処理するスレッド購読に使うリアクション名と期間。リアクションがなければ無効 |
-| `CODEX_COMMAND` | `codex` | Codex の実行ファイル（引数は書けません） |
-| `CODEX_MODEL` | Codex の既定 | 使うモデル |
-| `CODEX_TIMEOUT` | `30m` | 1回の Codex 実行の上限時間 |
-| `CODEX_MAX_PARALLEL_WORK` | `3` | 同時に動かすスレッドの数 |
-| `EBIX_HOME` | `.` | `data/` と `.codex/` を置くディレクトリ |
-| `EBIX_WRITABLE_ROOTS` | なし | Codex が書き込めるディレクトリ（作業対象のリポジトリなど） |
-| `EBIX_DENIED_READ_PATHS` | なし | 既定の認証情報の置き場に加えて、Codex に読ませないパス |
-| `EBIX_ALLOWED_READ_PATHS` | なし | 既定で読ませない認証情報の置き場のうち、作業に要るもの（`~/.config/gcloud` など、後述） |
-| `EBIX_CODEX_ENV` | なし | 許可リストに加えて Codex に渡す環境変数の名前（後述） |
-| `EBIX_CHECKOUT_IDLE_TTL` | `120h` | 使われなくなったスレッド専用クローンを消すまでの時間 |
-| `EBIX_GITHUB_TOKEN` / `EBIX_GITHUB_API_URL` | なし | PR の見守りに使うトークンと API の URL（後述） |
-| `EBIX_GITHUB_APP_ID` / `EBIX_GITHUB_APP_PRIVATE_KEY` / `EBIX_GITHUB_APP_INSTALLATION_ID` | なし | 作業の GitHub 認証に使う GitHub App（後述） |
+| `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` | none (required) | Slack tokens |
+| `SLACK_ALLOWED_USER_IDS` / `SLACK_ALLOWED_CHANNEL_IDS` | none | users and channels always allowed. Without an approval channel, at least one of each is required |
+| `SLACK_APPROVAL_CHANNEL_ID` / `SLACK_APPROVER_USER_IDS` | none | the approval channel and approvers (see below) |
+| `SLACK_ALLOW_WORKFLOWS` / `SLACK_ALLOWED_WORKFLOW_IDS` | `false` / none | whether to accept mentions from Workflow Builder, and which workflows |
+| `SLACK_ADMIN_USER_ID` | none | the user shown to people without permission as the one to ask. Unset, the words "the ebi-x administrator" are shown |
+| `SLACK_THREAD_SUBSCRIPTION_REACTION` / `SLACK_THREAD_SUBSCRIPTION_TTL` | none / `336h` | the reaction name and duration for thread subscriptions, which also handle replies without a mention. Without a reaction they are off |
+| `CODEX_COMMAND` | `codex` | the Codex executable (no arguments) |
+| `CODEX_MODEL` | Codex's default | the model to use |
+| `CODEX_TIMEOUT` | `30m` | the time limit for one Codex run |
+| `CODEX_MAX_PARALLEL_WORK` | `3` | how many threads run at once |
+| `EBIX_HOME` | `.` | the directory holding `data/` and `.codex/` |
+| `EBIX_WRITABLE_ROOTS` | none | directories Codex can write to (the repositories to work on, and so on) |
+| `EBIX_DENIED_READ_PATHS` | none | paths Codex must not read, in addition to the default credential locations |
+| `EBIX_ALLOWED_READ_PATHS` | none | default-denied credential locations the work needs (such as `~/.config/gcloud`; see below) |
+| `EBIX_CODEX_ENV` | none | names of environment variables passed to Codex in addition to the allowlist (see below) |
+| `EBIX_CHECKOUT_IDLE_TTL` | `120h` | how long an unused per-thread clone is kept before it is removed |
+| `EBIX_GITHUB_TOKEN` / `EBIX_GITHUB_API_URL` | none | the token and API URL for PR watching (see below) |
+| `EBIX_GITHUB_APP_ID` / `EBIX_GITHUB_APP_PRIVATE_KEY` / `EBIX_GITHUB_APP_INSTALLATION_ID` | none | the GitHub App used for the work's GitHub authentication (see below) |
 
-時刻はプロセスのローカルタイムゾーンで扱うので、日本時間で運用するなら `TZ=Asia/Tokyo` で起動します。
+Times use the process's local time zone, so to run on Japan time, start it with `TZ=Asia/Tokyo`.
 
-### 廃止した設定
+### Removed settings
 
-古い `.env` を使い回すときは、次の項目を消してください。
+If you reuse an old `.env`, delete these items.
 
-| 変数 | 扱い |
+| Variable | Handling |
 | --- | --- |
-| `SLACK_ALLOW_ALL_PUBLIC_CHANNELS` | `true` だと起動しません。チャンネルは `SLACK_ALLOWED_CHANNEL_IDS` か承認チャンネルで1つずつ許可します |
-| `CODEX_MAX_PARALLEL_PLAN` | 使いません。同時実行数は `CODEX_MAX_PARALLEL_WORK` です |
-| `CODEX_WORK_MODEL` | 使いません。モデルは `CODEX_MODEL` です |
-| `EBIX_SHARED_WRITE_CHANNEL_IDS` | 使いません。playbook と全体メモリは承認チャンネルから書き換えます |
+| `SLACK_ALLOW_ALL_PUBLIC_CHANNELS` | `true` stops startup. Allow channels one by one with `SLACK_ALLOWED_CHANNEL_IDS` or the approval channel |
+| `CODEX_MAX_PARALLEL_PLAN` | unused. Concurrency is `CODEX_MAX_PARALLEL_WORK` |
+| `CODEX_WORK_MODEL` | unused. The model is `CODEX_MODEL` |
+| `EBIX_SHARED_WRITE_CHANNEL_IDS` | unused. Playbooks and global memory are changed from the approval channel |
 
-## 3. 使える人とチャンネル
+## 3. Who and which channels can use it
 
-ebi-x を使えるかは、`.env` の固定の許可と、承認チャンネルで承認者が許可したものの2つで決まります。人の許可とチャンネルの許可の両方が要ります。DM は本人と ebi-x だけの会話なので、人が許可されていればチャンネルの許可は要りません。
+Whether someone can use ebi-x depends on the fixed permissions in `.env` and what approvers allowed in the approval channel. Both the person and the channel must be allowed. A DM is a conversation between the person and ebi-x only, so it needs no channel permission once the person is allowed.
 
-権限のない人・チャンネル・Workflow から mention されると、何に権限がないかと、`SLACK_ADMIN_USER_ID` に許可を頼むよう同じスレッドに返します。
+When a person, channel or workflow without permission mentions ebi-x, it replies in the same thread with what lacks permission, and asks them to ask `SLACK_ADMIN_USER_ID`.
 
 ```text
-🔒 あなたには ebi-x を使う権限がありません。使いたい場合は @yamada に許可を頼んでください。
+🔒 You do not have permission to use ebi-x. If you want to use it, ask @admin.
 ```
 
-### 承認チャンネル
+### Approval channel
 
-`SLACK_APPROVAL_CHANNEL_ID` と `SLACK_APPROVER_USER_IDS` を設定して Bot を招待すると、許可されていない相手からの依頼を Slack 上で許可できます。追加の scope は要りません。
+Set `SLACK_APPROVAL_CHANNEL_ID` and `SLACK_APPROVER_USER_IDS` and invite the bot, and requests from those not yet allowed can be approved in Slack. No extra scopes are needed.
 
 ```text
 #sales
-@tanaka   @ebi-x 先週の売上まとめて
-  └ @ebi-x  🔒 あなたには ebi-x を使う権限がまだないため、承認者に許可を依頼しました（承認依頼）。
-            そのままお待ちください！許可されたら、この依頼から自動で始めます。
+@alice    @ebi-x summarize last week's sales
+  └ @ebi-x  🔒 You do not have permission to use ebi-x yet, so I asked an approver (approval request).
+            Please wait! Once approved, I'll start with this request automatically.
 
-#ebi-x-owner
-@ebi-x    🔐 ebi-x の利用許可の依頼 / 対象: チャンネル #sales
-  └ @yamada   @ebi-x 許可
-  └ @ebi-x  ✅ チャンネル #sales: @yamada が許可しました。
+#ebi-x-approvals
+@ebi-x    🔐 Request to use ebi-x / Subject: channel #sales
+  └ @admin   @ebi-x 許可
+  └ @ebi-x  ✅ Channel #sales: approved by @admin.
 
-#sales（元のスレッド）
-  └ @ebi-x  ✅ チャンネル #sales が許可されました。依頼を始めます。
+#sales (the original thread)
+  └ @ebi-x  ✅ Channel #sales was approved. Starting the request.
 ```
 
-- 承認者は依頼のスレッドで `@ebi-x 許可` か `@ebi-x 拒否` と mention します。操作できるのは `SLACK_APPROVER_USER_IDS` の人だけで、最初の決定が優先されます。拒否した相手は次から確認せずに断ります。
-- 必要な許可が揃うと、待っていた依頼を自動で始めます。24時間より古い依頼は始めず、もう一度 mention するよう伝えます。
-- 承認チャンネルでは、依頼のスレッドでの mention と、スレッドの外での `@ebi-x 許可`・`@ebi-x 拒否`・`@ebi-x 残り` は承認の操作として扱います。それ以外の mention は、ebi-x の利用を許可された人からの作業の依頼として受けます。
-- playbook と全体メモリを書き換えられるのは承認チャンネルの依頼だけです。全チャンネルの依頼がこれらを読むので、承認者の目に入る場所に限っています。
-- 決定は `data/state/approvals.json` に残ります。取り消すときは ebi-x を止めて、このファイルから該当する項目を消します。
+- The approver mentions `@ebi-x 許可` (allow) or `@ebi-x 拒否` (deny) in the request's thread. Only people in `SLACK_APPROVER_USER_IDS` can do this, and the first decision wins. Those denied are turned away without asking from then on.
+- Once the needed permissions are in place, waiting requests start automatically. Requests older than 24 hours do not start; ebi-x asks for a new mention instead.
+- In the approval channel, mentions in a request's thread, and `@ebi-x 許可`, `@ebi-x 拒否` and `@ebi-x 残り` (usage) outside threads, are approval operations. Other mentions are taken as work requests from someone allowed to use ebi-x.
+- Only requests in the approval channel can change playbooks and global memory. Requests in every channel read them, so changes are kept where approvers can see them.
+- Decisions are kept in `data/state/approvals.json`. To revoke one, stop ebi-x and delete the entry from this file.
 
-### Workflow からの mention
+### Mentions from workflows
 
-`SLACK_ALLOW_WORKFLOWS=true` にすると、Workflow Builder の「メッセージを送信」からの mention を受けます。受けるのは、Slack イベントの `workflow_id` が `SLACK_ALLOWED_WORKFLOW_IDS` にあるか承認チャンネルで許可されたものだけです。Workflow はワークスペースの誰でも作れるので、ID で限定しないと人の許可を迂回できてしまうためです。Workflow もチャンネルの許可の対象です。それ以外の Bot の投稿には反応しません。
+With `SLACK_ALLOW_WORKFLOWS=true`, mentions from Workflow Builder's "Send a message" are accepted, but only when the Slack event's `workflow_id` is in `SLACK_ALLOWED_WORKFLOW_IDS` or was approved in the approval channel. Anyone in the workspace can create a workflow, so without limiting by ID, people's permissions could be bypassed. Workflows are also subject to channel permissions. Posts from other bots are ignored.
 
-## 4. 作業対象のリポジトリ
+## 4. Repositories to work on
 
-Codex に書き込ませたいディレクトリを `EBIX_WRITABLE_ROOTS` に並べます。そのうち Git リポジトリの最上位ディレクトリは、スレッドごとのクローンで作業するので元のリポジトリは書き換わりません（[design.md](design.md#作業場所の隔離)）。クローンの `origin` は元のリポジトリの `origin` なので、作業用ブランチを push できます。
+List the directories Codex should write to in `EBIX_WRITABLE_ROOTS`. Top-level directories of Git repositories among them are worked on through per-thread clones, so the original repository is not modified ([design.md](design.md#isolating-working-areas)). A clone's `origin` is the original repository's `origin`, so working branches can be pushed.
 
-`~/.ssh`・`~/.aws`・`~/.config/gh`・`~/.netrc` などの既知の認証情報の置き場は、既定で Codex に読ませません（一覧は [design.md](design.md#codex-から守るもの)）。ただし push と署名付きコミットに要るものは、起動時にリポジトリごとに調べて読めるようにし、どのパスを外したかを理由と一緒に起動ログに出します。
+Known credential locations such as `~/.ssh`, `~/.aws`, `~/.config/gh` and `~/.netrc` are hidden from Codex by default (see [design.md](design.md#what-is-protected-from-codex) for the list). Those needed for pushing and signed commits are checked per repository at startup and made readable, and the startup log shows which paths were exempted and why.
 
-- push 先が SSH なら `~/.ssh`、HTTPS なら git の credential helper に応じて `~/.git-credentials`（`store`）、`~/.config/gh`（`gh`）、helper なしなら `~/.netrc` を外します。`osxkeychain` などはパスが要らないので外しません。
-- `commit.gpgsign=true` なら、`gpg.format` に応じて `~/.ssh` か `~/.gnupg` を外します。
-- 調べるのはグローバルとシステムの git 設定だけです。元のリポジトリの `.git/config` はスレッドのクローンに引き継がれないためです。
-- `EBIX_WRITABLE_ROOTS` にリポジトリの親ディレクトリを書いた場合、配下のリポジトリは調べません。そこから SSH で push するなら `EBIX_ALLOWED_READ_PATHS=~/.ssh` を書きます。
-- `gcloud`・`bq`・`kubectl`・プライベート npm registry などを作業で使うときは、`EBIX_ALLOWED_READ_PATHS=~/.config/gcloud,~/.kube,~/.npmrc` のように書きます。書けるのは既定の一覧にあるものだけで、それ以外は起動エラーです。
+- For SSH remotes, `~/.ssh` is exempted. For HTTPS, depending on git's credential helper, `~/.git-credentials` (`store`), `~/.config/gh` (`gh`), or `~/.netrc` without a helper. Helpers such as `osxkeychain` need no path, so nothing is exempted.
+- With `commit.gpgsign=true`, `~/.ssh` or `~/.gnupg` is exempted depending on `gpg.format`.
+- Only the global and system git settings are checked, because the original repository's `.git/config` does not carry over to thread clones.
+- If `EBIX_WRITABLE_ROOTS` lists a repository's parent directory, the repositories under it are not checked. To push from them over SSH, write `EBIX_ALLOWED_READ_PATHS=~/.ssh`.
+- When the work uses `gcloud`, `bq`, `kubectl`, a private npm registry and so on, write something like `EBIX_ALLOWED_READ_PATHS=~/.config/gcloud,~/.kube,~/.npmrc`. Only entries in the default list are allowed; anything else is a startup error.
 
-push の認証情報は `EBIX_DENIED_READ_PATHS` に入れないでください。push させたくない場合は、元のリポジトリの `origin` の認証情報を絞ります。
+Do not put push credentials in `EBIX_DENIED_READ_PATHS`. To prevent pushes, narrow the credentials of the original repository's `origin`.
 
-`EBIX_WRITABLE_ROOTS` が ebi-x の管理するパス（`data/` の各ディレクトリ、`.env`、`EBIX_HOME/.codex`、`CODEX_HOME`、`EBIX_DENIED_READ_PATHS`）と重なると、起動を拒否します。
+If `EBIX_WRITABLE_ROOTS` overlaps paths ebi-x manages (the directories in `data/`, `.env`, `EBIX_HOME/.codex`, `CODEX_HOME`, `EBIX_DENIED_READ_PATHS`), it refuses to start.
 
-## 5. 操作ルール
+## 5. Action rules
 
-Codex がどの操作の前に依頼者へ確認するかは、既定で次のとおりです。
+By default, Codex confirms with the requester before these actions:
 
-- 先に確認する：リモートへの push、PR やイシューの作成・マージ・クローズ、Slack・メール・外部サービスへの送信、ファイルやリソースの削除・公開、費用が発生する操作、本番環境の変更
-- 確認せずに行う：調査と読み取り、スレッド用の作業コピーでの編集・コミット、テストやビルド、成果物の作成
+- Confirm first: pushing to a remote; creating, merging or closing PRs and issues; sending to Slack, email or external services; deleting or publishing files and resources; actions that cost money; changes to production
+- Do without asking: investigating and reading; editing and committing in the thread's working copy; tests and builds; producing deliverables
 
-変えたいときは `$EBIX_HOME/data/rules.md` に Markdown で書きます（例は `examples/rules.md`）。ファイルがあれば既定の代わりに使い、新しいスレッドから再起動なしで反映します。16KB までで、Codex からは書き換えられません。
+To change them, write them in Markdown in `$EBIX_HOME/data/rules.md` (see `examples/rules.md`). If the file exists it replaces the defaults, and takes effect from new threads without a restart. It can be up to 16KB, and Codex cannot change it.
 
-ルールはモデルへの指示です。書き込める範囲や読めないパスは、サンドボックスで別に強制しています。
+The rules are instructions to the model. What can be written and which paths cannot be read are enforced separately by the sandbox.
 
-### チャンネルごとの設定
+### Per-channel settings
 
-`$EBIX_HOME/data/channel-rules/channels.yaml` に、チャンネル ID ごとに書きます（例は `examples/channels.yaml`）。
+Write them per channel ID in `$EBIX_HOME/data/channel-rules/channels.yaml` (see `examples/channels.yaml`).
 
-| 項目 | 内容 |
+| Item | Contents |
 | --- | --- |
-| `system_prompt` | Codex の developer instructions に足す指示 |
-| `read_only` | `true` でファイルを書けず、ネットワークにも出られなくする |
-| `github` | `false` で GitHub の認証情報を渡さない（push・PR の作成ができない） |
-| `repositories` | 読めるリポジトリ（ディレクトリ名かパス）。ほかのリポジトリと、そのクローンは読めない |
-| `mcp_servers` | 使える MCP サーバーの名前。`[]` で全部止める |
+| `system_prompt` | instructions added to Codex's developer instructions |
+| `read_only` | `true` makes files unwritable and the network unreachable |
+| `github` | `false` withholds GitHub credentials (no pushes or PRs) |
+| `repositories` | the repositories that can be read (directory names or paths). Other repositories and their clones cannot be read |
+| `mcp_servers` | the names of usable MCP servers. `[]` turns them all off |
 
-### 全体の設定
+### Global settings
 
-`$EBIX_HOME/data/channel-rules/settings.yaml` に書きます（例は `examples/settings.yaml`）。承認チャンネルで `@ebi-x 監視のリアクションは ok_hand、時刻は9時にして` のように頼めば、ebi-x が変更内容を見せてから書き換えます。手で書いてもかまいません。
+Write them in `$EBIX_HOME/data/channel-rules/settings.yaml` (see `examples/settings.yaml`). Ask in the approval channel, for example `@ebi-x make the watch reaction ok_hand and the time 9`, and ebi-x shows the change before rewriting the file. Writing it by hand is fine too.
 
-| 項目 | 内容 |
+| Item | Contents |
 | --- | --- |
-| `done_watch.reaction` / `done_watch.hour` | 「監視して」で待つリアクションと、通知する時刻（[usage.md](usage.md#リアクションの監視)） |
-| `sql_write_servers` | 更新やロックを伴う SQL を許す MCP サーバーの名前 |
+| `done_watch.reaction` / `done_watch.hour` | the reaction "監視して" (watch this) waits for, and the hour to notify ([usage.md](usage.md#reaction-watches)) |
+| `sql_write_servers` | the names of MCP servers allowed to run SQL that writes or locks |
 
-ファイルを読めないときは既定の設定で動き、承認チャンネルの回答でそのことを伝えます。
+If the file cannot be read, ebi-x runs with the defaults and says so in its replies in the approval channel.
 
-- 依頼のたびに読み直すので、再起動は要りません。
-- 書き換えられるのは承認チャンネルからの依頼だけです。
-- ファイルが読めないとき（YAML の誤りや、知らない項目名）は、承認チャンネル以外の依頼を始めません（[design.md](design.md#チャンネルごとの設定)）。
-- プライベートチャンネルと Slack Connect チャンネルで Slack の MCP を止める制限は、`mcp_servers` に書いても外れません。
+- It is reread for every request, so no restart is needed.
+- Only requests from the approval channel can change it.
+- If the file cannot be read (a YAML error, or an unknown item), requests outside the approval channel do not start ([design.md](design.md#per-channel-settings)).
+- Turning off the Slack MCP in private and Slack Connect channels cannot be lifted with `mcp_servers`.
 
-## 6. playbook
+## 6. Playbooks
 
-playbook は、特定の作業の手順を書いた Markdown です。`data/playbooks/` の直下に置くと、スレッドの最初の依頼で一覧が Codex に渡り、該当する作業のときに読まれます。
+A playbook is Markdown describing how to do a specific kind of work. Put it directly under `data/playbooks/`, and the list is passed to Codex with a thread's first request and read when the work matches.
 
 ```markdown
 ---
 name: release-notes
-description: どんな依頼のときに使うかを具体的に書く
+description: state concretely which requests it is for
 ---
 
-# 手順 …
+# Steps …
 ```
 
-- frontmatter の `name` と `description` が必要で、1ファイル 64KB までです。`README.md` は一覧に含めません。
-- `examples/playbooks/` に例があります。
+- The frontmatter needs `name` and `description`, and each file can be up to 64KB. `README.md` is not listed.
+- There are examples in `examples/playbooks/`.
 
-| 例 | 内容 |
+| Example | Contents |
 | --- | --- |
-| `playbook-from-thread.md` | スレッドの対応を playbook にする、既存の playbook を直す |
-| `request-discovery.md` | 改善要望を1問ずつ聞き取ってまとめる |
+| `playbook-from-thread.md` | turn what was done in a thread into a playbook, or fix an existing one |
+| `request-discovery.md` | interview about an improvement request one question at a time and summarize it |
 
-Slack から playbook を書き換えられるのは承認チャンネルだけです。`data/` は Git の管理外なので、playbook は運用環境で保管します。
+Only the approval channel can change playbooks from Slack. `data/` is outside Git, so keep playbooks safe in the running environment.
 
-## 7. PR の見守り
+## 7. Watching PRs
 
-追加の設定なしで有効になります。bot は起動時に、`EBIX_WRITABLE_ROOTS` のうち GitHub にある https の origin について、git の credential helper に保存されたトークンを `git credential fill` で読み、それで PR を読みます。`gh auth` は使いません。origin が SSH の場合や認証情報がない場合は無効になります。
+This works with no extra settings. At startup, for the https origins on GitHub among `EBIX_WRITABLE_ROOTS`, the bot reads the token stored in git's credential helper with `git credential fill` and uses it to read PRs. It does not use `gh auth`. If the origin is SSH or there are no credentials, watching is off.
 
-- 別のトークンを使うときだけ `EBIX_GITHUB_TOKEN` に書きます。PR・チェック・コミットステータスの読み取り権限で足ります。Codex には渡しません。見守るリポジトリだけに絞った fine-grained token をおすすめします。
-- GitHub Enterprise Server では `EBIX_GITHUB_API_URL` に `https://<host>/api/v3` を書きます。
-- 1つの PR につき1時間に約180回 API を呼びます。上限が1時間に5,000回のトークンなら、同時に見守る PR は20件程度までにします。
-- トークンの持ち主自身のコメントやレビューでは作業を再開しません。
+- Only to use a different token, write it in `EBIX_GITHUB_TOKEN`. Read access to PRs, checks and commit statuses is enough. It is not passed to Codex. A fine-grained token limited to the watched repositories is recommended.
+- For GitHub Enterprise Server, write `https://<host>/api/v3` in `EBIX_GITHUB_API_URL`.
+- Each PR costs about 180 API calls an hour. With a token limited to 5,000 calls an hour, watch at most about 20 PRs at once.
+- Comments and reviews by the token's own owner do not resume work.
 
-### 作業の GitHub 認証（GitHub App）
+### The work's GitHub authentication (GitHub App)
 
-`EBIX_GITHUB_APP_ID` と `EBIX_GITHUB_APP_PRIVATE_KEY` を書くと、bot が作業ごとに App の秘密鍵でインストールトークンを発行して Codex へ渡し、作業が終わったら失効させます。トークンが使えるのは作業の間だけで、失効に失敗しても発行から1時間で切れます。CODEX_TIMEOUT を1時間より長くすると、長い作業の途中でトークンが切れます。秘密鍵は bot だけが使い、Codex には見せません。書かなければ従来どおり、ホストの git の credential helper と gh の設定を使います。
+With `EBIX_GITHUB_APP_ID` and `EBIX_GITHUB_APP_PRIVATE_KEY` set, the bot mints an installation token with the App's private key for each run, passes it to Codex, and revokes it when the run ends. The token works only during the run, and even if revoking fails it expires one hour after minting. If CODEX_TIMEOUT is longer than an hour, the token expires in the middle of long runs. Only the bot uses the private key; Codex never sees it. Without these settings, the host's git credential helper and gh settings are used as before.
 
-- `EBIX_GITHUB_APP_PRIVATE_KEY`：PEM の秘密鍵のファイルパス（`~/` 可）か、`keychain:<サービス名>`（macOS の Keychain）。ファイルは自動で Codex から読めなくなります。
-- `EBIX_GITHUB_APP_INSTALLATION_ID`：App のインストールが1つなら不要です。複数あるときは起動ログに一覧が出るので、使うものを書きます。トークンが効くのはそのインストール（Organization）のリポジトリだけです。
-- 発行に失敗したときはログに出し、その作業はホストの git と gh の設定で続けます。
-- Keychain に入れるときは、読めるアプリを ebi-x だけにします：`security add-generic-password -s ebi-x-github-app -a ebi-x -T "$PWD/ebi-x" -w "$(cat app.pem)"`。ebi-x は `security` コマンドを使わず Security framework を直接呼ぶので、Codex の作業から `security find-generic-password` で読もうとしても拒否されます（手で `security` を叩いた場合も同じなので、確認はキーチェーンアクセス.app で行います）。
-  - 作ったあとに `security find-generic-password -s ebi-x-github-app -w` が確認なしで鍵を出力しないことを確かめます。出力されたら、キーチェーンアクセス.app の「アクセス制御」から `security` を外します。
-  - ビルドし直すと、Keychain からは別のアプリに見えます。そのため、reload 後の起動時に「ebi-x がキーチェーンの機密情報を使用しようとしています」と聞かれるので、「常に許可」を押します。鍵を読むのは起動時の1回だけで、それまで起動は待ちます（ログに出ます）。
-  - `mise run build` は macOS で hardened runtime（`codesign --sign - --options runtime`）を付けます。デバッガ、つまり Codex の作業から ebi-x にアタッチして、メモリ上の鍵を読まれないようにするためです。`go build` で直接ビルドしたときは、同じ `codesign` を実行します。
+- `EBIX_GITHUB_APP_PRIVATE_KEY`: the path of the PEM private key file (`~/` allowed), or `keychain:<service name>` (the macOS Keychain). The file is automatically hidden from Codex.
+- `EBIX_GITHUB_APP_INSTALLATION_ID`: not needed if the App has one installation. If it has several, the startup log lists them; write the one to use. The token works only for that installation's (organization's) repositories.
+- If minting fails, it is logged and that run continues with the host's git and gh settings.
+- When storing the key in the Keychain, let only ebi-x read it: `security add-generic-password -s ebi-x-github-app -a ebi-x -T "$PWD/ebi-x" -w "$(cat app.pem)"`. ebi-x calls the Security framework directly instead of the `security` command, so attempts by Codex's work to read it with `security find-generic-password` are refused (the same goes for running `security` by hand, so check in Keychain Access.app).
+  - After creating it, check that `security find-generic-password -s ebi-x-github-app -w` does not print the key without asking. If it does, remove `security` under "Access Control" in Keychain Access.app.
+  - After a rebuild, the Keychain sees a different app. So after a reload, at startup you are asked "ebi-x wants to use confidential information stored in your keychain"; press "Always Allow". The key is read only once at startup, and startup waits until then (it is logged).
+  - On macOS, `mise run build` adds the hardened runtime (`codesign --sign - --options runtime`), so a debugger, that is Codex's work, cannot attach to ebi-x and read the key from memory. If you build with `go build` directly, run the same `codesign`.
 
 ## 8. MCP
 
-Codex の MCP サーバーは `$EBIX_HOME/.codex/config.toml` に書きます。`~/.codex/config.toml` は読みません。
+Codex's MCP servers are configured in `$EBIX_HOME/.codex/config.toml`. `~/.codex/config.toml` is not read.
 
-`command` で起動する MCP サーバーは、ebi-x の SQL ガードを挟んで起動します。ツールの呼び出しに SQL（引数 `sql`、`statement`、または名前に sql・query・execute を含むツールの `query`）があれば、SELECT・WITH・SHOW・EXPLAIN などの読み取りで、更新やロックを伴わない1文だけを通し、ほかはツールのエラーとして返します。書き込みが必要なサーバーは `settings.yaml` の `sql_write_servers` に名前を書きます。
+MCP servers started with `command` are started through ebi-x's SQL guard. When a tool call carries SQL (an `sql` or `statement` argument, or `query` on a tool whose name contains sql, query or execute), only a single read statement such as SELECT, WITH, SHOW or EXPLAIN that does not write or lock passes; anything else is returned as a tool error. List servers that need to write in `sql_write_servers` in `settings.yaml`.
 
-`url` で接続する MCP サーバーにはガードを挟めません。更新できるツールは `enabled_tools` や `disabled_tools`、サーバー自身の読み取り専用の設定で外します。
+The guard cannot be put in front of MCP servers connected by `url`. Remove their tools that can write with `enabled_tools` or `disabled_tools`, or with the server's own read-only setting.
 
-必要なツールが公開されていないとき、Codex は「接続できない」ではなく「公開されていない」と依頼者に伝えます。
+When a needed tool is not exposed, Codex tells the requester that it is "not exposed", not that it "cannot connect".
 
-### Slack の MCP
+### Slack MCP
 
-名前・`url`・`command`・`args` に `slack` を含む MCP サーバーは、閉じたチャンネルでは止まります（[design.md](design.md#閉じたチャンネル)）。起動ログの `MCP servers turned off for private and Slack Connect channels: [...]` に載らないときは、サーバー名に `slack` を含めます。
+MCP servers whose name, `url`, `command` or `args` contain `slack` are turned off in closed channels ([design.md](design.md#closed-channels)). If a server is missing from the startup log line `MCP servers turned off for private and Slack Connect channels: [...]`, include `slack` in its name.
 
-### 環境変数
+### Environment variables
 
-Codex に渡す環境変数は許可リストで決まっていて、`.env` やシェルのそれ以外の変数は渡りません（一覧は [design.md](design.md#codex-から守るもの)）。渡さなかった変数の名前は起動ログに1行出ます。MCP サーバーやモデルプロバイダーが環境変数を読むときは、次の両方が要ります。
+The environment variables passed to Codex are an allowlist; other variables in `.env` or the shell are not passed (see [design.md](design.md#what-is-protected-from-codex) for the list). The names of variables not passed are logged in one line at startup. When an MCP server or model provider reads an environment variable, both of the following are needed:
 
-1. `EBIX_CODEX_ENV` に変数名を書いて Codex に渡す
-2. そのサーバーの `env_vars` に名前を書く（または `env` に値を直接書く）。stdio の MCP サーバーは Codex の環境をそのまま引き継がないためです
+1. write the variable name in `EBIX_CODEX_ENV` to pass it to Codex
+2. write the name in that server's `env_vars` (or write the value directly in `env`), because stdio MCP servers do not inherit Codex's environment as is
 
 ```toml
 [mcp_servers.example]
 command = "example-mcp"
-env_vars = ["EXAMPLE_API_TOKEN"]   # EBIX_CODEX_ENV=EXAMPLE_API_TOKEN も必要
+env_vars = ["EXAMPLE_API_TOKEN"]   # also needs EBIX_CODEX_ENV=EXAMPLE_API_TOKEN
 env = { EXAMPLE_REGION = "asia-northeast1" }
 ```
 
-`SLACK_BOT_TOKEN`・`SLACK_APP_TOKEN`・`EBIX_GITHUB_TOKEN`・`EBIX_GITHUB_APP_PRIVATE_KEY` は書けません（起動エラー）。名前に `KEY`・`SECRET`・`TOKEN` を含む変数は Codex 本体には届きますが、Codex が実行するコマンドには渡りません。そのため `GH_TOKEN` などで `git push` や `gh` を認証する使い方はできないので、credential helper か GitHub App（[7. PR の見守り](#作業の-github-認証github-app)）を使います。
+`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`, `EBIX_GITHUB_TOKEN` and `EBIX_GITHUB_APP_PRIVATE_KEY` cannot be listed (startup error). Variables whose names contain `KEY`, `SECRET` or `TOKEN` reach Codex itself but are not passed to the commands Codex runs. So authenticating `git push` or `gh` with `GH_TOKEN` and the like does not work; use a credential helper or a GitHub App ([7. Watching PRs](#the-works-github-authentication-github-app)).
 
-## 9. 運用
+## 9. Operations
 
-- **1台1プロセス**：同じ `data/` で2つ目を起動するとエラーにします。メッセージの pid のプロセスを止めてから起動します。ロックファイルは消さないでください。
-- **リロード**：`mise run reload`（ビルドしてから、動いている ebi-x に `SIGHUP` を送る）で、実行中の作業を止めずに新しいバイナリに入れ替えます。mise なしなら `go build -o ebi-x ./cmd/ebi-x && codesign --force --sign - --options runtime ebi-x && kill -HUP "$(cat data/state/ebi-x.lock)"` です（`codesign` は macOS のみ）。
-  - 先に新しいバイナリを `-check-config` で起動してみて、失敗したら入れ替えずにそのまま動き続けます。`mise run reload` はビルドに失敗したら `SIGHUP` を送りません。
-  - 動いている作業はそのまま続け、その間に届いた依頼は保存して、再起動後に自動で始めます。`.env` も読み直します。
-  - 切り替えの数秒間に届いた mention は取りこぼすことがあります。`go run` で起動している場合と Windows ではリロードできません。
-  - systemd では `ExecReload=/bin/kill -HUP $MAINPID` を設定すると `systemctl reload ebi-x` で同じことができます。
-- **中断した依頼**：作業中に ebi-x が落ちた依頼は `interrupted` になり、自動ではやり直しません。作業は外部に副作用を残している可能性があるためです。状況を確かめてから、新しい mention で依頼し直します。
-- **ディスク**：スレッド専用クローンは `EBIX_CHECKOUT_IDLE_TTL` で自動で消えますが、`data/workspace/` のスレッドごとの作業ディレクトリは消えません。
-- **Codex のログイン**：ログインが切れると承認チャンネルに知らせが届きます。`codex login` でログインし直します。
-- **データの保管**：`data/` は `.gitignore` で除外しています。状態・メモリ・個人設定・playbook はここにあり、コミットされません。
+- **One process per machine**: starting a second one on the same `data/` is an error. Stop the process with the pid in the message before starting. Do not delete the lock file.
+- **Reload**: `mise run reload` (build, then send `SIGHUP` to the running ebi-x) swaps in the new binary without stopping work in progress. Without mise: `go build -o ebi-x ./cmd/ebi-x && codesign --force --sign - --options runtime ebi-x && kill -HUP "$(cat data/state/ebi-x.lock)"` (`codesign` on macOS only).
+  - The new binary is first started with `-check-config`; if that fails, nothing is swapped and the old one keeps running. `mise run reload` does not send `SIGHUP` if the build fails.
+  - Running work continues, and requests that arrive meanwhile are saved and started automatically after the restart. `.env` is reread too.
+  - Mentions arriving during the few seconds of the switch may be missed. Reload does not work when started with `go run`, or on Windows.
+  - With systemd, set `ExecReload=/bin/kill -HUP $MAINPID` and `systemctl reload ebi-x` does the same.
+- **Interrupted requests**: a request whose work was cut off by ebi-x going down becomes `interrupted` and is not retried automatically, because the work may have left side effects outside. Check the situation, then ask again with a new mention.
+- **Disk**: per-thread clones are removed automatically after `EBIX_CHECKOUT_IDLE_TTL`, but per-thread working directories under `data/workspace/` are not.
+- **Codex sign-in**: when the sign-in expires, a notice goes to the approval channel. Sign in again with `codex login`.
+- **Keeping data**: `data/` is excluded by `.gitignore`. State, memory, personal settings and playbooks live there and are never committed.

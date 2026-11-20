@@ -41,7 +41,7 @@ func List(dir string) ([]Playbook, error) {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".md" {
 			continue
 		}
-		// README.md は playbook 置き場の説明用であり playbook ではない。
+		// README.md describes the playbook directory; it is not a playbook.
 		if strings.EqualFold(entry.Name(), "README.md") {
 			continue
 		}

@@ -13,7 +13,7 @@ import (
 	"github.com/slack-go/slack/slackevents"
 )
 
-const scheduleAnswer = "毎朝確認します。\n\n## 定期実行\n- いつ: 平日 9:00\n- やること: main の CI の失敗を確認して報告する"
+const scheduleAnswer = "毎朝確認します。\n\n## Schedule\n- When: 平日 9:00\n- Task: main の CI の失敗を確認して報告する"
 
 func TestTurnSetsSchedule(t *testing.T) {
 	store := &fakeStore{claim: true}
@@ -22,16 +22,16 @@ func TestTurnSetsSchedule(t *testing.T) {
 
 	bot.HandleMention(context.Background(), mention())
 
-	spec, _ := codex.ParseScheduleSpec("平日 09:00")
+	spec, _ := codex.ParseScheduleSpec("weekdays 09:00")
 	want := state.Schedule{
-		Channel: "C1", ThreadTS: "100.1", AuthorID: "U1", Spec: "平日 09:00", Task: "main の CI の失敗を確認して報告する",
+		Channel: "C1", ThreadTS: "100.1", AuthorID: "U1", Spec: "weekdays 09:00", Task: "main の CI の失敗を確認して報告する",
 		NextAt: spec.Next(followUpNow.In(time.Local)), CreatedAt: followUpNow,
 	}
 	if got := store.schedules["C1:100.1"]; got != want {
 		t.Fatalf("schedule = %#v, want %#v", got, want)
 	}
 	post := api.postTexts[len(api.postTexts)-1]
-	if strings.Contains(post, "## 定期実行") || !strings.Contains(post, "🔁 定期実行を設定しました: 平日 09:00 に「main の CI の失敗を確認して報告する」") {
+	if strings.Contains(post, "## Schedule") || !strings.Contains(post, "🔁 定期実行を設定しました: weekdays 09:00 に「main の CI の失敗を確認して報告する」") {
 		t.Fatalf("result post = %q, want the section replaced by a notice", post)
 	}
 }
@@ -55,7 +55,7 @@ func TestUnattendedTurnCannotSetSchedule(t *testing.T) {
 func TestScheduleRejectsBadSpecAndLimit(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	bot := newFollowUpBot(t, store, api, followUpRunner("## 定期実行\n- いつ: 毎時\n- やること: 確認する", scheduleAnswer))
+	bot := newFollowUpBot(t, store, api, followUpRunner("## Schedule\n- When: 毎時\n- Task: 確認する", scheduleAnswer))
 
 	bot.HandleMention(context.Background(), mention())
 	if len(store.schedules) != 0 || !strings.Contains(api.postTexts[len(api.postTexts)-1], "「毎時」を読み取れなかった") {
@@ -74,7 +74,7 @@ func TestScheduleRejectsBadSpecAndLimit(t *testing.T) {
 func TestScheduleStopRequestAndCommand(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	bot := newFollowUpBot(t, store, api, followUpRunner("止めました。\n\n## 定期実行\n- いつ: 停止"))
+	bot := newFollowUpBot(t, store, api, followUpRunner("止めました。\n\n## Schedule\n- When: stop"))
 	store.schedules = map[string]state.Schedule{"C1:100.1": {Channel: "C1", ThreadTS: "100.1", AuthorID: "U1", Spec: "平日 09:00"}}
 
 	bot.HandleMention(context.Background(), mention())
@@ -104,7 +104,7 @@ func TestFireScheduleStartsNewThread(t *testing.T) {
 	if api.posts[1].threadTS != "900.1" || !strings.Contains(api.posts[1].text, "CI は成功しています。") {
 		t.Fatalf("result = %#v, want it in the new thread", api.posts[1])
 	}
-	if runner.threadIDs[0] != "" || !strings.Contains(runner.prompts[0], "定期実行として設定した作業です") ||
+	if runner.threadIDs[0] != "" || !strings.Contains(runner.prompts[0], "work the requester scheduled to run") ||
 		!strings.Contains(runner.prompts[0], "<authenticated_slack_author_id>\nU1\n") {
 		t.Fatalf("turn = thread %q prompt %q, want a fresh session for the author", runner.threadIDs[0], runner.prompts[0])
 	}

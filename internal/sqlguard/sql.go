@@ -27,9 +27,9 @@ var writingWords = map[string]bool{
 }
 
 var (
-	errMultiple = errors.New("複数の文はまとめて実行できません")
-	errEmpty    = errors.New("SQL が空です")
-	errUnclosed = errors.New("閉じていない文字列かコメントがあります")
+	errMultiple = errors.New("multiple statements cannot run together")
+	errEmpty    = errors.New("the SQL is empty")
+	errUnclosed = errors.New("a string or comment is not closed")
 )
 
 type token struct {
@@ -71,7 +71,7 @@ func CheckReadOnly(sql string) error {
 type blockedError struct{ word string }
 
 func (e *blockedError) Error() string {
-	return e.word + " を含む SQL は、更新やロックをする可能性があるため実行できません"
+	return "SQL containing " + e.word + " cannot run, because it may write or lock"
 }
 
 func tokenize(sql string) ([]token, error) {

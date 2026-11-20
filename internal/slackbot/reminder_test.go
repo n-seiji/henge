@@ -11,7 +11,7 @@ import (
 	"github.com/slack-go/slack/slackevents"
 )
 
-const reminderAnswer = "明日の10時にお知らせします。\n\n## リマインダー\n- いつ: 2026-10-10T10:00:00+09:00\n- 内容: 見積もりを送る"
+const reminderAnswer = "明日の10時にお知らせします。\n\n## Reminder\n- When: 2026-10-10T10:00:00+09:00\n- Text: 見積もりを送る"
 
 func TestTurnSetsReminder(t *testing.T) {
 	store := &fakeStore{claim: true}
@@ -29,7 +29,7 @@ func TestTurnSetsReminder(t *testing.T) {
 		t.Fatalf("reminders = %#v, want %#v", store.reminders, want)
 	}
 	post := api.postTexts[len(api.postTexts)-1]
-	if strings.Contains(post, "## リマインダー") || !strings.Contains(post, "にこのスレッドでリマインドします: 見積もりを送る") {
+	if strings.Contains(post, "## Reminder") || !strings.Contains(post, "にこのスレッドでリマインドします: 見積もりを送る") {
 		t.Fatalf("result post = %q, want the section replaced by a notice", post)
 	}
 }
@@ -37,7 +37,7 @@ func TestTurnSetsReminder(t *testing.T) {
 func TestReminderRejectsBadTimeLimitAndUnattendedTurns(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	bot := newFollowUpBot(t, store, api, followUpRunner("## リマインダー\n- いつ: 明日\n- 内容: 送る", reminderAnswer, reminderAnswer))
+	bot := newFollowUpBot(t, store, api, followUpRunner("## Reminder\n- When: 明日\n- Text: 送る", reminderAnswer, reminderAnswer))
 
 	bot.HandleMention(context.Background(), mention())
 	if len(store.reminders) != 0 || !strings.Contains(api.postTexts[len(api.postTexts)-1], "「明日」を読み取れないか範囲外") {
@@ -63,7 +63,7 @@ func TestReminderRejectsBadTimeLimitAndUnattendedTurns(t *testing.T) {
 func TestReminderCancelRequestAndStopCommand(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	bot := newFollowUpBot(t, store, api, followUpRunner("取り消しました。\n\n## リマインダー\n- いつ: 停止"))
+	bot := newFollowUpBot(t, store, api, followUpRunner("取り消しました。\n\n## Reminder\n- When: stop"))
 	pending := func() {
 		store.reminders = map[string]state.Reminder{
 			"a": {ID: "a", Channel: "C1", ThreadTS: "100.1", AuthorID: "U1", DueAt: followUpNow.Add(time.Hour)},

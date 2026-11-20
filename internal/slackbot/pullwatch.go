@@ -291,27 +291,27 @@ func (b *Bot) firePullWatch(ctx context.Context, watch state.PullWatch, summary,
 // Bodies are clipped; the session can read them in full on GitHub.
 func describePullEvent(pull github.Pull, checks github.Checks, activity []github.Activity, events []string) string {
 	var builder strings.Builder
-	fmt.Fprintf(&builder, "PR: %s（%s）\n", pull.URL, pull.Title)
+	fmt.Fprintf(&builder, "PR: %s (%s)\n", pull.URL, pull.Title)
 	for _, event := range events {
 		builder.WriteString("- " + event + "\n")
 	}
 	for i, item := range activity {
 		if i >= maxPullActivityItems {
-			fmt.Fprintf(&builder, "- ほか%d件\n", len(activity)-i)
+			fmt.Fprintf(&builder, "- %d more\n", len(activity)-i)
 			break
 		}
 		label := map[string]string{
-			github.KindReview:        "レビュー",
-			github.KindReviewComment: "コードへのコメント",
-			github.KindComment:       "コメント",
+			github.KindReview:        "review",
+			github.KindReviewComment: "code comment",
+			github.KindComment:       "comment",
 		}[item.Kind]
 		if item.State != "" && item.Kind == github.KindReview {
-			label += "（" + item.State + "）"
+			label += " (" + item.State + ")"
 		}
 		if item.Path != "" {
 			label += " " + item.Path
 		}
-		fmt.Fprintf(&builder, "- @%s の%s: %s %s\n", item.Author, label, clipText(item.Body, maxPullActivityRunes), item.URL)
+		fmt.Fprintf(&builder, "- %[2]s by @%[1]s: %[3]s %[4]s\n", item.Author, label, clipText(item.Body, maxPullActivityRunes), item.URL)
 	}
 	return strings.TrimSpace(builder.String())
 }

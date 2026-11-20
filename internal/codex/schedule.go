@@ -3,17 +3,25 @@ package codex
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
-	scheduleHeading  = "## 定期実行"
-	ScheduleStopWord = "停止"
+	scheduleHeading  = "## Schedule"
+	ScheduleStopWord = "stop"
 )
 
-var weekdayNames = []string{"日", "月", "火", "水", "木", "金", "土"}
+var weekdayNames = []string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+
+var (
+	everyDay = [7]bool{true, true, true, true, true, true, true}
+	weekdays = [7]bool{false, true, true, true, true, true, false}
+	weekends = [7]bool{true, false, false, false, false, false, true}
+)
 
 // Running at most daily keeps unattended work bounded.
 type ScheduleSpec struct {
@@ -28,41 +36,14 @@ func ParseScheduleSpec(when string) (ScheduleSpec, error) {
 		return ScheduleSpec{}, errors.New("want days and a time")
 	}
 	var spec ScheduleSpec
-	switch days := fields[0]; days {
-	case "毎日":
-		spec.Days = [7]bool{true, true, true, true, true, true, true}
-	case "平日":
-		spec.Days = [7]bool{false, true, true, true, true, true, false}
-	case "週末":
-		spec.Days = [7]bool{true, false, false, false, false, false, true}
-	default:
-		names, ok := strings.CutPrefix(days, "毎週")
-		if !ok {
-			return ScheduleSpec{}, fmt.Errorf("unknown days %q", days)
-		}
-		names = strings.TrimSuffix(strings.TrimSuffix(names, "日"), "曜")
-		names = strings.NewReplacer("・", "", "、", "", ",", "", "曜", "").Replace(names)
-		if names == "" {
-			return ScheduleSpec{}, errors.New("no weekday")
-		}
-		for _, name := range names {
-			day := -1
-			for i, weekday := range weekdayNames {
-				if string(name) == weekday {
-					day = i
-				}
-			}
-			if day < 0 {
-				return ScheduleSpec{}, fmt.Errorf("unknown weekday %q", string(name))
-			}
-			spec.Days[day] = true
-		}
+	var err error
+	if spec.Days, err = parseScheduleDays(fields[0]); err != nil {
+		return ScheduleSpec{}, err
 	}
 	hour, minute, ok := strings.Cut(fields[1], ":")
 	if !ok {
 		return ScheduleSpec{}, errors.New("time is not HH:MM")
 	}
-	var err error
 	if spec.Hour, err = strconv.Atoi(hour); err != nil || spec.Hour < 0 || spec.Hour > 23 {
 		return ScheduleSpec{}, fmt.Errorf("bad hour %q", hour)
 	}
@@ -72,24 +53,74 @@ func ParseScheduleSpec(when string) (ScheduleSpec, error) {
 	return spec, nil
 }
 
+func parseScheduleDays(days string) ([7]bool, error) {
+	switch strings.ToLower(days) {
+	case "daily":
+		return everyDay, nil
+	case "weekdays":
+		return weekdays, nil
+	case "weekends":
+		return weekends, nil
+	}
+	if names, ok := strings.CutPrefix(days, "毎週"); ok {
+		return parseLegacyWeekdays(names)
+	}
+	switch days {
+	case "毎日":
+		return everyDay, nil
+	case "平日":
+		return weekdays, nil
+	case "週末":
+		return weekends, nil
+	}
+	var result [7]bool
+	for _, name := range strings.Split(days, ",") {
+		day := slices.IndexFunc(weekdayNames, func(weekday string) bool { return strings.EqualFold(weekday, name) })
+		if day < 0 {
+			return [7]bool{}, fmt.Errorf("unknown days %q", days)
+		}
+		result[day] = true
+	}
+	return result, nil
+}
+
+// Schedules saved before the spec was in English are stored in this form and
+// are parsed again on every run.
+func parseLegacyWeekdays(names string) ([7]bool, error) {
+	names = strings.TrimSuffix(strings.TrimSuffix(names, "日"), "曜")
+	names = strings.NewReplacer("・", "", "、", "", ",", "", "曜", "").Replace(names)
+	if names == "" {
+		return [7]bool{}, errors.New("no weekday")
+	}
+	var result [7]bool
+	for _, name := range names {
+		day := strings.IndexRune("日月火水木金土", name)
+		if day < 0 {
+			return [7]bool{}, fmt.Errorf("unknown weekday %q", string(name))
+		}
+		result[utf8.RuneCountInString("日月火水木金土"[:day])] = true
+	}
+	return result, nil
+}
+
 func (s ScheduleSpec) String() string {
 	var days string
 	switch s.Days {
-	case [7]bool{true, true, true, true, true, true, true}:
-		days = "毎日"
-	case [7]bool{false, true, true, true, true, true, false}:
-		days = "平日"
-	case [7]bool{true, false, false, false, false, false, true}:
-		days = "週末"
+	case everyDay:
+		days = "daily"
+	case weekdays:
+		days = "weekdays"
+	case weekends:
+		days = "weekends"
 	default:
-		days = "毎週"
+		var names []string
 		// Monday first, as people list a week.
 		for _, i := range []int{1, 2, 3, 4, 5, 6, 0} {
 			if s.Days[i] {
-				days += weekdayNames[i]
+				names = append(names, weekdayNames[i])
 			}
 		}
-		days += "曜"
+		days = strings.Join(names, ",")
 	}
 	return fmt.Sprintf("%s %02d:%02d", days, s.Hour, s.Minute)
 }
@@ -121,7 +152,7 @@ func SplitSchedule(text string) (rest string, request *ScheduleRequest, invalid 
 	if invalid {
 		return rest, nil, true
 	}
-	if fields[followUpWhenKey] == ScheduleStopWord {
+	if strings.EqualFold(contractWord(fields[followUpWhenKey]), ScheduleStopWord) {
 		return rest, &ScheduleRequest{Stop: true}, false
 	}
 	if fields[followUpWhenKey] == "" || fields[followUpTaskKey] == "" {

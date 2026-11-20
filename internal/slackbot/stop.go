@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Only the whole message counts, so "停止の仕方を教えて" still reaches the agent.
+// Only the whole message counts, so "how do I stop it?" still reaches the agent.
 var stopCommands = map[string]struct{}{
 	"停止": {}, "停止して": {}, "止めて": {}, "とめて": {}, "中止": {}, "中止して": {},
 	"キャンセル": {}, "キャンセルして": {}, "ストップ": {}, "stop": {}, "cancel": {},

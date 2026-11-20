@@ -39,7 +39,7 @@ func Read(dir string) (string, error) {
 	}
 	text := string(data)
 	if len(text) > maxPromptBytes {
-		text = "(前半はサイズ上限のため省略)\n" + truncateTailRunes(text, maxPromptBytes)
+		text = "(earlier part omitted for size)\n" + truncateTailRunes(text, maxPromptBytes)
 	}
 	return strings.TrimSpace(text), nil
 }
@@ -53,7 +53,7 @@ func Append(dir, entry string) (written string, err error) {
 		return "", nil
 	}
 	if len(entry) > MaxAppendBytes {
-		entry = strings.TrimSpace(truncateRunes(entry, MaxAppendBytes)) + "\n(サイズ上限のため切り詰め)"
+		entry = strings.TrimSpace(truncateRunes(entry, MaxAppendBytes)) + "\n(truncated for size)"
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err

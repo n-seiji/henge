@@ -376,7 +376,7 @@ func TestApprovalChannelAcceptsOnlyDecisionsInRequestThreads(t *testing.T) {
 func TestAllowedUserWorksInApprovalChannelWithSharedWrites(t *testing.T) {
 	runner := &fakeRunner{responses: []runnerResponse{{result: &codex.TurnResult{
 		Completed: true,
-		Messages:  []string{"直しました。\n## 全体メモリ追記\nplaybook はこのチャンネルで直す"},
+		Messages:  []string{"直しました。\n## Global memory\nplaybook はこのチャンネルで直す"},
 	}}}}
 	bot, api, store, _ := newApprovalBot(t, runner)
 	bot.config.PlaybooksDir = t.TempDir()
@@ -387,7 +387,7 @@ func TestAllowedUserWorksInApprovalChannelWithSharedWrites(t *testing.T) {
 	if runner.calls != 1 || store.claimCalls != 1 {
 		t.Fatalf("runner calls = %d, claims = %d; want one turn", runner.calls, store.claimCalls)
 	}
-	if !strings.Contains(runner.prompts[0], "## 全体メモリ追記") {
+	if !strings.Contains(runner.prompts[0], "## Global memory") {
 		t.Errorf("work prompt does not offer shared writes in the approval channel")
 	}
 	if !slices.Contains(runner.roots[0], bot.config.PlaybooksDir) {
@@ -426,7 +426,7 @@ func TestOtherChannelsCannotChangePlaybooksOrGlobalMemory(t *testing.T) {
 	if runner.calls != 1 {
 		t.Fatalf("runner calls = %d, want 1", runner.calls)
 	}
-	if strings.Contains(runner.prompts[0], "## 全体メモリ追記") || slices.Contains(runner.roots[0], bot.config.PlaybooksDir) {
+	if strings.Contains(runner.prompts[0], "## Global memory") || slices.Contains(runner.roots[0], bot.config.PlaybooksDir) {
 		t.Errorf("channel C1 got shared writes: roots %v", runner.roots[0])
 	}
 }

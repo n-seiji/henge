@@ -26,9 +26,9 @@ func TestClosedChannelTurnsAreKeptApart(t *testing.T) {
 		err  error
 		kind string
 	}{
-		{name: "private", info: ChannelInfo{Private: true}, kind: "プライベートチャンネル"},
-		{name: "slack connect", info: ChannelInfo{External: true}, kind: "外部の組織と共有しているチャンネル"},
-		{name: "lookup failure", err: errors.New("missing_scope"), kind: "種類を確認できなかったチャンネル"},
+		{name: "private", info: ChannelInfo{Private: true}, kind: "a private channel"},
+		{name: "slack connect", info: ChannelInfo{External: true}, kind: "a channel shared with an external organization"},
+		{name: "lookup failure", err: errors.New("missing_scope"), kind: "a channel whose type could not be checked"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -49,7 +49,7 @@ func TestClosedChannelTurnsAreKeptApart(t *testing.T) {
 			if !reflect.DeepEqual(runner.access, []codex.Access{{WithoutSlack: true}}) {
 				t.Fatalf("access = %+v, want Slack MCP servers off", runner.access)
 			}
-			if len(runner.prompts) != 1 || !strings.Contains(runner.prompts[0], test.kind) || !strings.Contains(runner.prompts[0], "Slack の検索・読み取りツールは使えません") {
+			if len(runner.prompts) != 1 || !strings.Contains(runner.prompts[0], test.kind) || !strings.Contains(runner.prompts[0], "Slack search and read tools are unavailable") {
 				t.Fatalf("prompt = %q, want the closed channel note naming %q", runner.prompts, test.kind)
 			}
 		})

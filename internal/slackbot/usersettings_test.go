@@ -20,7 +20,7 @@ func TestUserSettingsReachOnlyTheirOwnerInASharedThread(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
 	runner := &fakeRunner{responses: []runnerResponse{
-		turnResponse("わかりました。\n## 個人設定\n- 返事は3行以内にする\n- 英語で答える"),
+		turnResponse("わかりました。\n## Personal settings\n- 返事は3行以内にする\n- 英語で答える"),
 		turnResponse("Done."),
 		turnResponse("Done."),
 	}}
@@ -41,10 +41,10 @@ func TestUserSettingsReachOnlyTheirOwnerInASharedThread(t *testing.T) {
 	if len(runner.prompts) != 3 {
 		t.Fatalf("prompts = %d, want 3", len(runner.prompts))
 	}
-	if !strings.Contains(runner.prompts[0], "<user_settings>\n（設定なし）\n</user_settings>") {
+	if !strings.Contains(runner.prompts[0], "<user_settings>\n(no settings)\n</user_settings>") {
 		t.Errorf("first prompt lacks the empty settings:\n%s", runner.prompts[0])
 	}
-	if strings.Contains(runner.prompts[1], "英語で答える") || !strings.Contains(runner.prompts[1], "（設定なし）") {
+	if strings.Contains(runner.prompts[1], "英語で答える") || !strings.Contains(runner.prompts[1], "(no settings)") {
 		t.Errorf("another speaker's prompt carries U2's settings:\n%s", runner.prompts[1])
 	}
 	if !strings.Contains(runner.prompts[2], "<user_settings>\n- 返事は3行以内にする\n- 英語で答える\n</user_settings>") {
@@ -52,7 +52,7 @@ func TestUserSettingsReachOnlyTheirOwnerInASharedThread(t *testing.T) {
 	}
 
 	posts := strings.Join(api.postTexts, "|")
-	for _, private := range []string{"## 個人設定", "返事は3行以内にする", "英語で答える"} {
+	for _, private := range []string{"## Personal settings", "返事は3行以内にする", "英語で答える"} {
 		if strings.Contains(posts, private) {
 			t.Errorf("thread posts expose %q: %q", private, posts)
 		}
@@ -75,18 +75,18 @@ func TestUserSettingsCanBeClearedAndIgnoreMalformedOutput(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
 	runner := &fakeRunner{responses: []runnerResponse{
-		turnResponse("消しました。\n## 個人設定\n- なし"),
+		turnResponse("消しました。\n## Personal settings\n- なし"),
 	}}
 	bot := newTestBot(t, store, api, runner)
 	if _, err := usersettings.Write(bot.config.MemoryDir, "U1", []string{"敬語を使わない"}); err != nil {
 		t.Fatal(err)
 	}
 	for _, malformed := range []string{
-		"## 個人設定\n本文だけ",
-		"## 個人設定\n- a\n## 個人設定\n- b",
+		"## Personal settings\n本文だけ",
+		"## Personal settings\n- a\n## Personal settings\n- b",
 	} {
 		rest, _, present, invalid := codex.SplitUserSettings(malformed)
-		if !present || !invalid || strings.Contains(rest, "## 個人設定") {
+		if !present || !invalid || strings.Contains(rest, "## Personal settings") {
 			t.Errorf("SplitUserSettings(%q) = %q, present %v, invalid %v", malformed, rest, present, invalid)
 		}
 	}

@@ -1,7 +1,7 @@
 {
   "display_information": {
     "name": "ebi-x",
-    "description": "Slack から Codex に調査や作業を頼めるエージェント"
+    "description": "An agent you can ask from Slack to investigate and work with Codex"
   },
   "features": {
     "app_home": {
@@ -14,14 +14,14 @@
       "always_online": true
     },
     "agent_view": {
-      "agent_description": "リポジトリの調査・修正・PR 作成や、成果物の作成を Codex で進めて、スレッドに報告します。"
+      "agent_description": "Investigates and fixes repositories, opens PRs and produces deliverables with Codex, and reports back in the thread."
     },
     "shortcuts": [
       {
-        "name": "ebi-x に頼む",
+        "name": "Ask ebi-x",
         "type": "message",
         "callback_id": "ebix_request",
-        "description": "このメッセージについて ebi-x に調査や作業を頼みます"
+        "description": "Ask ebi-x to investigate or work on this message"
       }
     ]
   },

@@ -1,4 +1,4 @@
-- 先に確認する（依頼者に聞き、承認されてから行う）: main ブランチへの push、PR のマージ、Slack・メール・外部サービスへの送信や投稿、ファイルやリソースの削除・公開、費用が発生する操作、本番環境の変更
-- 確認せずに行う: 調査と読み取り、このスレッド用の作業コピーでの編集・コミット、作業用ブランチへの push と draft PR の作成、テストやビルドの実行、成果物の作成
-- 自分では行わず、手順を示して人に任せる: パスワードやトークンの変更、権限の付与
-- 費用: 料金が50円未満と見積もれる操作は確認せずに行う
+- Confirm first (ask the requester and act only once approved): pushing to the main branch, merging PRs, sending or posting to Slack, email or external services, deleting or publishing files and resources, actions that cost money, changes to production
+- Do without asking: investigating and reading, editing and committing in this thread's working copy, pushing to a working branch and opening a draft PR, running tests and builds, producing deliverables
+- Do not do yourself; show the steps and leave it to a person: changing passwords or tokens, granting permissions
+- Cost: do actions estimated to cost under 50 yen without asking

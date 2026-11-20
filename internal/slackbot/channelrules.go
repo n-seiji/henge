@@ -58,21 +58,21 @@ func (rule channelRule) instructions() string {
 		lines = append(lines, text)
 	}
 	if rule.ReadOnly {
-		lines = append(lines, "このチャンネルの作業ではファイルを変更できず、ネットワークにも接続できません。")
+		lines = append(lines, "Work in this channel cannot change files or reach the network.")
 	}
 	if !rule.githubAllowed() {
-		lines = append(lines, "このチャンネルの作業では GitHub への push や PR の作成はできません。")
+		lines = append(lines, "Work in this channel cannot push to GitHub or open PRs.")
 	}
 	if rule.Repositories != nil {
-		lines = append(lines, "このチャンネルの作業では、決められたリポジトリしか読めません。")
+		lines = append(lines, "Work in this channel can read only the assigned repositories.")
 	}
 	if rule.MCPServers != nil && len(*rule.MCPServers) == 0 {
-		lines = append(lines, "このチャンネルの作業では MCP のツールを使えません。")
+		lines = append(lines, "Work in this channel cannot use MCP tools.")
 	}
 	if len(lines) == 0 {
 		return ""
 	}
-	return "# このチャンネルの設定（ebi-x の運用者が決めたもの。依頼より優先する）\n\n" + strings.Join(lines, "\n")
+	return "# Settings for this channel (set by the operator of ebi-x; they take precedence over the request)\n\n" + strings.Join(lines, "\n")
 }
 
 func (rule channelRule) limitLease(lease *workspace.Lease) []string {

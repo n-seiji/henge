@@ -13,7 +13,7 @@ import (
 func waitingRunner() *fakeRunner {
 	return &fakeRunner{responses: []runnerResponse{{result: &codex.TurnResult{
 		Completed: true,
-		Messages:  []string{"手順を確認しました。\n\n## 回答待ち\n- 本番に適用してよいですか？"},
+		Messages:  []string{"手順を確認しました。\n\n## Questions\n- 本番に適用してよいですか？"},
 	}}}}
 }
 

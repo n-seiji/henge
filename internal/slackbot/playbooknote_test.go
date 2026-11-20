@@ -38,12 +38,12 @@ func newPlaybookNoteBot(t *testing.T, responses ...string) (*Bot, *fakeSlack, *f
 
 func TestPlaybookNoteReachesTheNextThread(t *testing.T) {
 	bot, api, runner := newPlaybookNoteBot(t,
-		"作りました。\n\n## playbook メモ追記\n- 対象: slides\n- 内容: 初回の納品は2週後に変わった",
+		"作りました。\n\n## Playbook note\n- Playbook: slides\n- Text: 初回の納品は2週後に変わった",
 		"次の作業です。",
 	)
 	bot.HandleMention(context.Background(), mentionAt("100.1", ""))
 	posts := strings.Join(api.postTexts, "|")
-	if !strings.Contains(posts, "📝 playbook「slides」のメモを更新しました: 初回の納品は2週後に変わった") || strings.Contains(posts, "## playbook メモ追記") {
+	if !strings.Contains(posts, "📝 playbook「slides」のメモを更新しました: 初回の納品は2週後に変わった") || strings.Contains(posts, "## Playbook note") {
 		t.Fatalf("posts = %q, want the result and the note notice", posts)
 	}
 
@@ -55,7 +55,7 @@ func TestPlaybookNoteReachesTheNextThread(t *testing.T) {
 }
 
 func TestPlaybookNoteForUnknownPlaybook(t *testing.T) {
-	bot, api, _ := newPlaybookNoteBot(t, "作りました。\n## playbook メモ追記\n- 対象: deploy\n- 内容: x")
+	bot, api, _ := newPlaybookNoteBot(t, "作りました。\n## Playbook note\n- Playbook: deploy\n- Text: x")
 	bot.HandleMention(context.Background(), mentionAt("100.1", ""))
 	if posts := strings.Join(api.postTexts, "|"); !strings.Contains(posts, "playbook「deploy」が見つからない") {
 		t.Fatalf("posts = %q, want a missing playbook notice", posts)
@@ -66,11 +66,11 @@ func TestPlaybookNoteForUnknownPlaybook(t *testing.T) {
 }
 
 func TestPlaybookNoteNeedsSharedWrites(t *testing.T) {
-	bot, api, _ := newPlaybookNoteBot(t, "作りました。\n## playbook メモ追記\n- 対象: slides\n- 内容: x")
+	bot, api, _ := newPlaybookNoteBot(t, "作りました。\n## Playbook note\n- Playbook: slides\n- Text: x")
 	bot.config.ApprovalChannelID = ""
 	bot.HandleMention(context.Background(), mentionAt("100.1", ""))
 	posts := strings.Join(api.postTexts, "|")
-	if strings.Contains(posts, "メモを更新しました") || strings.Contains(posts, "## playbook メモ追記") {
+	if strings.Contains(posts, "メモを更新しました") || strings.Contains(posts, "## Playbook note") {
 		t.Fatalf("posts = %q, want no note saved", posts)
 	}
 	if _, err := os.Stat(filepath.Join(bot.config.MemoryDir, "playbooks", "slides.md")); !os.IsNotExist(err) {
@@ -79,7 +79,7 @@ func TestPlaybookNoteNeedsSharedWrites(t *testing.T) {
 }
 
 func TestMalformedPlaybookNote(t *testing.T) {
-	bot, api, _ := newPlaybookNoteBot(t, "作りました。\n## playbook メモ追記\n- 対象: slides")
+	bot, api, _ := newPlaybookNoteBot(t, "作りました。\n## Playbook note\n- Playbook: slides")
 	bot.HandleMention(context.Background(), mentionAt("100.1", ""))
 	if posts := strings.Join(api.postTexts, "|"); !strings.Contains(posts, playbookNoteInvalidNotice) || !strings.Contains(posts, "作りました。") {
 		t.Fatalf("posts = %q, want the result and the malformed notice", posts)
@@ -87,7 +87,7 @@ func TestMalformedPlaybookNote(t *testing.T) {
 }
 
 func playbookNote(text string) string {
-	return "作りました。\n## playbook メモ追記\n- 対象: slides\n- 内容: " + text
+	return "作りました。\n## Playbook note\n- Playbook: slides\n- Text: " + text
 }
 
 func lastThreadPost(api *fakeSlack, threadTS string) string {
@@ -120,7 +120,7 @@ func TestPlaybookNotesFoldOnceTheyGather(t *testing.T) {
 			t.Fatalf("note %d: folded = %v, posts %q", i+1, folded, api.postTexts)
 		}
 	}
-	if runner.calls != 4 || !strings.Contains(runner.prompts[3], "依頼者への確認は不要") || !strings.Contains(runner.prompts[3], "三つ目") {
+	if runner.calls != 4 || !strings.Contains(runner.prompts[3], "No confirmation from the requester is needed") || !strings.Contains(runner.prompts[3], "三つ目") {
 		t.Fatalf("fold turn not run: calls %d, prompts %q", runner.calls, runner.prompts)
 	}
 	if runner.threadIDs[3] != "codex-thread" {

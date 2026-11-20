@@ -87,7 +87,7 @@ func checkOnce(t *testing.T, bot *Bot, watch state.PullWatch) {
 func TestTurnStartsPullWatchFromCurrentState(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	runner := followUpRunner("PR を作りました。\n\n## PR の見守り\n- " + testPullURL + "\n- https://example.com/x")
+	runner := followUpRunner("PR を作りました。\n\n## Watch PRs\n- " + testPullURL + "\n- https://example.com/x")
 	gh := &fakeGitHub{pull: openPull("abc"), checks: github.Checks{State: github.ChecksPending}, cursor: github.Cursor{Comment: 3}}
 	bot := newPullWatchBot(t, store, api, runner, gh)
 
@@ -108,10 +108,10 @@ func TestTurnStartsPullWatchFromCurrentState(t *testing.T) {
 			t.Errorf("result post %q does not contain %q", post, want)
 		}
 	}
-	if strings.Contains(post, "## PR の見守り") {
+	if strings.Contains(post, "## Watch PRs") {
 		t.Error("result post still carries the watch section")
 	}
-	if !strings.Contains(runner.prompts[0], "## PR の見守り") {
+	if !strings.Contains(runner.prompts[0], "## Watch PRs") {
 		t.Error("prompt does not describe the watch contract")
 	}
 }
@@ -119,7 +119,7 @@ func TestTurnStartsPullWatchFromCurrentState(t *testing.T) {
 func TestPullWatchOnlyForWorkRepositories(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	runner := followUpRunner("PR を見ました。\n\n## PR の見守り\n- " + testPullURL)
+	runner := followUpRunner("PR を見ました。\n\n## Watch PRs\n- " + testPullURL)
 	bot := newPullWatchBot(t, store, api, runner, &fakeGitHub{pull: openPull("abc")})
 	bot.config.GitHubRepos = []string{"o/other"}
 
@@ -141,7 +141,7 @@ func TestPullWatchNotMovedFromAnotherThread(t *testing.T) {
 		t.Fatal(err)
 	}
 	api := &fakeSlack{}
-	runner := followUpRunner("PR を見ました。\n\n## PR の見守り\n- " + testPullURL)
+	runner := followUpRunner("PR を見ました。\n\n## Watch PRs\n- " + testPullURL)
 	bot := newPullWatchBot(t, store, api, runner, &fakeGitHub{pull: openPull("abc")})
 
 	bot.HandleMention(context.Background(), mention())
@@ -157,7 +157,7 @@ func TestPullWatchNotMovedFromAnotherThread(t *testing.T) {
 func TestPullWatchDisabledWithoutGitHub(t *testing.T) {
 	store := &fakeStore{claim: true}
 	api := &fakeSlack{}
-	runner := followUpRunner("PR を作りました。\n\n## PR の見守り\n- " + testPullURL)
+	runner := followUpRunner("PR を作りました。\n\n## Watch PRs\n- " + testPullURL)
 	bot := newTestBot(t, store, api, runner)
 
 	bot.HandleMention(context.Background(), mention())
@@ -165,7 +165,7 @@ func TestPullWatchDisabledWithoutGitHub(t *testing.T) {
 	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, pullWatchDisabledNotice) {
 		t.Fatalf("result post = %q, want the disabled notice", post)
 	}
-	if strings.Contains(runner.prompts[0], "## PR の見守り") {
+	if strings.Contains(runner.prompts[0], "## Watch PRs") {
 		t.Error("prompt describes the watch contract while watching is off")
 	}
 }
@@ -182,7 +182,7 @@ func TestFailedChecksResumeSession(t *testing.T) {
 	if runner.calls != 1 || runner.threadIDs[0] != "codex-thread" {
 		t.Fatalf("runner calls = %d, threads = %v; want the session resumed", runner.calls, runner.threadIDs)
 	}
-	for _, want := range []string{"<pull_request_event>", "CI が失敗しました（失敗したチェック: test）", testPullURL, "この PR のブランチに push"} {
+	for _, want := range []string{"<pull_request_event>", "CI が失敗しました（失敗したチェック: test）", testPullURL, "push to this PR's branch"} {
 		if !strings.Contains(runner.prompts[0], want) {
 			t.Errorf("prompt does not contain %q", want)
 		}
@@ -217,7 +217,7 @@ func TestNewActivityResumesSession(t *testing.T) {
 
 	checkOnce(t, bot, watched(github.ChecksSuccess, state.PullCursor{}))
 
-	if runner.calls != 1 || !strings.Contains(runner.prompts[0], "@alice のレビュー（CHANGES_REQUESTED）: エラー処理を足して") {
+	if runner.calls != 1 || !strings.Contains(runner.prompts[0], "review (CHANGES_REQUESTED) by @alice: エラー処理を足して") {
 		t.Fatalf("prompts = %q, want the review in the event", runner.prompts)
 	}
 	if watch, _ := store.GetPullWatch("o/r#7"); watch.Cursor.Review != 5 {

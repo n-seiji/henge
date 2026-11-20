@@ -1,9 +1,9 @@
 package codex
 
 const (
-	playbookNoteHeading   = "## playbook メモ追記"
-	playbookNoteTargetKey = "対象"
-	playbookNoteBodyKey   = "内容"
+	playbookNoteHeading   = "## Playbook note"
+	playbookNoteTargetKey = "Playbook"
+	playbookNoteBodyKey   = "Text"
 )
 
 // Target is kept as the model wrote it; the bot decides whether it names a
