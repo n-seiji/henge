@@ -3,6 +3,7 @@ package slackbot
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 
@@ -21,7 +22,6 @@ const (
 	requestBlockID          = "request"
 	requestActionID         = "request_text"
 	maxQuotedRunes          = 500
-	shortcutForbidden       = "このメッセージについて henge に依頼する許可がありません。"
 )
 
 type requestTarget struct {
@@ -53,7 +53,7 @@ func (b *Bot) HandleRequestShortcut(ctx context.Context, callback *slack.Interac
 		return
 	}
 	if !b.userAllowed(callback.User.ID) || !b.channelAllowed(target.Channel) {
-		if err := b.api.PostEphemeral(ctx, target.Channel, callback.User.ID, shortcutForbidden); err != nil {
+		if err := b.api.PostEphemeral(ctx, target.Channel, callback.User.ID, b.text().shortcutForbidden); err != nil {
 			log.Printf("slackbot: post shortcut refusal: %v", err)
 		}
 		return
@@ -64,7 +64,7 @@ func (b *Bot) HandleRequestShortcut(ctx context.Context, callback *slack.Interac
 		return
 	}
 	quoted := clipText(callback.Message.Text, maxQuotedRunes)
-	if err := b.api.OpenRequestModal(ctx, callback.TriggerID, string(metadata), quoted); err != nil {
+	if err := b.api.OpenRequestModal(ctx, b.text(), callback.TriggerID, string(metadata), quoted); err != nil {
 		log.Printf("slackbot: open request modal: %v", err)
 	}
 }
@@ -89,7 +89,7 @@ func (b *Bot) HandleRequestSubmission(ctx context.Context, callback *slack.Inter
 	var timestamp string
 	if err := b.retrySlack(ctx, func() error {
 		var err error
-		timestamp, err = b.api.PostMessage(ctx, target.Channel, threadTS, formatRequestPost(user, text))
+		timestamp, err = b.api.PostMessage(ctx, target.Channel, threadTS, formatRequestPost(b.text(), user, text))
 		return err
 	}); err != nil {
 		log.Printf("slackbot: post shortcut request: %v", err)
@@ -108,23 +108,23 @@ func (b *Bot) HandleRequestSubmission(ctx context.Context, callback *slack.Inter
 	})
 }
 
-func formatRequestPost(user, text string) string {
-	return "📝 <@" + user + "> からの依頼（このスレッドのメッセージについて）:\n> " + strings.ReplaceAll(text, "\n", "\n> ")
+func formatRequestPost(messages *messages, user, text string) string {
+	return fmt.Sprintf(messages.requestPost, user, strings.ReplaceAll(text, "\n", "\n> "))
 }
 
-func (w *webAPI) OpenRequestModal(ctx context.Context, triggerID, metadata, quoted string) error {
-	input := slack.NewPlainTextInputBlockElement(slack.NewTextBlockObject(slack.PlainTextType, "例: このエラーの原因を調べて", false, false), requestActionID)
+func (w *webAPI) OpenRequestModal(ctx context.Context, text *messages, triggerID, metadata, quoted string) error {
+	input := slack.NewPlainTextInputBlockElement(slack.NewTextBlockObject(slack.PlainTextType, text.requestPlaceholder, false, false), requestActionID)
 	input.Multiline = true
 	blocks := []slack.Block{
-		slack.NewContextBlock("", slack.NewTextBlockObject(slack.PlainTextType, "対象のメッセージ: "+quoted, false, false)),
-		slack.NewInputBlock(requestBlockID, slack.NewTextBlockObject(slack.PlainTextType, "依頼内容", false, false), nil, input),
+		slack.NewContextBlock("", slack.NewTextBlockObject(slack.PlainTextType, fmt.Sprintf(text.requestTarget, quoted), false, false)),
+		slack.NewInputBlock(requestBlockID, slack.NewTextBlockObject(slack.PlainTextType, text.requestLabel, false, false), nil, input),
 	}
 	_, err := w.client.OpenViewContext(ctx, triggerID, slack.ModalViewRequest{
 		Type:            slack.VTModal,
 		CallbackID:      requestModalID,
-		Title:           slack.NewTextBlockObject(slack.PlainTextType, "henge に頼む", false, false),
-		Submit:          slack.NewTextBlockObject(slack.PlainTextType, "依頼する", false, false),
-		Close:           slack.NewTextBlockObject(slack.PlainTextType, "やめる", false, false),
+		Title:           slack.NewTextBlockObject(slack.PlainTextType, text.requestTitle, false, false),
+		Submit:          slack.NewTextBlockObject(slack.PlainTextType, text.requestSubmit, false, false),
+		Close:           slack.NewTextBlockObject(slack.PlainTextType, text.requestClose, false, false),
 		Blocks:          slack.Blocks{BlockSet: blocks},
 		PrivateMetadata: metadata,
 	})

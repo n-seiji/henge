@@ -21,26 +21,13 @@ const (
 	maxDoneWatchReminders = 5
 	maxDoneWatchesPerUser = 10
 	maxDoneWatchTargets   = 100
-
-	doneWatchStartedNotice    = "👀 :done: の監視を始めます。対象は元メッセージで @メンションされた%d人です。%sに、まだ :done: を付けていない人にこのスレッドで通知します（次回 %s）。%s\n全員が付けるか、%d回通知したら終了します。止める場合は、このスレッドで「@henge 監視をとめて」と mention してください。"
-	doneWatchAllDoneNotice    = "✅ 対象の全員がすでに :done: を付けているため、監視は始めていません。"
-	doneWatchNoTargetNotice   = "⚠️ @メンションされた人が見つからなかったため、監視は始めていません。対象の人を @メンションしたメッセージの末尾で「@henge 監視して」と書いてください。"
-	doneWatchLimitNotice      = "⚠️ 1人が同時に続けられる監視は%d件までのため、監視は始めていません。不要な監視を、そのスレッドで「@henge 監視をとめて」と mention して止めてください。"
-	doneWatchTooManyNotice    = "⚠️ 対象が%d人を超えるため、監視は始めていません。"
-	doneWatchScopeNotice      = "⚠️ @channel やユーザーグループの対象を調べるには、Slack アプリに channels:read・groups:read・usergroups:read・users:read の scope が必要です。管理者に追加を頼んでください。"
-	doneWatchOutsideNotice    = "ユーザーグループのうち、このチャンネルにいない%d人は通知が届かないため対象から外しました。"
-	doneWatchNamedOutsideNote = "%s はまだこのチャンネルに参加していないようです。招待しないと通知が届きません。"
-	doneWatchAllOutsideNotice = "⚠️ ユーザーグループのメンバーは全員このチャンネルにいないため、通知が届きません。監視は始めていません。メンバーをチャンネルに招待してから、もう一度「@henge 監視して」と mention してください。"
-	doneWatchFailedNotice     = "⚠️ 監視を始められませんでした。もう一度 mention してください。"
-	doneWatchReminder         = "%s\n:done: のリアクションがまだのようです。対応が済んだら、%sに :done: を付けてください。（%d回目の通知）"
-	doneWatchLastReminder     = "\n%d回通知したため、監視はこれで終了します。"
-	doneWatchCompleted        = "✅ 対象の全員が :done: を付けたため、監視を終了しました。"
-	doneWatchGoneMessage      = "元メッセージが見つからなくなったため、リアクションの監視を終了しました。"
-	doneWatchStoppedMessage   = "リアクションの監視を終了しました。"
-	doneWatchNothingToStop    = "このスレッドで続けているリアクションの監視はありません。"
 )
 
 var doneWatchCommand = regexp.MustCompile(`^(?:(毎日)|(\d{1,2})日(おき|ごと|毎)に?)?\s*監視(?:して|お願い(?:します)?|よろしく)?(?:ください)?[。．.!！\s]*$`)
+
+var englishDoneWatchCommand = regexp.MustCompile(`(?i)^watch(?: this)?(?: (daily)| every (\d{1,2}) weekdays?)?[.!\s]*$`)
+
+var englishDoneWatchStopCommand = regexp.MustCompile(`(?i)^stop watching[.!\s]*$`)
 
 var doneWatchStopCommand = regexp.MustCompile(`^監視を?(?:とめ|止め|やめ|停止し?|終了し?|解除し?)(?:て(?:ください)?)?[。．.!！\s]*$|^監視(?:停止|終了|解除)[。．.!！\s]*$`)
 
@@ -59,9 +46,14 @@ func parseDoneWatchCommand(text, botUserID string) (int, bool) {
 	if index < 0 {
 		return 0, false
 	}
-	match := doneWatchCommand.FindStringSubmatch(strings.TrimSpace(text[index+len(mention):]))
+	command := strings.TrimSpace(text[index+len(mention):])
+	match := doneWatchCommand.FindStringSubmatch(command)
 	if match == nil {
-		return 0, false
+		english := englishDoneWatchCommand.FindStringSubmatch(command)
+		if english == nil {
+			return 0, false
+		}
+		match = []string{english[0], english[1], english[2], "ごと"}
 	}
 	switch {
 	case match[1] != "":
@@ -84,7 +76,7 @@ func parseDoneWatchCommand(text, botUserID string) (int, bool) {
 }
 
 func isDoneWatchStopCommand(message string) bool {
-	return doneWatchStopCommand.MatchString(strings.TrimSpace(message))
+	return doneWatchStopCommand.MatchString(strings.TrimSpace(message)) || englishDoneWatchStopCommand.MatchString(strings.TrimSpace(message))
 }
 
 func mentionedUsers(text, botUserID string) []string {
@@ -113,7 +105,7 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 		messages, err := b.api.GetThreadMessages(ctx, channel, threadTS, threadTS)
 		if err != nil {
 			log.Printf("slackbot: read thread %s for done watch: %v", threadRef(channel, threadTS), err)
-			b.postDoneWatchNotice(ctx, channel, threadTS, doneWatchFailedNotice)
+			b.postDoneWatchNotice(ctx, channel, threadTS, b.text().doneWatchFailedNotice)
 			return
 		}
 		for _, message := range messages {
@@ -136,9 +128,9 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 		}
 		if err != nil {
 			log.Printf("slackbot: list members for done watch in %s: %v", channel, err)
-			notice := doneWatchFailedNotice
+			notice := b.text().doneWatchFailedNotice
 			if response, ok := errors.AsType[slack.SlackErrorResponse](err); ok && response.Err == "missing_scope" {
-				notice = doneWatchScopeNotice
+				notice = b.text().doneWatchScopeNotice
 			}
 			b.postDoneWatchNotice(ctx, channel, threadTS, notice)
 			return
@@ -154,15 +146,15 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 		}
 	}
 	if len(targets) == 0 {
-		notice := doneWatchNoTargetNotice
+		notice := b.text().doneWatchNoTargetNotice
 		if outside > 0 {
-			notice = doneWatchAllOutsideNotice
+			notice = b.text().doneWatchAllOutsideNotice
 		}
 		b.postDoneWatchNotice(ctx, channel, threadTS, notice)
 		return
 	}
 	if len(targets) > maxDoneWatchTargets {
-		b.postDoneWatchNotice(ctx, channel, threadTS, fmt.Sprintf(doneWatchTooManyNotice, maxDoneWatchTargets))
+		b.postDoneWatchNotice(ctx, channel, threadTS, fmt.Sprintf(b.text().doneWatchTooManyNotice, maxDoneWatchTargets))
 		return
 	}
 	key := channel + ":" + messageTS
@@ -173,7 +165,7 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 		}
 	}
 	if others >= maxDoneWatchesPerUser {
-		b.postDoneWatchNotice(ctx, channel, threadTS, fmt.Sprintf(doneWatchLimitNotice, maxDoneWatchesPerUser))
+		b.postDoneWatchNotice(ctx, channel, threadTS, fmt.Sprintf(b.text().doneWatchLimitNotice, maxDoneWatchesPerUser))
 		return
 	}
 	settings := b.settings()
@@ -181,11 +173,11 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 	reacted, err := b.api.ReactionUsers(ctx, channel, messageTS, reaction)
 	if err != nil {
 		log.Printf("slackbot: read reactions of %s: %v", key, err)
-		b.postDoneWatchNotice(ctx, channel, threadTS, doneWatchFailedNotice)
+		b.postDoneWatchNotice(ctx, channel, threadTS, b.text().doneWatchFailedNotice)
 		return
 	}
 	if len(pendingUsers(targets, reacted)) == 0 {
-		b.postDoneWatchNotice(ctx, channel, threadTS, withReaction(doneWatchAllDoneNotice, reaction))
+		b.postDoneWatchNotice(ctx, channel, threadTS, withReaction(b.text().doneWatchAllDoneNotice, reaction))
 		return
 	}
 	now := b.now()
@@ -196,18 +188,18 @@ func (b *Bot) startDoneWatch(ctx context.Context, channel, threadTS, timestamp, 
 	}
 	if err := b.store.SetDoneWatch(watch); err != nil {
 		log.Printf("slackbot: save done watch %s: %v", key, err)
-		b.postDoneWatchNotice(ctx, channel, threadTS, doneWatchFailedNotice)
+		b.postDoneWatchNotice(ctx, channel, threadTS, b.text().doneWatchFailedNotice)
 		return
 	}
 	b.addReaction(ctx, channel, timestamp, "eyes")
 	outsideNote := ""
 	if outside > 0 {
-		outsideNote = fmt.Sprintf(doneWatchOutsideNotice, outside)
+		outsideNote = fmt.Sprintf(b.text().doneWatchOutsideNotice, outside)
 	}
 	if len(namedOutside) > 0 {
-		outsideNote += fmt.Sprintf(doneWatchNamedOutsideNote, userMentions(namedOutside))
+		outsideNote += fmt.Sprintf(b.text().doneWatchNamedOutsideNote, userMentions(namedOutside))
 	}
-	b.postDoneWatchNotice(ctx, channel, threadTS, withReaction(fmt.Sprintf(doneWatchStartedNotice, len(targets), doneWatchIntervalLabel(days, hour), formatFollowUpTime(watch.NextAt), outsideNote, maxDoneWatchReminders), reaction))
+	b.postDoneWatchNotice(ctx, channel, threadTS, withReaction(fmt.Sprintf(b.text().doneWatchStartedNotice, len(targets), doneWatchIntervalLabel(b.text(), days, hour), formatFollowUpTime(watch.NextAt), outsideNote, maxDoneWatchReminders), reaction))
 }
 
 func nextDoneWatchReminder(after time.Time, days, hour int) time.Time {
@@ -280,14 +272,14 @@ func (b *Bot) postDoneWatchNotice(ctx context.Context, channel, threadTS, text s
 	}
 }
 
-func doneWatchIntervalLabel(days, hour int) string {
+func doneWatchIntervalLabel(text *messages, days, hour int) string {
 	switch days {
 	case 1:
-		return fmt.Sprintf("平日の毎日%d時", hour)
+		return fmt.Sprintf(text.doneWatchEveryDay, hour)
 	case 2:
-		return fmt.Sprintf("平日1日おきの%d時", hour)
+		return fmt.Sprintf(text.doneWatchEveryOtherDay, hour)
 	}
-	return fmt.Sprintf("平日%d日ごとの%d時", days, hour)
+	return fmt.Sprintf(text.doneWatchEveryNDays, days, hour)
 }
 
 // Watches saved before the reaction became a setting have none.
@@ -394,7 +386,7 @@ func (b *Bot) checkDoneWatch(ctx context.Context, watch state.DoneWatch) {
 	reacted, err := b.api.ReactionUsers(ctx, watch.Channel, watch.MessageTS, reaction)
 	if err != nil {
 		if response, ok := errors.AsType[slack.SlackErrorResponse](err); ok && response.Err == "message_not_found" {
-			b.endDoneWatch(ctx, watch, doneWatchGoneMessage)
+			b.endDoneWatch(ctx, watch, b.text().doneWatchGoneMessage)
 			return
 		}
 		log.Printf("slackbot: read reactions of %s: %v", key, err)
@@ -402,7 +394,7 @@ func (b *Bot) checkDoneWatch(ctx context.Context, watch state.DoneWatch) {
 	}
 	pending := pendingUsers(watch.Targets, reacted)
 	if len(pending) == 0 {
-		b.endDoneWatch(ctx, watch, withReaction(doneWatchCompleted, reaction))
+		b.endDoneWatch(ctx, watch, withReaction(b.text().doneWatchCompleted, reaction))
 		return
 	}
 	// A crash after the last reminder was counted leaves the watch behind.
@@ -432,16 +424,16 @@ func (b *Bot) checkDoneWatch(ctx context.Context, watch state.DoneWatch) {
 	if !ok {
 		return
 	}
-	original := "元メッセージ"
+	original := b.text().doneWatchOriginal
 	if link, err := b.api.Permalink(ctx, watch.Channel, watch.MessageTS); err == nil {
-		original = "<" + link + "|元メッセージ>"
+		original = "<" + link + "|" + b.text().doneWatchOriginal + ">"
 	} else {
 		log.Printf("slackbot: link done watch message %s: %v", key, err)
 	}
-	text := withReaction(fmt.Sprintf(doneWatchReminder, userMentions(pending), original, watch.Reminders), reaction)
+	text := withReaction(fmt.Sprintf(b.text().doneWatchReminder, userMentions(pending), original, watch.Reminders), reaction)
 	last := watch.Reminders >= maxDoneWatchReminders
 	if last {
-		text += fmt.Sprintf(doneWatchLastReminder, maxDoneWatchReminders)
+		text += fmt.Sprintf(b.text().doneWatchLastReminder, maxDoneWatchReminders)
 	}
 	if err := b.post(ctx, watch.Channel, watch.ThreadTS, text); err != nil {
 		log.Printf("slackbot: post done watch reminder %s: %v", key, err)
@@ -477,14 +469,14 @@ func (b *Bot) stopDoneWatches(channel, threadTS string) bool {
 	return len(removed) > 0
 }
 
-func doneWatchSummary(watch state.DoneWatch) string {
-	return fmt.Sprintf("対象%d人、%s（次回 %s）", len(watch.Targets), doneWatchIntervalLabel(watch.IntervalDays, watch.NextAt.In(time.Local).Hour()), formatFollowUpTime(watch.NextAt))
+func doneWatchSummary(text *messages, watch state.DoneWatch) string {
+	return fmt.Sprintf(text.doneWatchSummary, len(watch.Targets), doneWatchIntervalLabel(text, watch.IntervalDays, watch.NextAt.In(time.Local).Hour()), formatFollowUpTime(watch.NextAt))
 }
 
 func (b *Bot) stopDoneWatchCommand(ctx context.Context, channel, threadTS string) {
-	message := doneWatchNothingToStop
+	message := b.text().doneWatchNothingToStop
 	if b.stopDoneWatches(channel, threadTS) {
-		message = doneWatchStoppedMessage
+		message = b.text().doneWatchStoppedMessage
 	}
 	b.postDoneWatchNotice(ctx, channel, threadTS, message)
 }

@@ -547,7 +547,7 @@ func (s *fakeSlack) PublishHome(_ context.Context, userID string, sections []str
 	return nil
 }
 
-func (s *fakeSlack) OpenRequestModal(_ context.Context, triggerID, metadata, quoted string) error {
+func (s *fakeSlack) OpenRequestModal(_ context.Context, _ *messages, triggerID, metadata, quoted string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls = append(s.calls, slackCall{kind: "modal:" + triggerID, text: metadata + "\n" + quoted})
@@ -1702,7 +1702,7 @@ func TestThreadFetchFailureDoesNotStartCodex(t *testing.T) {
 	if store.current != state.Failed {
 		t.Fatalf("state = %q, want failed", store.current)
 	}
-	if !strings.Contains(strings.Join(api.postTexts, "|"), threadFailureMessage) {
+	if !strings.Contains(strings.Join(api.postTexts, "|"), japanese.threadFailureMessage) {
 		t.Fatalf("posts = %q, want thread failure message", api.postTexts)
 	}
 	assertFinalReactionOrder(t, api.calls, "x")
@@ -1741,7 +1741,7 @@ func TestKeepStatusRefreshesUntilStopped(t *testing.T) {
 		}
 	}
 
-	stop := bot.startStatus(context.Background(), "C1", "100.1", workingStatus).Stop
+	stop := bot.startStatus(context.Background(), "C1", "100.1", japanese.workingStatus).Stop
 	if got := receiveDuration(t, sleepCalls); got != statusRefreshDelay {
 		t.Fatalf("first status delay = %v, want %v", got, statusRefreshDelay)
 	}
@@ -1751,7 +1751,7 @@ func TestKeepStatusRefreshesUntilStopped(t *testing.T) {
 	}
 	stop()
 
-	assertStatusSequence(t, api.calls, []string{workingStatus, workingStatus})
+	assertStatusSequence(t, api.calls, []string{japanese.workingStatus, japanese.workingStatus})
 }
 
 func TestTurnPromptInjectsMemoryContent(t *testing.T) {
@@ -2207,7 +2207,7 @@ func TestWorkTurnsBeyondLimitWaitWithQueuedStatus(t *testing.T) {
 	api.mu.Lock()
 	queued := false
 	for _, call := range api.calls {
-		queued = queued || (call.kind == "status" && call.text == queuedStatus)
+		queued = queued || (call.kind == "status" && call.text == japanese.queuedStatus)
 	}
 	api.mu.Unlock()
 	if !queued {
@@ -2268,7 +2268,7 @@ func TestCancelledWaitForWorkFailsWithoutRunningWork(t *testing.T) {
 	assertTransitions(t, store.transitions, [][2]state.State{
 		{state.Received, state.Failed},
 	})
-	if len(api.postTexts) == 0 || api.postTexts[len(api.postTexts)-1] != workStartFailureMessage {
+	if len(api.postTexts) == 0 || api.postTexts[len(api.postTexts)-1] != japanese.workStartFailureMessage {
 		t.Fatalf("posts = %q, want work start failure", api.postTexts)
 	}
 }
@@ -2927,7 +2927,7 @@ func TestCheckoutRequestPreparationFailureIsInterrupted(t *testing.T) {
 	if runner.calls != 1 {
 		t.Fatalf("runner calls = %d, want 1", runner.calls)
 	}
-	if !reflect.DeepEqual(api.postTexts, []string{workFailureMessage}) {
+	if !reflect.DeepEqual(api.postTexts, []string{japanese.workFailureMessage}) {
 		t.Fatalf("posts = %q", api.postTexts)
 	}
 	assertTransitions(t, store.transitions, [][2]state.State{
@@ -2952,7 +2952,7 @@ func TestIncompleteSingleTurnIsInterruptedAndNotRetried(t *testing.T) {
 		if runner.calls != 1 {
 			t.Fatalf("incomplete execution retried: calls=%d", runner.calls)
 		}
-		if !strings.Contains(strings.Join(api.postTexts, ""), workFailureMessage) {
+		if !strings.Contains(strings.Join(api.postTexts, ""), japanese.workFailureMessage) {
 			t.Fatalf("posts = %q", api.postTexts)
 		}
 		assertFinalReactionOrder(t, api.calls, "x")
@@ -2993,5 +2993,5 @@ func TestAnswerHidesLocalPaths(t *testing.T) {
 }
 
 func forbiddenText(subject, contact string) string {
-	return fmt.Sprintf(forbiddenMessage, subject, contact)
+	return fmt.Sprintf(japanese.forbiddenMessage, subject, contact)
 }

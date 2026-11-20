@@ -70,10 +70,10 @@ func TestHomeTabEmptyAndForbidden(t *testing.T) {
 	bot.HandleAppHomeOpened(context.Background(), &slackevents.AppHomeOpenedEvent{User: "U1", Tab: "home"})
 	bot.HandleAppHomeOpened(context.Background(), &slackevents.AppHomeOpenedEvent{User: "U9", Tab: "home"})
 
-	if text := homeText(t, api, "U1"); strings.Count(text, homeEmpty) != 7 {
+	if text := homeText(t, api, "U1"); strings.Count(text, japanese.homeEmpty) != 7 {
 		t.Errorf("home text = %q, want seven empty lists", text)
 	}
-	if text := homeText(t, api, "U9"); text != homeForbidden {
-		t.Errorf("home text for an unallowed user = %q, want %q", text, homeForbidden)
+	if text := homeText(t, api, "U9"); text != japanese.homeForbidden {
+		t.Errorf("home text for an unallowed user = %q, want %q", text, japanese.homeForbidden)
 	}
 }

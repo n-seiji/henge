@@ -108,7 +108,7 @@ func TestFailedMentionsAlertAdminAfterRepeating(t *testing.T) {
 	if len(alerts) != 1 || !strings.Contains(alerts[0], "codex exec: argument too long") {
 		t.Fatalf("alerts = %q, want one naming the error", alerts)
 	}
-	if got := strings.Count(strings.Join(api.postTexts, "\n"), workFailureMessage); got != repeatedFailureCount {
+	if got := strings.Count(strings.Join(api.postTexts, "\n"), japanese.workFailureMessage); got != repeatedFailureCount {
 		t.Errorf("failure replies = %d, want %d", got, repeatedFailureCount)
 	}
 }
@@ -131,7 +131,7 @@ func TestSignInFailuresKeepTheirOwnAlert(t *testing.T) {
 	}
 
 	alerts := approvalPosts(api)
-	if len(alerts) != 1 || alerts[0] != authAdminAlert {
+	if len(alerts) != 1 || alerts[0] != japanese.authAdminAlert {
 		t.Fatalf("alerts = %q, want only the sign-in alert", alerts)
 	}
 }

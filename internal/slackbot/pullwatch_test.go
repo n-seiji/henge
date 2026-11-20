@@ -128,7 +128,7 @@ func TestPullWatchOnlyForWorkRepositories(t *testing.T) {
 	if _, ok := store.GetPullWatch("o/r#7"); ok {
 		t.Fatal("a pull request outside the work repositories is watched")
 	}
-	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, pullWatchRepoNotice) {
+	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, japanese.pullWatchRepoNotice) {
 		t.Fatalf("result post = %q, want the repository notice", post)
 	}
 }
@@ -149,7 +149,7 @@ func TestPullWatchNotMovedFromAnotherThread(t *testing.T) {
 	if watch, _ := store.GetPullWatch("o/r#7"); watch.ThreadTS != "50.1" {
 		t.Fatalf("watch moved to thread %q, want it kept in 50.1", watch.ThreadTS)
 	}
-	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, pullWatchTakenNotice) {
+	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, japanese.pullWatchTakenNotice) {
 		t.Fatalf("result post = %q, want the taken notice", post)
 	}
 }
@@ -162,7 +162,7 @@ func TestPullWatchDisabledWithoutGitHub(t *testing.T) {
 
 	bot.HandleMention(context.Background(), mention())
 
-	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, pullWatchDisabledNotice) {
+	if post := api.postTexts[len(api.postTexts)-1]; !strings.Contains(post, japanese.pullWatchDisabledNotice) {
 		t.Fatalf("result post = %q, want the disabled notice", post)
 	}
 	if strings.Contains(runner.prompts[0], "## Watch PRs") {
@@ -182,7 +182,7 @@ func TestFailedChecksResumeSession(t *testing.T) {
 	if runner.calls != 1 || runner.threadIDs[0] != "codex-thread" {
 		t.Fatalf("runner calls = %d, threads = %v; want the session resumed", runner.calls, runner.threadIDs)
 	}
-	for _, want := range []string{"<pull_request_event>", "CI が失敗しました（失敗したチェック: test）", testPullURL, "push to this PR's branch"} {
+	for _, want := range []string{"<pull_request_event>", "CI failed (failed checks: test)", testPullURL, "push to this PR's branch"} {
 		if !strings.Contains(runner.prompts[0], want) {
 			t.Errorf("prompt does not contain %q", want)
 		}
@@ -340,8 +340,8 @@ func TestStopEndsPullWatches(t *testing.T) {
 	if _, ok := store.GetPullWatch("o/r#7"); ok {
 		t.Fatal("watch remains after stop")
 	}
-	if len(api.postTexts) != 1 || api.postTexts[0] != pullWatchStoppedMessage {
-		t.Fatalf("posts = %q, want %q", api.postTexts, pullWatchStoppedMessage)
+	if len(api.postTexts) != 1 || api.postTexts[0] != japanese.pullWatchStoppedMessage {
+		t.Fatalf("posts = %q, want %q", api.postTexts, japanese.pullWatchStoppedMessage)
 	}
 }
 

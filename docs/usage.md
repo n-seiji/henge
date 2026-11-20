@@ -127,7 +127,7 @@ When henge opens a PR in its work, it watches the PR. On a CI failure, review or
 
 ## Reaction watches
 
-After handing out a task with @mentions, henge can chase whether everyone has finished. End the message with `@henge 監視して` ("watch this"), and on weekdays at 19:00 it reminds, in the thread, the people @mentioned in that message who have not yet added a `:done:` reaction. It runs on the bot alone, without Codex.
+After handing out a task with @mentions, henge can chase whether everyone has finished. End the message with `@henge 監視して` or `@henge watch this`, and on weekdays at 19:00 it reminds, in the thread, the people @mentioned in that message who have not yet added a `:done:` reaction. It runs on the bot alone, without Codex.
 
 ```text
 @alice  @bob @carol please submit the year-end forms. Add :done: when you have @henge 監視して
@@ -141,9 +141,9 @@ After handing out a task with @mentions, henge can chase whether everyone has fi
 
 - It covers the people @mentioned in that message (or in the thread's first message if it has none). `@channel`, `@here` and user groups expand to the members in the channel. It does not start for more than 100 people.
 - By default the reaction is `:done:` and reminders go out on weekdays at 19:00 (the time on the machine running henge). The operator can change both ([setup.md](setup.md#global-settings)). Holidays are not skipped.
-- The interval can be changed in weekdays, such as `1日おきに監視して` (every other day) or `3日ごとに監視して` (every 3 days). The default is daily, up to 7 days.
+- The interval can be changed in weekdays, such as `1日おきに監視して` / `watch every 2 weekdays` (every other day) or `3日ごとに監視して` / `watch every 3 weekdays`. The default is daily, up to 7 days.
 - It ends after 5 reminders, or when the original message is deleted.
-- To stop it, mention `@henge 監視をとめて` ("stop watching") in the thread.
+- To stop it, mention `@henge 監視をとめて` or `@henge stop watching` in the thread.
 
 ## Home tab
 

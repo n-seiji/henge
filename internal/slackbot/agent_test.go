@@ -134,8 +134,8 @@ func TestDirectMessageStopCommand(t *testing.T) {
 	if runner.calls != 0 {
 		t.Fatalf("runner calls = %d, want 0", runner.calls)
 	}
-	if got := strings.Join(api.postTexts, "|"); got != nothingToStopMessage {
-		t.Fatalf("posts = %q, want %q", got, nothingToStopMessage)
+	if got := strings.Join(api.postTexts, "|"); got != japanese.nothingToStopMessage {
+		t.Fatalf("posts = %q, want %q", got, japanese.nothingToStopMessage)
 	}
 }
 

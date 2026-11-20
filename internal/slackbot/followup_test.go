@@ -156,7 +156,7 @@ func TestStopCancelsScheduledFollowUp(t *testing.T) {
 	if _, ok := store.GetFollowUp("C1:100.1"); ok {
 		t.Fatal("follow-up survived the stop command")
 	}
-	if len(api.postTexts) != 1 || api.postTexts[0] != followUpStoppedMessage {
+	if len(api.postTexts) != 1 || api.postTexts[0] != japanese.followUpStoppedMessage {
 		t.Fatalf("posts = %q, want the follow-up cancellation", api.postTexts)
 	}
 }

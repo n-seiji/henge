@@ -15,16 +15,6 @@ const (
 	maxReminderTextRunes = 500
 	// A reminder is late when the bot was down at its time.
 	reminderLateAfter = 5 * time.Minute
-
-	reminderSetNotice     = "🔔 %s にこのスレッドでリマインドします: %s\n取り消す場合は、このスレッドで「停止」と mention してください。"
-	reminderStopNotice    = "🔔 予定していたリマインダー（%d件）を取り消しました。"
-	reminderInvalidNotice = "⚠️ リマインダーの指定を読み取れなかったため、設定していません。"
-	reminderTimeNotice    = "⚠️ リマインダーの時刻「%s」を読み取れないか範囲外（%s）のため、設定していません。"
-	reminderLimitNotice   = "⚠️ 1人が予定できるリマインダーは%d件までのため、設定していません。不要なものを、設定したスレッドで「停止」と mention して取り消してください。"
-	reminderSourceNotice  = "⚠️ リマインダーは人の依頼への回答でだけ設定・取り消しできるため、指定を無視しました。"
-	reminderMessage       = "<@%s> 🔔 リマインダー: %s"
-	reminderLateSuffix    = "\n（予定は %s でしたが、bot が止まっていたため遅れました）"
-	reminderStoppedMsg    = "予定していたリマインダーを取り消しました。"
 )
 
 // Only a person's request may change reminders, like schedules.
@@ -34,10 +24,10 @@ func (b *Bot) applyReminder(trigger processingTrigger, output workOutput) string
 	}
 	if trigger.source != mentionTrigger && trigger.source != messageTrigger {
 		log.Printf("slackbot: ignore reminder from an unattended turn in %s:%s", trigger.channel, trigger.threadTS)
-		return reminderSourceNotice
+		return b.text().reminderSourceNotice
 	}
 	if output.reminderInvalid {
-		return reminderInvalidNotice
+		return b.text().reminderInvalidNotice
 	}
 	request := output.reminder
 	if request.Stop {
@@ -45,13 +35,13 @@ func (b *Bot) applyReminder(trigger processingTrigger, output workOutput) string
 		if removed == 0 {
 			return ""
 		}
-		return fmt.Sprintf(reminderStopNotice, removed)
+		return fmt.Sprintf(b.text().reminderStopNotice, removed)
 	}
 	now := b.now()
 	dueAt, err := codex.ReminderDueAt(request.When, now)
 	if err != nil {
 		log.Printf("slackbot: reject reminder time %q in %s:%s: %v", request.When, trigger.channel, trigger.threadTS, err)
-		return fmt.Sprintf(reminderTimeNotice, shortDetail(request.When), codex.ReminderRange())
+		return fmt.Sprintf(b.text().reminderTimeNotice, shortDetail(request.When), codex.ReminderRange())
 	}
 	pending := 0
 	for _, reminder := range b.store.Reminders() {
@@ -60,7 +50,7 @@ func (b *Bot) applyReminder(trigger processingTrigger, output workOutput) string
 		}
 	}
 	if pending >= maxRemindersPerUser {
-		return fmt.Sprintf(reminderLimitNotice, maxRemindersPerUser)
+		return fmt.Sprintf(b.text().reminderLimitNotice, maxRemindersPerUser)
 	}
 	reminder := state.Reminder{
 		// One reminder per request, so the request's message keys it.
@@ -74,9 +64,9 @@ func (b *Bot) applyReminder(trigger processingTrigger, output workOutput) string
 	}
 	if err := b.store.AddReminder(reminder); err != nil {
 		log.Printf("slackbot: save reminder %q: %v", reminder.ID, err)
-		return reminderInvalidNotice
+		return b.text().reminderInvalidNotice
 	}
-	return fmt.Sprintf(reminderSetNotice, formatFollowUpTime(reminder.DueAt), reminder.Text)
+	return fmt.Sprintf(b.text().reminderSetNotice, formatFollowUpTime(reminder.DueAt), reminder.Text)
 }
 
 // Posting starts no work, so it does not wait for a turn slot.
@@ -101,9 +91,9 @@ func (b *Bot) fireReminder(ctx context.Context, reminder state.Reminder) {
 		log.Printf("slackbot: drop reminder %q: user %q or channel is no longer allowed", reminder.ID, reminder.AuthorID)
 		return
 	}
-	text := fmt.Sprintf(reminderMessage, reminder.AuthorID, reminder.Text)
+	text := fmt.Sprintf(b.text().reminderMessage, reminder.AuthorID, reminder.Text)
 	if b.now().Sub(reminder.DueAt) > reminderLateAfter {
-		text += fmt.Sprintf(reminderLateSuffix, formatFollowUpTime(reminder.DueAt))
+		text += fmt.Sprintf(b.text().reminderLateSuffix, formatFollowUpTime(reminder.DueAt))
 	}
 	if err := b.post(ctx, reminder.Channel, reminder.ThreadTS, text); err != nil {
 		log.Printf("slackbot: post reminder %q: %v", reminder.ID, err)

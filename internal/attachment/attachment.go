@@ -2,7 +2,6 @@ package attachment
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -40,9 +39,26 @@ func (f File) Size() int64 { return f.info.Size() }
 
 type area struct{ lexical, real string }
 
+// Reason is a code, not text, so the bot can word it in the operator's
+// language.
+type Reason int
+
+const (
+	TooMany Reason = iota + 1
+	NotAllowedType
+	NotFound
+	Unreadable
+	OutsideArea
+	NotRegular
+	HardLinked
+	Empty
+	TooLarge
+	UploadFailed
+)
+
 type Rejection struct {
 	Path   string
-	Reason string
+	Reason Reason
 }
 
 func Resolve(roots []string, cwd string, paths []string) ([]File, []Rejection) {
@@ -66,9 +82,9 @@ func Resolve(roots []string, cwd string, paths []string) ([]File, []Rejection) {
 			path = filepath.Join(cwd, path)
 		}
 		path = filepath.Clean(path)
-		file, err := resolveOne(path, areas)
-		if err != nil {
-			rejections = append(rejections, Rejection{Path: path, Reason: err.Error()})
+		file, reason := resolveOne(path, areas)
+		if reason != 0 {
+			rejections = append(rejections, Rejection{Path: path, Reason: reason})
 			continue
 		}
 		// The real path catches one file listed through different paths.
@@ -77,7 +93,7 @@ func Resolve(roots []string, cwd string, paths []string) ([]File, []Rejection) {
 		}
 		seen[file.Path] = struct{}{}
 		if len(files) >= MaxFiles {
-			rejections = append(rejections, Rejection{Path: path, Reason: fmt.Sprintf("1回の添付は%d件までです", MaxFiles)})
+			rejections = append(rejections, Rejection{Path: path, Reason: TooMany})
 			continue
 		}
 		files = append(files, file)
@@ -85,39 +101,39 @@ func Resolve(roots []string, cwd string, paths []string) ([]File, []Rejection) {
 	return files, rejections
 }
 
-func resolveOne(path string, areas []area) (File, error) {
+func resolveOne(path string, areas []area) (File, Reason) {
 	ext := strings.ToLower(filepath.Ext(path))
 	if _, ok := allowedExtensions[ext]; !ok {
-		return File{}, errors.New("添付できない種類のファイルです")
+		return File{}, NotAllowedType
 	}
 	real, err := filepath.EvalSymlinks(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return File{}, errors.New("ファイルが見つかりません")
+		return File{}, NotFound
 	} else if err != nil {
-		return File{}, errors.New("ファイルを確認できません")
+		return File{}, Unreadable
 	}
 	if !inAreas(areas, path, real) {
-		return File{}, errors.New("このスレッドの作業領域外のファイルです")
+		return File{}, OutsideArea
 	}
 	info, err := os.Lstat(real)
 	if err != nil {
-		return File{}, errors.New("ファイルを確認できません")
+		return File{}, Unreadable
 	}
 	if !info.Mode().IsRegular() {
-		return File{}, errors.New("通常のファイルではありません")
+		return File{}, NotRegular
 	}
 	// A hard link shares the inode of a file that may live outside the work
 	// area, such as a credential, and no path check can tell them apart.
 	if linkCount(info) > 1 {
-		return File{}, errors.New("ハードリンクされたファイルです")
+		return File{}, HardLinked
 	}
 	if info.Size() == 0 {
-		return File{}, errors.New("ファイルが空です")
+		return File{}, Empty
 	}
 	if info.Size() > MaxSize {
-		return File{}, fmt.Errorf("%dMBを超えています", MaxSize>>20)
+		return File{}, TooLarge
 	}
-	return File{Path: real, info: info}, nil
+	return File{Path: real, info: info}, 0
 }
 
 // The real path must match the lexical one, so no symbolic link inside the work
@@ -149,7 +165,7 @@ func (f File) Open() (*os.File, error) {
 	if !os.SameFile(info, f.info) || !info.Mode().IsRegular() ||
 		info.Size() != f.info.Size() || !info.ModTime().Equal(f.info.ModTime()) {
 		file.Close()
-		return nil, errors.New("検証後にファイルが変更されました")
+		return nil, errors.New("the file changed after it was checked")
 	}
 	return file, nil
 }

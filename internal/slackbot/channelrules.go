@@ -19,8 +19,6 @@ import (
 
 const maxChannelRulesBytes = 256 << 10
 
-const channelRulesBrokenNotice = "⚠️ チャンネルごとの設定ファイルを読めません（%v）。直すまで、承認チャンネル以外の依頼は始められません。"
-
 type channelRule struct {
 	SystemPrompt string    `yaml:"system_prompt"`
 	ReadOnly     bool      `yaml:"read_only"`
@@ -128,7 +126,7 @@ func (b *Bot) channelRulesDir() string {
 
 func (b *Bot) channelRulesNotice() string {
 	if err := ValidateChannelRules(b.config.ChannelRulesFile); err != nil {
-		return fmt.Sprintf(channelRulesBrokenNotice, err)
+		return fmt.Sprintf(b.text().channelRulesBrokenNotice, err)
 	}
 	return ""
 }

@@ -81,7 +81,7 @@ func TestPlaybookNoteNeedsSharedWrites(t *testing.T) {
 func TestMalformedPlaybookNote(t *testing.T) {
 	bot, api, _ := newPlaybookNoteBot(t, "作りました。\n## Playbook note\n- Playbook: slides")
 	bot.HandleMention(context.Background(), mentionAt("100.1", ""))
-	if posts := strings.Join(api.postTexts, "|"); !strings.Contains(posts, playbookNoteInvalidNotice) || !strings.Contains(posts, "作りました。") {
+	if posts := strings.Join(api.postTexts, "|"); !strings.Contains(posts, japanese.playbookNoteInvalidNotice) || !strings.Contains(posts, "作りました。") {
 		t.Fatalf("posts = %q, want the result and the malformed notice", posts)
 	}
 }

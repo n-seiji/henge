@@ -16,13 +16,6 @@ const (
 	// maxHomeItems bounds each list on the Home tab, which Slack limits in
 	// size.
 	maxHomeItems = 15
-
-	homeTitle     = "*henge の作業*\nあなたが依頼した作業の今の状況です。ホームを開き直すと最新になります。"
-	homeForbidden = "*henge の作業*\nhenge を使う許可がないため、作業はありません。"
-	homeEmpty     = "ありません。"
-
-	homeSettingsTitle = "⚙️ あなたの個人設定"
-	homeSettingsHelp  = "henge への依頼の中で「返事は短くして、今後もそうして」のように頼むと設定され、「個人設定から〇〇を消して」で変更や削除ができます。この一覧はあなたにだけ表示されます。"
 )
 
 type homeThread struct {
@@ -34,7 +27,7 @@ type homeThread struct {
 
 func (b *Bot) publishHome(ctx context.Context, userID string) {
 	if !b.userAllowed(userID) {
-		if err := b.api.PublishHome(ctx, userID, []string{homeForbidden}); err != nil {
+		if err := b.api.PublishHome(ctx, userID, []string{b.text().homeForbidden}); err != nil {
 			log.Printf("slackbot: publish home for %q: %v", userID, err)
 		}
 		return
@@ -66,8 +59,8 @@ func (b *Bot) publishHome(ctx context.Context, userID string) {
 	for _, watch := range b.store.PullWatches() {
 		if watch.AuthorID == userID {
 			detail := watch.URL
-			if label := checksLabel(watch.Checks); label != "" {
-				detail += "（CI: " + label + "）"
+			if label := b.text().checksLabels[watch.Checks]; label != "" {
+				detail += fmt.Sprintf(b.text().homeCI, label)
 			}
 			watches = append(watches, homeThread{channel: watch.Channel, threadTS: watch.ThreadTS, detail: detail})
 		}
@@ -76,7 +69,7 @@ func (b *Bot) publishHome(ctx context.Context, userID string) {
 	var schedules []homeThread
 	for _, schedule := range b.store.Schedules() {
 		if schedule.AuthorID == userID {
-			schedules = append(schedules, homeThread{channel: schedule.Channel, threadTS: schedule.ThreadTS, detail: scheduleSummary(schedule)})
+			schedules = append(schedules, homeThread{channel: schedule.Channel, threadTS: schedule.ThreadTS, detail: scheduleSummary(b.text(), schedule)})
 		}
 	}
 
@@ -90,32 +83,33 @@ func (b *Bot) publishHome(ctx context.Context, userID string) {
 	var doneWatches []homeThread
 	for _, watch := range b.store.DoneWatches() {
 		if watch.AuthorID == userID {
-			doneWatches = append(doneWatches, homeThread{channel: watch.Channel, threadTS: watch.ThreadTS, detail: doneWatchSummary(watch)})
+			doneWatches = append(doneWatches, homeThread{channel: watch.Channel, threadTS: watch.ThreadTS, detail: doneWatchSummary(b.text(), watch)})
 		}
 	}
 
+	text := b.text()
 	links := make(map[string]string)
-	sections := []string{homeTitle}
-	sections = append(sections, b.homeSection(ctx, links, "⏳ 作業中", running, func(item homeThread) string {
-		return formatFollowUpTime(item.at) + " から"
+	sections := []string{text.homeTitle}
+	sections = append(sections, b.homeSection(ctx, text, links, text.homeRunning, running, func(item homeThread) string {
+		return fmt.Sprintf(text.homeRunningSince, formatFollowUpTime(item.at))
 	}))
-	sections = append(sections, b.homeSection(ctx, links, "⏰ 予定中のフォローアップ", followUps, func(item homeThread) string {
-		return formatFollowUpTime(item.at) + " ごろ: " + clipText(item.detail, 100)
+	sections = append(sections, b.homeSection(ctx, text, links, text.homeFollowUps, followUps, func(item homeThread) string {
+		return fmt.Sprintf(text.homeFollowUpAt, formatFollowUpTime(item.at), clipText(item.detail, 100))
 	}))
-	sections = append(sections, b.homeSection(ctx, links, "👀 見守り中の PR", watches, func(item homeThread) string {
+	sections = append(sections, b.homeSection(ctx, text, links, text.homeWatches, watches, func(item homeThread) string {
 		return item.detail
 	}))
-	sections = append(sections, b.homeSection(ctx, links, "🔁 定期実行", schedules, func(item homeThread) string {
+	sections = append(sections, b.homeSection(ctx, text, links, text.homeSchedules, schedules, func(item homeThread) string {
 		return item.detail
 	}))
-	sections = append(sections, b.homeSection(ctx, links, "🔔 リマインダー", reminders, func(item homeThread) string {
+	sections = append(sections, b.homeSection(ctx, text, links, text.homeReminders, reminders, func(item homeThread) string {
 		return formatFollowUpTime(item.at) + ": " + clipText(item.detail, 100)
 	}))
-	sections = append(sections, b.homeSection(ctx, links, "✅ リアクションの監視", doneWatches, func(item homeThread) string {
+	sections = append(sections, b.homeSection(ctx, text, links, text.homeDoneWatches, doneWatches, func(item homeThread) string {
 		return item.detail
 	}))
-	sections = append(sections, homeUserSettings(b.readUserSettings(userID)))
-	sections = append(sections, "_更新: "+formatFollowUpTime(b.now())+"_")
+	sections = append(sections, homeUserSettings(text, b.readUserSettings(userID)))
+	sections = append(sections, fmt.Sprintf(text.homeUpdated, formatFollowUpTime(b.now())))
 	if err := b.api.PublishHome(ctx, userID, sections); err != nil {
 		log.Printf("slackbot: publish home for %q: %v", userID, err)
 	}
@@ -123,42 +117,42 @@ func (b *Bot) publishHome(ctx context.Context, userID string) {
 
 // The Home tab is the one place settings are shown, since only its owner sees
 // it.
-func homeUserSettings(settings []string) string {
+func homeUserSettings(text *messages, settings []string) string {
 	var builder strings.Builder
-	fmt.Fprintf(&builder, "*%s（%d）*", homeSettingsTitle, len(settings))
+	fmt.Fprintf(&builder, text.homeCount, text.homeSettingsTitle, len(settings))
 	if len(settings) == 0 {
-		builder.WriteString("\n" + homeEmpty)
+		builder.WriteString("\n" + text.homeEmpty)
 	}
 	for _, setting := range settings {
 		builder.WriteString("\n• " + setting)
 	}
-	return builder.String() + "\n_" + homeSettingsHelp + "_"
+	return builder.String() + "\n_" + text.homeSettingsHelp + "_"
 }
 
-func (b *Bot) homeSection(ctx context.Context, links map[string]string, title string, items []homeThread, describe func(homeThread) string) string {
+func (b *Bot) homeSection(ctx context.Context, text *messages, links map[string]string, title string, items []homeThread, describe func(homeThread) string) string {
 	var builder strings.Builder
-	fmt.Fprintf(&builder, "*%s（%d）*", title, len(items))
+	fmt.Fprintf(&builder, text.homeCount, title, len(items))
 	if len(items) == 0 {
-		return builder.String() + "\n" + homeEmpty
+		return builder.String() + "\n" + text.homeEmpty
 	}
 	for i, item := range items {
 		if i >= maxHomeItems {
-			fmt.Fprintf(&builder, "\nほか%d件", len(items)-i)
+			fmt.Fprintf(&builder, text.homeMore, len(items)-i)
 			break
 		}
-		fmt.Fprintf(&builder, "\n• %s — %s", b.threadLink(ctx, links, item.channel, item.threadTS), describe(item))
+		fmt.Fprintf(&builder, "\n• %s — %s", b.threadLink(ctx, text, links, item.channel, item.threadTS), describe(item))
 	}
 	return builder.String()
 }
 
-func (b *Bot) threadLink(ctx context.Context, links map[string]string, channel, threadTS string) string {
+func (b *Bot) threadLink(ctx context.Context, text *messages, links map[string]string, channel, threadTS string) string {
 	key := threadRef(channel, threadTS)
 	if link, ok := links[key]; ok {
 		return link
 	}
-	place := "<#" + channel + "> のスレッド"
+	place := fmt.Sprintf(text.homeChannelThread, channel)
 	if isDirectMessage(channel) {
-		place = "DM のスレッド"
+		place = text.homeDMThread
 	}
 	link := place
 	if permalink, err := b.api.Permalink(ctx, channel, threadTS); err == nil && permalink != "" {
@@ -168,14 +162,6 @@ func (b *Bot) threadLink(ctx context.Context, links map[string]string, channel, 
 	}
 	links[key] = link
 	return link
-}
-
-func checksLabel(checks string) string {
-	return map[string]string{
-		"pending": "実行中",
-		"success": "成功",
-		"failure": "失敗",
-	}[checks]
 }
 
 func (w *webAPI) PublishHome(ctx context.Context, userID string, sections []string) error {

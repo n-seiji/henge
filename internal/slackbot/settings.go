@@ -11,8 +11,6 @@ const (
 	defaultDoneWatchHour = 19
 )
 
-const settingsBrokenNotice = "⚠️ henge の設定ファイルを読めません（%v）。直すまで、既定の設定で動き、SQL の書き込みはすべて止めます。"
-
 var reactionName = regexp.MustCompile(`^[a-z0-9_+'-]+$`)
 
 type Settings struct {
@@ -21,6 +19,7 @@ type Settings struct {
 		Hour     *int   `yaml:"hour"`
 	} `yaml:"done_watch"`
 	SQLWriteServers []string `yaml:"sql_write_servers"`
+	Language        string   `yaml:"language"`
 }
 
 func ReadSettings(path string) (Settings, error) {
@@ -33,6 +32,9 @@ func ReadSettings(path string) (Settings, error) {
 	}
 	if hour := settings.DoneWatch.Hour; hour != nil && (*hour < 0 || *hour > 23) {
 		return Settings{}, fmt.Errorf("settings %q: done_watch.hour %d is not between 0 and 23", path, *hour)
+	}
+	if language := settings.Language; language != "" && language != "ja" && language != "en" {
+		return Settings{}, fmt.Errorf("settings %q: language %q is not ja or en", path, language)
 	}
 	return settings, nil
 }
@@ -49,7 +51,7 @@ func (b *Bot) settings() Settings {
 
 func (b *Bot) settingsNotice() string {
 	if _, err := ReadSettings(b.config.SettingsFile); err != nil {
-		return fmt.Sprintf(settingsBrokenNotice, err)
+		return fmt.Sprintf(b.text().settingsBrokenNotice, err)
 	}
 	return ""
 }
@@ -66,4 +68,11 @@ func (s Settings) doneWatchHour() int {
 		return defaultDoneWatchHour
 	}
 	return *s.DoneWatch.Hour
+}
+
+func (b *Bot) text() *messages {
+	if b.settings().Language == "en" {
+		return &english
+	}
+	return &japanese
 }

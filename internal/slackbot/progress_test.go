@@ -36,7 +36,7 @@ func TestCommandLabelKeepsProgramAndSubcommandOnly(t *testing.T) {
 }
 
 func TestProgressStatus(t *testing.T) {
-	p := &progress{}
+	p := &progress{text: &japanese}
 	steps := []struct {
 		activity codex.Activity
 		want     string
@@ -64,7 +64,7 @@ func TestProgressStatus(t *testing.T) {
 		}
 	}
 
-	search := (&progress{}).observe(codex.Activity{Kind: codex.ActivityWebSearch, Query: strings.Repeat("あ", 50)})
+	search := (&progress{text: &japanese}).observe(codex.Activity{Kind: codex.ActivityWebSearch, Query: strings.Repeat("あ", 50)})
 	if want := "がWebを検索しています（" + strings.Repeat("あ", maxStatusDetailRunes-1) + "…）…"; search != want {
 		t.Errorf("long search status = %q, want %q", search, want)
 	}
@@ -73,7 +73,7 @@ func TestProgressStatus(t *testing.T) {
 func TestStatusKeeperShowsUpdatesPromptly(t *testing.T) {
 	api := &fakeSlack{}
 	bot := newTestBot(t, &fakeStore{}, api, &fakeRunner{})
-	keeper := bot.startStatus(context.Background(), "C1", "100.1", workingStatus)
+	keeper := bot.startStatus(context.Background(), "C1", "100.1", japanese.workingStatus)
 	keeper.Update("がコマンドを実行しています（go test）…")
 	waitFor(t, func() bool {
 		return slices.Contains(statusTexts(api), "がコマンドを実行しています（go test）…")
@@ -81,8 +81,8 @@ func TestStatusKeeperShowsUpdatesPromptly(t *testing.T) {
 	keeper.Stop()
 
 	got := statusTexts(api)
-	if got[0] != workingStatus {
-		t.Fatalf("first status = %q, want %q", got[0], workingStatus)
+	if got[0] != japanese.workingStatus {
+		t.Fatalf("first status = %q, want %q", got[0], japanese.workingStatus)
 	}
 }
 
@@ -130,7 +130,7 @@ func TestStopCommandCancelsRunningWork(t *testing.T) {
 	})
 	wg.Wait()
 
-	if !slices.Contains(api.postTexts, stoppedMessage) {
+	if !slices.Contains(api.postTexts, japanese.stoppedMessage) {
 		t.Fatalf("posts = %q, want stopped message", api.postTexts)
 	}
 	if store.current != state.Interrupted {
@@ -157,7 +157,7 @@ func TestStopCommandWithNothingRunning(t *testing.T) {
 	if runner.calls != 0 || store.claimCalls != 0 {
 		t.Fatalf("runner calls = %d, claims = %d, want none", runner.calls, store.claimCalls)
 	}
-	if !slices.Equal(api.postTexts, []string{nothingToStopMessage}) {
+	if !slices.Equal(api.postTexts, []string{japanese.nothingToStopMessage}) {
 		t.Fatalf("posts = %q, want nothing-to-stop message", api.postTexts)
 	}
 }

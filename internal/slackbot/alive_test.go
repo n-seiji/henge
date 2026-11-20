@@ -30,9 +30,9 @@ func TestAliveQuestionRepliesWithoutTurn(t *testing.T) {
 		usage UsageReader
 		want  string
 	}{
-		"codex up":   {&fakeUsage{limits: usageLimits(10, 10)}, aliveReply},
-		"codex down": {&fakeUsage{err: errors.New("not logged in")}, aliveCodexDownReply},
-		"no usage":   {nil, aliveNoCodexReply},
+		"codex up":   {&fakeUsage{limits: usageLimits(10, 10)}, japanese.aliveReply},
+		"codex down": {&fakeUsage{err: errors.New("not logged in")}, japanese.aliveCodexDownReply},
+		"no usage":   {nil, japanese.aliveNoCodexReply},
 	} {
 		t.Run(name, func(t *testing.T) {
 			api := &fakeSlack{}
@@ -65,7 +65,7 @@ func TestAliveQuestionAnswersAnyChannelAndUser(t *testing.T) {
 		t.Fatalf("posts = %+v", api.posts)
 	}
 	for _, post := range api.posts {
-		if post.text != aliveReply {
+		if post.text != japanese.aliveReply {
 			t.Fatalf("posts = %+v", api.posts)
 		}
 	}
@@ -80,7 +80,7 @@ func TestAliveQuestionInDirectMessage(t *testing.T) {
 		Type: "message", ChannelType: "im", User: "U1", Channel: "D1", TimeStamp: "200.1", Text: "生きてる？",
 	})
 
-	if runner.calls != 0 || len(api.posts) != 1 || api.posts[0].text != aliveNoCodexReply || api.posts[0].threadTS != "200.1" {
+	if runner.calls != 0 || len(api.posts) != 1 || api.posts[0].text != japanese.aliveNoCodexReply || api.posts[0].threadTS != "200.1" {
 		t.Fatalf("runner calls = %d, posts = %+v", runner.calls, api.posts)
 	}
 }
