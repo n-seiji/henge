@@ -6,11 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/ebitengine/purego v0.11.3
 	github.com/slack-go/slack v0.36.0
-	golang.org/x/term v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require (
-	github.com/gorilla/websocket v1.5.3 // indirect
-	golang.org/x/sys v0.50.0 // indirect
-)
+require github.com/gorilla/websocket v1.5.3 // indirect

@@ -7,10 +7,9 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"golang.org/x/term"
 
 	ebix "github.com/n-seiji/ebi-x"
 )
@@ -165,18 +164,17 @@ func writeNew(path string, data []byte, perm fs.FileMode, out io.Writer) error {
 
 type terminalPrompter struct {
 	in  *bufio.Reader
-	fd  int
 	out io.Writer
 }
 
 // newTerminalPrompter returns nil when stdin is not a terminal, so that
 // scripted runs get the template instead of blocking on questions.
 func newTerminalPrompter() initPrompter {
-	fd := int(os.Stdin.Fd())
-	if !term.IsTerminal(fd) {
+	info, err := os.Stdin.Stat()
+	if err != nil || info.Mode()&os.ModeCharDevice == 0 {
 		return nil
 	}
-	return &terminalPrompter{in: bufio.NewReader(os.Stdin), fd: fd, out: os.Stdout}
+	return &terminalPrompter{in: bufio.NewReader(os.Stdin), out: os.Stdout}
 }
 
 func (p *terminalPrompter) Line(question string) (string, error) {
@@ -186,7 +184,19 @@ func (p *terminalPrompter) Line(question string) (string, error) {
 
 func (p *terminalPrompter) Secret(question string) (string, error) {
 	fmt.Fprint(p.out, question)
-	secret, err := term.ReadPassword(p.fd)
+	// stty rather than golang.org/x/term: init runs only on Linux and macOS,
+	// where stty always exists, and it keeps two modules out of go.mod.
+	if err := stty("-echo"); err != nil {
+		return "", err
+	}
+	defer stty("echo")
+	secret, err := p.in.ReadString('\n')
 	fmt.Fprintln(p.out)
-	return string(secret), err
+	return strings.TrimRight(secret, "\r\n"), err
+}
+
+func stty(arg string) error {
+	cmd := exec.Command("stty", arg)
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
 }
