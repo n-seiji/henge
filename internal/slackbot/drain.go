@@ -7,10 +7,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 )
 
-var errDraining = errors.New("ebi-x is draining for a restart")
+var errDraining = errors.New("henge is draining for a restart")
 
 var triggerSourceNames = map[triggerSource]string{
 	mentionTrigger:   "mention",

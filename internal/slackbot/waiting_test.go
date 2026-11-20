@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/state"
 )
 
 func waitingRunner() *fakeRunner {
@@ -24,7 +24,7 @@ func TestWaitingTurnNotifiesRequester(t *testing.T) {
 
 	bot.HandleMention(context.Background(), mention())
 
-	want := "手順を確認しました。\n\n🙋 <@U1> 回答待ちです。このスレッドで ebi-x に mention して答えてください。\n- 本番に適用してよいですか？"
+	want := "手順を確認しました。\n\n🙋 <@U1> 回答待ちです。このスレッドで henge に mention して答えてください。\n- 本番に適用してよいですか？"
 	if len(api.postTexts) != 1 || api.postTexts[0] != want {
 		t.Fatalf("posts = %q, want %q", api.postTexts, want)
 	}

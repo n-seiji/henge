@@ -34,11 +34,11 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":read-only"`,
-				"-c", `permissions.ebi-x.filesystem={"/Users/example/github.com/repo/memory"="deny"}`,
+				"-c", `permissions.henge.extends=":read-only"`,
+				"-c", `permissions.henge.filesystem={"/Users/example/github.com/repo/memory"="deny"}`,
 				"-C", "/work", "-",
 			},
 		},
@@ -51,11 +51,11 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":read-only"`,
-				"-c", `permissions.ebi-x.filesystem={"/private/memory"="deny"}`,
+				"-c", `permissions.henge.extends=":read-only"`,
+				"-c", `permissions.henge.filesystem={"/private/memory"="deny"}`,
 				"-c", `developer_instructions="絶対ルール\n\"quoted\""`,
 				"-C", "/work", "-",
 			},
@@ -70,12 +70,12 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":workspace"`,
-				"-c", `permissions.ebi-x.filesystem={"/extra"="write","/a\"b"="write","/private/memory"="deny"}`,
-				"-c", "permissions.ebi-x.network.enabled=true",
+				"-c", `permissions.henge.extends=":workspace"`,
+				"-c", `permissions.henge.filesystem={"/extra"="write","/a\"b"="write","/private/memory"="deny"}`,
+				"-c", "permissions.henge.network.enabled=true",
 				"-m", "gpt-test", "-C", "/work", "-",
 			},
 		},
@@ -88,12 +88,12 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":workspace"`,
-				"-c", `permissions.ebi-x.filesystem={"/a dir"="write","/b/c"="write","/d e/f"="write","/private/memory"="deny"}`,
-				"-c", "permissions.ebi-x.network.enabled=true",
+				"-c", `permissions.henge.extends=":workspace"`,
+				"-c", `permissions.henge.filesystem={"/a dir"="write","/b/c"="write","/d e/f"="write","/private/memory"="deny"}`,
+				"-c", "permissions.henge.network.enabled=true",
 				"-C", "/work", "-",
 			},
 		},
@@ -105,12 +105,12 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":workspace"`,
-				"-c", `permissions.ebi-x.filesystem={"/private/memory"="deny"}`,
-				"-c", "permissions.ebi-x.network.enabled=true",
+				"-c", `permissions.henge.extends=":workspace"`,
+				"-c", `permissions.henge.filesystem={"/private/memory"="deny"}`,
+				"-c", "permissions.henge.network.enabled=true",
 				"-C", "/work", "-",
 			},
 		},
@@ -122,12 +122,12 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":read-only"`,
-				"-c", `permissions.ebi-x.filesystem={"/private/memory"="deny"}`,
-				"-c", "permissions.ebi-x.network.enabled=true",
+				"-c", `permissions.henge.extends=":read-only"`,
+				"-c", `permissions.henge.filesystem={"/private/memory"="deny"}`,
+				"-c", "permissions.henge.network.enabled=true",
 				"-C", "/work", "-",
 			},
 		},
@@ -140,11 +140,11 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":read-only"`,
-				"-c", `permissions.ebi-x.filesystem={"/private/memory"="deny"}`,
+				"-c", `permissions.henge.extends=":read-only"`,
+				"-c", `permissions.henge.filesystem={"/private/memory"="deny"}`,
 				"-C", "/work", "-",
 			},
 		},
@@ -157,12 +157,12 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":workspace"`,
-				"-c", `permissions.ebi-x.filesystem={"/extra"="write","/private/memory"="deny"}`,
-				"-c", "permissions.ebi-x.network.enabled=true",
+				"-c", `permissions.henge.extends=":workspace"`,
+				"-c", `permissions.henge.filesystem={"/extra"="write","/private/memory"="deny"}`,
+				"-c", "permissions.henge.network.enabled=true",
 				"-C", "/work", "-",
 			},
 		},
@@ -177,12 +177,12 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{
 				"exec", "resume", "thread-1", "--json", "--skip-git-repo-check", "--ignore-user-config",
 				"-c", `approval_policy="never"`,
-				"-c", `default_permissions="ebi-x"`,
+				"-c", `default_permissions="henge"`,
 				"-c", `shell_environment_policy.ignore_default_excludes=false`,
 				"-c", `shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-				"-c", `permissions.ebi-x.extends=":workspace"`,
-				"-c", `permissions.ebi-x.filesystem={"/extra"="write","/private/memory"="deny"}`,
-				"-c", "permissions.ebi-x.network.enabled=true",
+				"-c", `permissions.henge.extends=":workspace"`,
+				"-c", `permissions.henge.filesystem={"/extra"="write","/private/memory"="deny"}`,
+				"-c", "permissions.henge.network.enabled=true",
 				"-m", "gpt-test", "-",
 			},
 		},
@@ -305,7 +305,7 @@ exclude = []
 sandbox_mode = "danger-full-access"
 approval_policy = "on-request"
 
-[permissions.ebi-x.filesystem]
+[permissions.henge.filesystem]
 "/private/memory" = "read"
 
 [mcp_servers.example]
@@ -361,11 +361,11 @@ func TestBuildArgsWithOverridesKeepsSecuritySettingsLast(t *testing.T) {
 		`default_permissions=":workspace"`,
 		`mcp_servers.example.enabled=true`,
 		`approval_policy="never"`,
-		`default_permissions="ebi-x"`,
+		`default_permissions="henge"`,
 		`shell_environment_policy.ignore_default_excludes=false`,
 		`shell_environment_policy.exclude=["OPENAI_API_KEY","CODEX_API_KEY"]`,
-		`permissions.ebi-x.extends=":read-only"`,
-		`permissions.ebi-x.filesystem={"/private/memory"="deny"}`,
+		`permissions.henge.extends=":read-only"`,
+		`permissions.henge.filesystem={"/private/memory"="deny"}`,
 	}
 	var gotOverrides []string
 	for i := 0; i+1 < len(got); i++ {
@@ -637,11 +637,11 @@ printf '{"type":"turn.completed"}\n'
 	}
 	t.Setenv("SLACK_BOT_TOKEN", "xoxb-secret")
 	t.Setenv("SLACK_APP_TOKEN", "xapp-secret")
-	t.Setenv("EBIX_GITHUB_TOKEN", "ghp-secret")
-	t.Setenv("EBIX_TEST_VISIBLE", "kept")
-	t.Setenv("EBIX_TEST_HIDDEN", "hidden")
+	t.Setenv("HENGE_GITHUB_TOKEN", "ghp-secret")
+	t.Setenv("HENGE_TEST_VISIBLE", "kept")
+	t.Setenv("HENGE_TEST_HIDDEN", "hidden")
 
-	runner := &Runner{Command: script, DeniedReadPaths: []string{"/protected"}, PassEnv: []string{"EBIX_TEST_VISIBLE"}}
+	runner := &Runner{Command: script, DeniedReadPaths: []string{"/protected"}, PassEnv: []string{"HENGE_TEST_VISIBLE"}}
 	if _, err := runner.Run(context.Background(), "", "read-only", dir, nil, []string{"/other-thread"}, Access{}, "prompt", nil, nil); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -649,14 +649,14 @@ printf '{"type":"turn.completed"}\n'
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(env), "secret") || strings.Contains(string(env), "EBIX_TEST_HIDDEN") || !strings.Contains(string(env), "EBIX_TEST_VISIBLE=kept") {
+	if strings.Contains(string(env), "secret") || strings.Contains(string(env), "HENGE_TEST_HIDDEN") || !strings.Contains(string(env), "HENGE_TEST_VISIBLE=kept") {
 		t.Fatalf("codex environment = %q, want unlisted variables removed and PassEnv names kept", env)
 	}
 	args, err := os.ReadFile(argsFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(args), `permissions.ebi-x.filesystem={"/protected"="deny","/other-thread"="deny"}`) {
+	if !strings.Contains(string(args), `permissions.henge.filesystem={"/protected"="deny","/other-thread"="deny"}`) {
 		t.Fatalf("codex args = %q, want both denied paths", args)
 	}
 }
@@ -857,7 +857,7 @@ func TestFilterEnv(t *testing.T) {
 		},
 		{
 			name: "slack and github tokens are dropped",
-			env:  []string{"SLACK_BOT_TOKEN=b", "SLACK_APP_TOKEN=a", "EBIX_GITHUB_TOKEN=g", "HOME=/h"},
+			env:  []string{"SLACK_BOT_TOKEN=b", "SLACK_APP_TOKEN=a", "HENGE_GITHUB_TOKEN=g", "HOME=/h"},
 			want: []string{"HOME=/h"},
 		},
 		{
@@ -996,13 +996,13 @@ func TestLoadConfigOverridesGuardsStdioServers(t *testing.T) {
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	got, err := loadConfigOverrides(path, Access{SQLWriters: []string{"ledger"}, sqlGuard: "/opt/ebi-x"})
+	got, err := loadConfigOverrides(path, Access{SQLWriters: []string{"ledger"}, sqlGuard: "/opt/henge"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []string{
 		`mcp_servers.analytics.args=["mcp-sql-guard","--","npx","-y","@example/db-server"]`,
-		`mcp_servers.analytics.command="/opt/ebi-x"`,
+		`mcp_servers.analytics.command="/opt/henge"`,
 		`mcp_servers.ledger.command="ledger-mcp"`,
 		`mcp_servers.remote.url="https://example.com/mcp"`,
 	}

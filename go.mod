@@ -1,4 +1,4 @@
-module github.com/n-seiji/ebi-x
+module github.com/n-seiji/henge
 
 go 1.27.4
 

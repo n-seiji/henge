@@ -17,11 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/memory"
-	"github.com/n-seiji/ebi-x/internal/slackfmt"
-	"github.com/n-seiji/ebi-x/internal/state"
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/memory"
+	"github.com/n-seiji/henge/internal/slackfmt"
+	"github.com/n-seiji/henge/internal/state"
+	"github.com/n-seiji/henge/internal/workspace"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 )
@@ -748,7 +748,7 @@ func TestAllowlistRejectsUserAndChannel(t *testing.T) {
 			if store.claimCalls != 0 {
 				t.Fatalf("ClaimEvent called %d times, want 0", store.claimCalls)
 			}
-			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "ebi-x の管理者") {
+			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "henge の管理者") {
 				t.Fatalf("posts = %q, want forbidden response", got)
 			}
 		})
@@ -790,7 +790,7 @@ func TestBotMentionWithoutWorkflowIDIsForbidden(t *testing.T) {
 	if store.claimCalls != 0 {
 		t.Fatalf("ClaimEvent called %d times, want 0", store.claimCalls)
 	}
-	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("この Workflow", "ebi-x の管理者") {
+	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("この Workflow", "henge の管理者") {
 		t.Fatalf("posts = %q, want forbidden response", got)
 	}
 }
@@ -805,7 +805,7 @@ func TestUnauthorizedBareMentionIsForbidden(t *testing.T) {
 
 	bot.HandleMention(context.Background(), event)
 
-	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "ebi-x の管理者") {
+	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "henge の管理者") {
 		t.Fatalf("posts = %q, want forbidden response", got)
 	}
 }
@@ -842,7 +842,7 @@ func TestWorkflowAuthorizationBoundaries(t *testing.T) {
 			if store.claimCalls != 0 {
 				t.Fatalf("ClaimEvent called %d times, want 0", store.claimCalls)
 			}
-			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "ebi-x の管理者") {
+			if got := strings.Join(api.postTexts, "|"); got != forbiddenText(test.subject, "henge の管理者") {
 				t.Fatalf("posts = %q, want forbidden response", got)
 			}
 		})
@@ -2328,7 +2328,7 @@ func (w *fakeWorkspaces) lease(threadID string, createCheckouts bool) (*workspac
 	lease := workspace.NewLease(
 		"/home/workspace/"+threadID,
 		[]string{"/shared/plain", checkoutPath, checkoutPath + ".gitdir"},
-		[]workspace.Checkout{{Repo: "/src/app", Path: checkoutPath, Branch: "ebi-x/" + threadID}},
+		[]workspace.Checkout{{Repo: "/src/app", Path: checkoutPath, Branch: "henge/" + threadID}},
 		release,
 	)
 	return lease, nil
@@ -2550,7 +2550,7 @@ func (w dirWorkspaces) Acquire(_ context.Context, threadID string, _ workspace.A
 		return nil, err
 	}
 	return workspace.NewLease(dir, []string{checkout, checkout + ".gitdir"},
-		[]workspace.Checkout{{Repo: "/src/slides", Path: checkout, Branch: "ebi-x/" + threadID}}, func() {}), nil
+		[]workspace.Checkout{{Repo: "/src/slides", Path: checkout, Branch: "henge/" + threadID}}, func() {}), nil
 }
 
 func newAttachmentBot(t *testing.T, api *fakeSlack, store *fakeStore, workResult string) string {
@@ -2977,7 +2977,7 @@ func TestAnswerHidesLocalPaths(t *testing.T) {
 	}}}}
 	api := &fakeSlack{}
 	bot := newTestBot(t, &fakeStore{claim: true}, api, runner)
-	bot.config.EBIXHome = "/home/ebi"
+	bot.config.HengeHome = "/home/ebi"
 
 	bot.HandleMention(context.Background(), mention())
 

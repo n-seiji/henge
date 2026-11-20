@@ -1,6 +1,6 @@
 # Design
 
-The decisions behind ebi-x and their reasons. For the details (limits, file names, lists of variables), read the code.
+The decisions behind henge and their reasons. For the details (limits, file names, lists of variables), read the code.
 
 ## Principles
 
@@ -12,7 +12,7 @@ The decisions behind ebi-x and their reasons. For the details (limits, file name
 ## Layout
 
 ```text
-cmd/ebi-x/            startup, loading settings, signal handling
+cmd/henge/            startup, loading settings, signal handling
 internal/
   config/             loading and checking .env
   slackbot/           Slack event handling, and what runs after the conversation
@@ -71,7 +71,7 @@ Unless denied, Codex's commands can read the whole file system. So every run den
 - With a GitHub App configured, only a token minted for the run is placed in a run-only directory, and it is revoked afterwards. Only the bot reads the private key.
 - If the deny list is too long, the run does not start rather than truncating it.
 
-Remaining risks: the default locations are fixed paths under the home directory, so anything moved with `XDG_CONFIG_HOME` and the like must be added to `EBIX_DENIED_READ_PATHS`. If work can reach the Docker socket, the denials can be bypassed. `~/.ssh` and `~/.config/gh`, needed for pushing, are visible to work that can reach the network.
+Remaining risks: the default locations are fixed paths under the home directory, so anything moved with `XDG_CONFIG_HOME` and the like must be added to `HENGE_DENIED_READ_PATHS`. If work can reach the Docker socket, the denials can be bypassed. `~/.ssh` and `~/.config/gh`, needed for pushing, are visible to work that can reach the network.
 
 Action rules (what to confirm before doing) are instructions in the prompt, separate from these denials.
 
@@ -101,7 +101,7 @@ The instructions and limits in `data/channel-rules/channels.yaml` are read for e
 
 ### SQL guard
 
-Every MCP server started with `command` is started through ebi-x itself (`ebi-x mcp-sql-guard`), which limits tool calls that carry SQL to a single read-only statement.
+Every MCP server started with `command` is started through henge itself (`henge mcp-sql-guard`), which limits tool calls that carry SQL to a single read-only statement.
 
 - It does not rely on each server's read-only setting, because the setting's name and existence differ between servers, and forgetting it lets writes through.
 - It wraps every server, not only those that look like databases. Telling them apart by name or arguments would let unrecognized servers through. Calls without SQL pass unchanged.
@@ -135,7 +135,7 @@ Codex asks the bot to act by writing these headings in its final reply. Only hea
 | Scope | Where | Contents |
 | --- | --- | --- |
 | How to do a task | a playbook and its notes | how to do a specific kind of work, criteria, settled facts |
-| All of ebi-x | `data/memory/MEMORY.md` | technical and operational facts that belong to no playbook |
+| All of henge | `data/memory/MEMORY.md` | technical and operational facts that belong to no playbook |
 | A thread | the Codex session | what happened in the thread; not saved separately |
 | A person | `data/memory/users/{user}/settings.md` | how they asked to be replied to |
 

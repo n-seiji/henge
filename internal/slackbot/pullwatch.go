@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/github"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/github"
+	"github.com/n-seiji/henge/internal/state"
 )
 
 const (

@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/memory"
+	"github.com/n-seiji/henge/internal/memory"
 )
 
 const (
-	branchPrefix = "ebi-x/"
+	branchPrefix = "henge/"
 	lastUsedFile = ".last-used"
 	// Codex keeps every directory named .git read-only even when it is a
 	// writable root, which would make commits impossible.

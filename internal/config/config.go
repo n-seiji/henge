@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
+	"github.com/n-seiji/henge/internal/codex"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-var botSecretEnvNames = []string{"SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "EBIX_GITHUB_TOKEN", "EBIX_GITHUB_APP_PRIVATE_KEY"}
+var botSecretEnvNames = []string{"SLACK_BOT_TOKEN", "SLACK_APP_TOKEN", "HENGE_GITHUB_TOKEN", "HENGE_GITHUB_APP_PRIVATE_KEY"}
 
 type Config struct {
 	SlackBotToken              string
@@ -48,7 +48,7 @@ type Config struct {
 	CheckoutIdleTTL            time.Duration
 	ThreadSubscriptionReaction string
 	ThreadSubscriptionTTL      time.Duration
-	EBIXHome                   string
+	HengeHome                  string
 	WorkspaceDir               string
 	CheckoutsDir               string
 	ClosedDir                  string
@@ -72,6 +72,7 @@ func Load() (*Config, error) {
 	if err := loadDotEnv(".env"); err != nil {
 		return nil, fmt.Errorf("load .env: %w", err)
 	}
+	renameLegacyEnv()
 
 	botToken, err := requiredEnv("SLACK_BOT_TOKEN")
 	if err != nil {
@@ -168,17 +169,17 @@ func Load() (*Config, error) {
 	// Playbooks and global memory used to be writable from listed channels.
 	// Only the approval channel may write them now; the old list is ignored
 	// so a leftover .env entry does not stop the bot.
-	if strings.TrimSpace(os.Getenv("EBIX_SHARED_WRITE_CHANNEL_IDS")) != "" {
-		log.Printf("EBIX_SHARED_WRITE_CHANNEL_IDS was removed and is ignored; playbooks and global memory are changed from SLACK_APPROVAL_CHANNEL_ID")
+	if strings.TrimSpace(os.Getenv("HENGE_SHARED_WRITE_CHANNEL_IDS")) != "" {
+		log.Printf("HENGE_SHARED_WRITE_CHANNEL_IDS was removed and is ignored; playbooks and global memory are changed from SLACK_APPROVAL_CHANNEL_ID")
 	}
 	checkoutIdleTTL := defaultCheckoutIdleTTL
-	if value := strings.TrimSpace(os.Getenv("EBIX_CHECKOUT_IDLE_TTL")); value != "" {
+	if value := strings.TrimSpace(os.Getenv("HENGE_CHECKOUT_IDLE_TTL")); value != "" {
 		checkoutIdleTTL, err = time.ParseDuration(value)
 		if err != nil {
-			return nil, fmt.Errorf("EBIX_CHECKOUT_IDLE_TTL %q: %w", value, err)
+			return nil, fmt.Errorf("HENGE_CHECKOUT_IDLE_TTL %q: %w", value, err)
 		}
 		if checkoutIdleTTL <= 0 {
-			return nil, fmt.Errorf("EBIX_CHECKOUT_IDLE_TTL %q: %w", value, errors.New("must be positive"))
+			return nil, fmt.Errorf("HENGE_CHECKOUT_IDLE_TTL %q: %w", value, errors.New("must be positive"))
 		}
 	}
 	threadSubscriptionReaction := strings.TrimSpace(os.Getenv("SLACK_THREAD_SUBSCRIPTION_REACTION"))
@@ -193,19 +194,19 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("SLACK_THREAD_SUBSCRIPTION_TTL %q: %w", os.Getenv("SLACK_THREAD_SUBSCRIPTION_TTL"), errors.New("must be positive when subscriptions are enabled"))
 	}
 
-	home := strings.TrimSpace(os.Getenv("EBIX_HOME"))
+	home := strings.TrimSpace(os.Getenv("HENGE_HOME"))
 	if home == "" {
 		home = "."
 	}
 	absoluteHome, err := filepath.Abs(home)
 	if err != nil {
-		return nil, fmt.Errorf("EBIX_HOME %q: %w", home, err)
+		return nil, fmt.Errorf("HENGE_HOME %q: %w", home, err)
 	}
 	home = absoluteHome
 
-	writableRoots, err := resolveWritableRoots(os.Getenv("EBIX_WRITABLE_ROOTS"))
+	writableRoots, err := resolveWritableRoots(os.Getenv("HENGE_WRITABLE_ROOTS"))
 	if err != nil {
-		return nil, fmt.Errorf("EBIX_WRITABLE_ROOTS: %w", err)
+		return nil, fmt.Errorf("HENGE_WRITABLE_ROOTS: %w", err)
 	}
 	workspaceDir := filepath.Join(home, "data", "workspace")
 	checkoutsDir := filepath.Join(home, "data", "checkouts")
@@ -226,11 +227,11 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	codexEnv, err := parseCodexEnv(os.Getenv("EBIX_CODEX_ENV"))
+	codexEnv, err := parseCodexEnv(os.Getenv("HENGE_CODEX_ENV"))
 	if err != nil {
 		return nil, err
 	}
-	protectedPaths, err := resolveProtectedPaths(home, memoryDir, stateDir, os.Getenv("EBIX_DENIED_READ_PATHS"))
+	protectedPaths, err := resolveProtectedPaths(home, memoryDir, stateDir, os.Getenv("HENGE_DENIED_READ_PATHS"))
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +248,7 @@ func Load() (*Config, error) {
 	// Detection runs git with the environment Codex will get, so variables
 	// withheld from it (such as a GIT_CONFIG_* insteadOf rewrite) cannot make
 	// the detected push URL differ from the one a turn pushes to.
-	credentialPaths, err := resolveCredentialPaths(writableRoots, protectedPaths, os.Getenv("EBIX_ALLOWED_READ_PATHS"), checkoutsDir, codex.FilterEnv(os.Environ(), codexEnv))
+	credentialPaths, err := resolveCredentialPaths(writableRoots, protectedPaths, os.Getenv("HENGE_ALLOWED_READ_PATHS"), checkoutsDir, codex.FilterEnv(os.Environ(), codexEnv))
 	if err != nil {
 		return nil, err
 	}
@@ -280,15 +281,15 @@ func Load() (*Config, error) {
 		AdminUserID:                adminUserID,
 		CodexCommand:               codexCommand,
 		CodexModel:                 strings.TrimSpace(os.Getenv("CODEX_MODEL")),
-		GitHubToken:                strings.TrimSpace(os.Getenv("EBIX_GITHUB_TOKEN")),
-		GitHubAPIURL:               strings.TrimSpace(os.Getenv("EBIX_GITHUB_API_URL")),
+		GitHubToken:                strings.TrimSpace(os.Getenv("HENGE_GITHUB_TOKEN")),
+		GitHubAPIURL:               strings.TrimSpace(os.Getenv("HENGE_GITHUB_API_URL")),
 		GitHubApp:                  githubApp,
 		CodexTimeout:               codexTimeout,
 		MaxParallelWork:            maxParallelWork,
 		CheckoutIdleTTL:            checkoutIdleTTL,
 		ThreadSubscriptionReaction: threadSubscriptionReaction,
 		ThreadSubscriptionTTL:      threadSubscriptionTTL,
-		EBIXHome:                   home,
+		HengeHome:                  home,
 		WorkspaceDir:               workspaceDir,
 		CheckoutsDir:               checkoutsDir,
 		ClosedDir:                  closedDir,
@@ -329,10 +330,10 @@ func parseCodexEnv(value string) ([]string, error) {
 	var names []string
 	for _, name := range splitList(value) {
 		if !envNamePattern.MatchString(name) {
-			return nil, fmt.Errorf("EBIX_CODEX_ENV %q: not a valid variable name", name)
+			return nil, fmt.Errorf("HENGE_CODEX_ENV %q: not a valid variable name", name)
 		}
 		if slices.Contains(botSecretEnvNames, name) {
-			return nil, fmt.Errorf("EBIX_CODEX_ENV %q: the bot's own credentials must not reach Codex", name)
+			return nil, fmt.Errorf("HENGE_CODEX_ENV %q: the bot's own credentials must not reach Codex", name)
 		}
 		names = append(names, name)
 	}
@@ -343,7 +344,7 @@ func parseCodexEnv(value string) ([]string, error) {
 		}
 	}
 	if len(hidden) > 0 {
-		log.Printf("EBIX_CODEX_ENV %s reach Codex (and its model provider) but are removed from the commands Codex runs", strings.Join(hidden, ", "))
+		log.Printf("HENGE_CODEX_ENV %s reach Codex (and its model provider) but are removed from the commands Codex runs", strings.Join(hidden, ", "))
 	}
 	return names, nil
 }
@@ -361,7 +362,7 @@ func resolveProtectedPaths(home, memoryDir, stateDir, extraDenied string) ([]str
 	for _, item := range splitList(extraDenied) {
 		expanded, err := expandHome(item)
 		if err != nil {
-			return nil, fmt.Errorf("EBIX_DENIED_READ_PATHS %q: %w", item, err)
+			return nil, fmt.Errorf("HENGE_DENIED_READ_PATHS %q: %w", item, err)
 		}
 		candidates = append(candidates, expanded)
 	}
@@ -574,4 +575,31 @@ func loadDotEnv(path string) error {
 		return fmt.Errorf("read %s: %w", path, err)
 	}
 	return nil
+}
+
+const legacyEnvPrefix = "EBIX_"
+
+// Hosts set up before the rename keep their .env and service files. The old
+// names are moved rather than read alongside the new ones, so each value has
+// one name and the filters that keep the bot's credentials from Codex only
+// need to know the new names.
+func renameLegacyEnv() {
+	var renamed []string
+	for _, entry := range os.Environ() {
+		name, value, _ := strings.Cut(entry, "=")
+		suffix, ok := strings.CutPrefix(name, legacyEnvPrefix)
+		if !ok {
+			continue
+		}
+		newName := "HENGE_" + suffix
+		if _, exists := os.LookupEnv(newName); !exists {
+			_ = os.Setenv(newName, value)
+			renamed = append(renamed, name)
+		}
+		_ = os.Unsetenv(name)
+	}
+	if len(renamed) > 0 {
+		slices.Sort(renamed)
+		log.Printf("%s: rename the EBIX_ prefix to HENGE_ in .env; the old names still work for now", strings.Join(renamed, ", "))
+	}
 }

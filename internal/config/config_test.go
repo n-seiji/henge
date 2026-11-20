@@ -27,16 +27,16 @@ func TestLoad(t *testing.T) {
 				"SLACK_ALLOW_WORKFLOWS":              "true",
 				"SLACK_ALLOWED_WORKFLOW_IDS":         "Wf0BSM19MCDT",
 				"CODEX_MAX_PARALLEL_PLAN":            "2",
-				"EBIX_SHARED_WRITE_CHANNEL_IDS":      "D123", // removed; ignored even when invalid
+				"HENGE_SHARED_WRITE_CHANNEL_IDS":     "D123", // removed; ignored even when invalid
 				"SLACK_ADMIN_USER_ID":                "UADMIN",
 				"CODEX_COMMAND":                      "/usr/local/bin/codex",
 				"CODEX_MODEL":                        "gpt-test",
 				"CODEX_TIMEOUT":                      "45s",
 				"CODEX_MAX_PARALLEL_WORK":            "5",
-				"EBIX_CHECKOUT_IDLE_TTL":             "24h",
+				"HENGE_CHECKOUT_IDLE_TTL":            "24h",
 				"SLACK_THREAD_SUBSCRIPTION_REACTION": "follow-up",
 				"SLACK_THREAD_SUBSCRIPTION_TTL":      "48h",
-				"EBIX_HOME":                          "data",
+				"HENGE_HOME":                         "data",
 			},
 			check: func(t *testing.T, cfg *Config, workingDir string) {
 				t.Helper()
@@ -77,8 +77,8 @@ func TestLoad(t *testing.T) {
 				if cfg.ThreadSubscriptionTTL != 48*time.Hour {
 					t.Errorf("ThreadSubscriptionTTL = %v, want %v", cfg.ThreadSubscriptionTTL, 48*time.Hour)
 				}
-				if cfg.EBIXHome != wantHome {
-					t.Errorf("EBIXHome = %q, want %q", cfg.EBIXHome, wantHome)
+				if cfg.HengeHome != wantHome {
+					t.Errorf("HengeHome = %q, want %q", cfg.HengeHome, wantHome)
 				}
 				assertPaths(t, cfg, wantHome)
 			},
@@ -158,8 +158,8 @@ func TestLoad(t *testing.T) {
 			},
 			check: func(t *testing.T, cfg *Config, workingDir string) {
 				t.Helper()
-				if cfg.EBIXHome != workingDir {
-					t.Errorf("EBIXHome = %q, want %q", cfg.EBIXHome, workingDir)
+				if cfg.HengeHome != workingDir {
+					t.Errorf("HengeHome = %q, want %q", cfg.HengeHome, workingDir)
 				}
 				if cfg.CodexCommand != "codex" {
 					t.Errorf("CodexCommand = %q, want %q", cfg.CodexCommand, "codex")
@@ -374,12 +374,12 @@ func TestLoad(t *testing.T) {
 		{
 			name: "non-positive checkout idle TTL",
 			env: map[string]string{
-				"SLACK_BOT_TOKEN":        "xoxb-test",
-				"SLACK_APP_TOKEN":        "xapp-test",
-				"SLACK_ALLOWED_USER_IDS": "U123",
-				"EBIX_CHECKOUT_IDLE_TTL": "0s",
+				"SLACK_BOT_TOKEN":         "xoxb-test",
+				"SLACK_APP_TOKEN":         "xapp-test",
+				"SLACK_ALLOWED_USER_IDS":  "U123",
+				"HENGE_CHECKOUT_IDLE_TTL": "0s",
 			},
-			wantErr: "EBIX_CHECKOUT_IDLE_TTL",
+			wantErr: "HENGE_CHECKOUT_IDLE_TTL",
 		},
 		{
 			name: "subscriptions are off without a reaction",
@@ -531,7 +531,7 @@ func TestLoadWritableRoots(t *testing.T) {
 		t.Fatalf("EvalSymlinks() error = %v, want nil", err)
 	}
 	setRequiredEnv(t)
-	t.Setenv("EBIX_WRITABLE_ROOTS", root)
+	t.Setenv("HENGE_WRITABLE_ROOTS", root)
 
 	cfg, err := Load()
 	if err != nil {
@@ -541,9 +541,9 @@ func TestLoadWritableRoots(t *testing.T) {
 		t.Errorf("WritableRoots = %v, want %v", cfg.WritableRoots, []string{root})
 	}
 
-	t.Setenv("EBIX_WRITABLE_ROOTS", filepath.Join(root, "missing"))
-	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "EBIX_WRITABLE_ROOTS") {
-		t.Fatalf("Load() error = %v, want EBIX_WRITABLE_ROOTS failure", err)
+	t.Setenv("HENGE_WRITABLE_ROOTS", filepath.Join(root, "missing"))
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "HENGE_WRITABLE_ROOTS") {
+		t.Fatalf("Load() error = %v, want HENGE_WRITABLE_ROOTS failure", err)
 	}
 }
 
@@ -578,8 +578,8 @@ func TestLoadRejectsMemoryOverlappingWritableRoots(t *testing.T) {
 				}
 			}
 			setRequiredEnv(t)
-			t.Setenv("EBIX_HOME", home)
-			t.Setenv("EBIX_WRITABLE_ROOTS", tt.rootPath(home))
+			t.Setenv("HENGE_HOME", home)
+			t.Setenv("HENGE_WRITABLE_ROOTS", tt.rootPath(home))
 
 			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "overlaps protected path") {
 				t.Fatalf("Load() error = %v, want protected memory overlap", err)
@@ -602,8 +602,8 @@ func TestLoadRejectsSymlinkedMemoryWritableRoot(t *testing.T) {
 		t.Fatalf("Symlink(%q) error = %v", link, err)
 	}
 	setRequiredEnv(t)
-	t.Setenv("EBIX_HOME", home)
-	t.Setenv("EBIX_WRITABLE_ROOTS", link)
+	t.Setenv("HENGE_HOME", home)
+	t.Setenv("HENGE_WRITABLE_ROOTS", link)
 
 	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "overlaps protected path") {
 		t.Fatalf("Load() error = %v, want protected memory overlap", err)
@@ -664,12 +664,12 @@ func clearConfigEnv(t *testing.T) {
 	for _, key := range []string{
 		"SLACK_BOT_TOKEN",
 		"SLACK_APP_TOKEN",
-		"EBIX_GITHUB_TOKEN",
-		"EBIX_GITHUB_API_URL",
-		"EBIX_GITHUB_APP_ID",
-		"EBIX_GITHUB_APP_PRIVATE_KEY",
-		"EBIX_GITHUB_APP_INSTALLATION_ID",
-		"EBIX_CODEX_ENV",
+		"HENGE_GITHUB_TOKEN",
+		"HENGE_GITHUB_API_URL",
+		"HENGE_GITHUB_APP_ID",
+		"HENGE_GITHUB_APP_PRIVATE_KEY",
+		"HENGE_GITHUB_APP_INSTALLATION_ID",
+		"HENGE_CODEX_ENV",
 		"SLACK_ALLOWED_USER_IDS",
 		"SLACK_ALLOWED_CHANNEL_IDS",
 		"SLACK_ALLOW_ALL_PUBLIC_CHANNELS",
@@ -684,14 +684,14 @@ func clearConfigEnv(t *testing.T) {
 		"CODEX_WORK_MODEL",
 		"CODEX_TIMEOUT",
 		"CODEX_MAX_PARALLEL_WORK",
-		"EBIX_CHECKOUT_IDLE_TTL",
-		"EBIX_HOME",
-		"EBIX_WRITABLE_ROOTS",
+		"HENGE_CHECKOUT_IDLE_TTL",
+		"HENGE_HOME",
+		"HENGE_WRITABLE_ROOTS",
 		"SLACK_ALLOWED_WORKFLOW_IDS",
 		"CODEX_MAX_PARALLEL_PLAN",
-		"EBIX_SHARED_WRITE_CHANNEL_IDS",
-		"EBIX_DENIED_READ_PATHS",
-		"EBIX_ALLOWED_READ_PATHS",
+		"HENGE_SHARED_WRITE_CHANNEL_IDS",
+		"HENGE_DENIED_READ_PATHS",
+		"HENGE_ALLOWED_READ_PATHS",
 		"CODEX_HOME",
 	} {
 		value, exists := os.LookupEnv(key)
@@ -756,7 +756,7 @@ func TestLoadRejectsWritableRootOverlappingProtectedPaths(t *testing.T) {
 			t.Setenv("CODEX_HOME", filepath.Join(root, "codex"))
 		},
 		"operator denied path": func(t *testing.T, root string) {
-			t.Setenv("EBIX_DENIED_READ_PATHS", filepath.Join(root, "secrets"))
+			t.Setenv("HENGE_DENIED_READ_PATHS", filepath.Join(root, "secrets"))
 		},
 	}
 	for name, configure := range tests {
@@ -769,7 +769,7 @@ func TestLoadRejectsWritableRootOverlappingProtectedPaths(t *testing.T) {
 				t.Fatal(err)
 			}
 			setRequiredEnv(t)
-			t.Setenv("EBIX_WRITABLE_ROOTS", root)
+			t.Setenv("HENGE_WRITABLE_ROOTS", root)
 			configure(t, root)
 
 			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "overlaps protected path") {
@@ -784,7 +784,7 @@ func TestLoadIncludesOperatorDeniedPaths(t *testing.T) {
 	withWorkingDir(t, workingDir)
 	clearConfigEnv(t)
 	setRequiredEnv(t)
-	t.Setenv("EBIX_DENIED_READ_PATHS", filepath.Join(workingDir, "ssh"))
+	t.Setenv("HENGE_DENIED_READ_PATHS", filepath.Join(workingDir, "ssh"))
 
 	cfg, err := Load()
 	if err != nil {
@@ -813,7 +813,7 @@ func TestLoadRejectsWritableRootOverlappingBotDirectories(t *testing.T) {
 			if err := os.MkdirAll(root, 0o700); err != nil {
 				t.Fatal(err)
 			}
-			t.Setenv("EBIX_WRITABLE_ROOTS", root)
+			t.Setenv("HENGE_WRITABLE_ROOTS", root)
 
 			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "overlaps protected path") {
 				t.Fatalf("Load() error = %v, want bot directory overlap", err)
@@ -837,7 +837,7 @@ func TestRuntimeDataIsGitIgnored(t *testing.T) {
 	t.Setenv("SLACK_APP_TOKEN", "xapp-test")
 	t.Setenv("SLACK_ALLOWED_USER_IDS", "U1")
 	t.Setenv("SLACK_ALLOWED_CHANNEL_IDS", "C1")
-	t.Setenv("EBIX_HOME", home)
+	t.Setenv("HENGE_HOME", home)
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
@@ -875,7 +875,7 @@ func TestParseCodexEnv(t *testing.T) {
 		{name: "assignment", value: "FOO=bar", wantErr: "not a valid variable name"},
 		{name: "slack bot token", value: "FOO,SLACK_BOT_TOKEN", wantErr: "SLACK_BOT_TOKEN"},
 		{name: "slack app token", value: "SLACK_APP_TOKEN", wantErr: "SLACK_APP_TOKEN"},
-		{name: "github token", value: "EBIX_GITHUB_TOKEN", wantErr: "EBIX_GITHUB_TOKEN"},
+		{name: "github token", value: "HENGE_GITHUB_TOKEN", wantErr: "HENGE_GITHUB_TOKEN"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -893,5 +893,37 @@ func TestParseCodexEnv(t *testing.T) {
 				t.Errorf("parseCodexEnv(%q) = %v; want %v", tt.value, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestLoadReadsLegacyEnvNamesWithoutOverridingNewOnes(t *testing.T) {
+	workingDir := t.TempDir()
+	withWorkingDir(t, workingDir)
+	clearConfigEnv(t)
+	setRequiredEnv(t)
+	t.Setenv("HENGE_GITHUB_API_URL", "https://new.example")
+	content := "EBIX_HOME=legacy-home\nEBIX_GITHUB_API_URL=https://old.example\n"
+	if err := os.WriteFile(filepath.Join(workingDir, ".env"), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Unsetenv("EBIX_HOME")
+		_ = os.Unsetenv("EBIX_GITHUB_API_URL")
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if want := filepath.Join(workingDir, "legacy-home"); cfg.HengeHome != want {
+		t.Errorf("HengeHome = %q, want %q", cfg.HengeHome, want)
+	}
+	if cfg.GitHubAPIURL != "https://new.example" {
+		t.Errorf("GitHubAPIURL = %q, want the HENGE_ value", cfg.GitHubAPIURL)
+	}
+	for _, name := range []string{"EBIX_HOME", "EBIX_GITHUB_API_URL"} {
+		if _, exists := os.LookupEnv(name); exists {
+			t.Errorf("%s is still in the environment Codex inherits", name)
+		}
 	}
 }

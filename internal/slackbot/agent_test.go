@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack/slackevents"
 )
 
@@ -77,7 +77,7 @@ func TestDirectMessageFromUnallowedUserIsForbidden(t *testing.T) {
 	if runner.calls != 0 {
 		t.Fatalf("runner calls = %d, want 0", runner.calls)
 	}
-	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "ebi-x の管理者") {
+	if got := strings.Join(api.postTexts, "|"); got != forbiddenText("あなた", "henge の管理者") {
 		t.Fatalf("posts = %q, want forbidden response", got)
 	}
 }

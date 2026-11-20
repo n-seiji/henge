@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	ebix "github.com/n-seiji/ebi-x"
+	"github.com/n-seiji/henge"
 )
 
 const initArg = "init"
@@ -24,13 +24,13 @@ Next steps:
      and put the Bot Token (xoxb-) and the Socket Mode App Token (xapp-) in .env.
   2. Fill in the allowed user and channel IDs in .env.
   3. Log in to Codex: codex login
-  4. Start the agent in this directory: ebi-x
+  4. Start the agent in this directory: henge
 `
 
 const initNextStepsAnswered = `
 Next steps:
   1. Log in to Codex: codex login
-  2. Start the agent in this directory: ebi-x
+  2. Start the agent in this directory: henge
   3. Invite the bot to the channel you entered and mention it there.
      Other people and channels are approved from that channel in Slack.
 `
@@ -45,7 +45,7 @@ type initPrompter interface {
 // .env is the commented template.
 func initAgentDir(dir string, prompter initPrompter, out io.Writer) error {
 	manifestPath := filepath.Join(dir, manifestFile)
-	if err := writeNew(manifestPath, ebix.SlackAppManifest, 0o644, out); err != nil {
+	if err := writeNew(manifestPath, henge.SlackAppManifest, 0o644, out); err != nil {
 		return err
 	}
 	envPath := filepath.Join(dir, ".env")
@@ -55,7 +55,7 @@ func initAgentDir(dir string, prompter initPrompter, out io.Writer) error {
 		return nil
 	}
 	if prompter == nil {
-		if err := writeNew(envPath, ebix.EnvTemplate, 0o600, out); err != nil {
+		if err := writeNew(envPath, henge.EnvTemplate, 0o600, out); err != nil {
 			return err
 		}
 		fmt.Fprint(out, initNextStepsTemplate)

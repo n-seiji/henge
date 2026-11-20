@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/state"
 	"github.com/slack-go/slack"
 )
 

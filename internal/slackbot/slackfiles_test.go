@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/n-seiji/ebi-x/internal/codex"
-	"github.com/n-seiji/ebi-x/internal/workspace"
+	"github.com/n-seiji/henge/internal/codex"
+	"github.com/n-seiji/henge/internal/workspace"
 )
 
 // threadWorkspaces gives every thread the same private directory, so a test
@@ -87,7 +87,7 @@ func TestSignInPageIsReportedAsMissingScope(t *testing.T) {
 
 	bot.HandleMention(context.Background(), mention())
 
-	for _, want := range []string{"receipt.jpg (message 100.1): could not be fetched from Slack (the ebi-x Slack app needs the files:read scope)", sharedFilesMissing} {
+	for _, want := range []string{"receipt.jpg (message 100.1): could not be fetched from Slack (the henge Slack app needs the files:read scope)", sharedFilesMissing} {
 		if !strings.Contains(runner.prompts[0], want) {
 			t.Errorf("prompt does not contain %q:\n%s", want, runner.prompts[0])
 		}

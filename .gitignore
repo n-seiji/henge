@@ -1,6 +1,6 @@
 .env
 /scripts/
-/ebi-x
+/henge
 *.exe
 *.test
 *.out

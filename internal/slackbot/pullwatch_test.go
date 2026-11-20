@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-seiji/ebi-x/internal/github"
-	"github.com/n-seiji/ebi-x/internal/state"
+	"github.com/n-seiji/henge/internal/github"
+	"github.com/n-seiji/henge/internal/state"
 )
 
 var pullWatchNow = time.Date(2026, 10, 10, 9, 0, 0, 0, time.UTC)
@@ -64,7 +64,7 @@ func newPullWatchBot(t *testing.T, store *fakeStore, api *fakeSlack, runner *fak
 	bot := newTestBot(t, store, api, runner)
 	bot.now = func() time.Time { return pullWatchNow }
 	bot.config.GitHub = gh
-	bot.config.GitHubLogin = "ebix-bot"
+	bot.config.GitHubLogin = "henge-bot"
 	bot.config.GitHubRepos = []string{"O/R"}
 	return bot
 }
@@ -223,7 +223,7 @@ func TestNewActivityResumesSession(t *testing.T) {
 	if watch, _ := store.GetPullWatch("o/r#7"); watch.Cursor.Review != 5 {
 		t.Fatalf("cursor = %+v, want the review marked as seen", watch.Cursor)
 	}
-	if len(gh.ignored) == 0 || gh.ignored[0] != "ebix-bot" {
+	if len(gh.ignored) == 0 || gh.ignored[0] != "henge-bot" {
 		t.Fatalf("ignored authors = %v, want the token user", gh.ignored)
 	}
 }
