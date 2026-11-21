@@ -215,7 +215,7 @@ func (b *Bot) approvalRequestLinks(ctx context.Context, missing []approvalSubjec
 }
 
 func waitingMention(event *slackevents.AppMentionEvent, botUserID string) (state.ApprovalMention, bool) {
-	text := stripBotMention(event.Text, botUserID)
+	text := mentionRequest(event, botUserID)
 	if event.BotID != "" || text == "" || isStopCommand(text) {
 		return state.ApprovalMention{}, false
 	}

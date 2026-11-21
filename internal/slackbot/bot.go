@@ -276,7 +276,7 @@ func (b *Bot) handleMention(ctx context.Context, event *slackevents.AppMentionEv
 		threadTS = event.TimeStamp
 	}
 
-	message := stripBotMention(event.Text, b.config.BotUserID)
+	message := mentionRequest(event, b.config.BotUserID)
 	if message == "" {
 		return
 	}
@@ -1050,6 +1050,19 @@ func retryable(err error) bool {
 	}
 	var status interface{ HTTPStatusCode() int }
 	return errors.As(err, &status) && (status.HTTPStatusCode() == 429 || status.HTTPStatusCode() >= 500)
+}
+
+// bareThreadMentionRequest replaces an empty mention posted as a reply. People
+// often write the question first and then call the bot under it, so dropping
+// the mention as empty left them with no answer.
+const bareThreadMentionRequest = "(The mention has no text. Treat the conversation so far in this thread as the request and answer it.)"
+
+func mentionRequest(event *slackevents.AppMentionEvent, botUserID string) string {
+	text := stripBotMention(event.Text, botUserID)
+	if text == "" && event.BotID == "" && event.ThreadTimeStamp != "" && event.ThreadTimeStamp != event.TimeStamp {
+		return bareThreadMentionRequest
+	}
+	return text
 }
 
 func stripBotMention(text, botUserID string) string {
