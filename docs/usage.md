@@ -13,6 +13,7 @@ The examples below are in English for readability. The bot's own fixed messages 
 | Shortcut | Choose "…" → "Ask henge" on a message and write the request in the form. The work happens in that message's thread. Not available in DMs. |
 
 - One Slack thread is one Codex session. Mention it again in the same thread and it continues with what happened so far.
+- Reply with only `@henge` under a question and it answers the thread so far. A mention with no text outside a thread does nothing.
 - Add the subscription reaction the operator chose to a thread's parent message, and replies from allowed people in that thread are handled without a mention. It works in public and private channels and lasts 14 days by default.
 - The content of private channels and Slack Connect channels is not visible from other channels. Slack lookups there stay inside that channel.
 - Per-channel instructions and limits can be changed by asking henge in the approval channel.
