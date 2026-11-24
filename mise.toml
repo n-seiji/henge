@@ -46,4 +46,19 @@ run = ".githooks/scan"
 
 [tasks.vulncheck]
 description = "Report known vulnerabilities reachable from the code"
-run = "go run golang.org/x/vuln/cmd/govulncheck@latest ./..."
+# govulncheck has no option to accept a finding, so its JSON is filtered here.
+# GO-2026-6278 (gorilla/websocket mask key PRNG): fixed only on an untagged
+# commit that also brings reverted main-branch changes. Remove it from the list
+# once a tagged release with the fix ships.
+run = """
+ignored='GO-2026-6278'
+report=$(go run golang.org/x/vuln/cmd/govulncheck@latest -format json ./...) || exit 1
+found=$(printf '%s' "$report" | jq -rs '[.[] | .finding? | select(. != null and .trace[0].function != null) | .osv] | unique | .[]') || exit 1
+for id in $found; do
+  case " $ignored " in
+    *" $id "*) echo "accepted: $id (https://pkg.go.dev/vuln/$id)" ;;
+    *) echo "vulnerable: $id (https://pkg.go.dev/vuln/$id)"; failed=1 ;;
+  esac
+done
+test -z "$failed" || { echo "Run: go run golang.org/x/vuln/cmd/govulncheck@latest ./..."; exit 1; }
+"""
