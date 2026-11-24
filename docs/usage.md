@@ -174,7 +174,7 @@ When work turns up a fact that contradicts a playbook or is not written in it ye
 
 With an approval channel, henge checks Codex's usage limits (5 hours and 1 week) every 30 minutes and, in the approval channel:
 
-- posts every hour what is left in each window and the trend over the last 12 hours (hours without change are skipped)
+- posts every hour one line for the longest window (1 week): what is left and when it resets. Hours without change are skipped
 - notifies when less than 10% is left, and when it is used up
 - posts a summary of the previous day after midnight
 - answers with what is left now when mentioned with "usage", "残り" (remaining) and the like
