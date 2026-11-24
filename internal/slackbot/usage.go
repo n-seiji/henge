@@ -13,15 +13,10 @@ import (
 )
 
 const (
-	usageCheckInterval   = 30 * time.Minute
-	usageChartHours      = 12
-	usagePaceMinSpan     = 3 * time.Hour
-	usageHistoryKeep     = usageChartHours * time.Hour
-	usageReadTimeout     = 30 * time.Second
-	usageDayLayout       = "2006-01-02"
-	usageChartTimeLayout = "15:04"
-	usageChartMissing    = "    -"
-	usageChartBarWidth   = 10
+	usageCheckInterval = 30 * time.Minute
+	usageHistoryKeep   = 12 * time.Hour
+	usageReadTimeout   = 30 * time.Second
+	usageDayLayout     = "2006-01-02"
 	// Used when the reset time could not be read, so recordUsage cannot
 	// announce the limit.
 	adminAlertInterval = time.Hour
@@ -181,12 +176,16 @@ func (b *Bot) reportUsage(ctx context.Context) {
 		// This check was not recorded; do not report an older one as now.
 		return
 	}
-	if previous != nil && !usageSampleChanged(*previous, latest) {
+	key, ok := usageReportedKey(latest)
+	if !ok {
+		return
+	}
+	if previous != nil && !usageSampleChanged(*previous, latest, key) {
 		// Keep the last report as the base, so its change is not lost
 		// across quiet hours.
 		return
 	}
-	text := usageHourlyReport(b.text(), previous, saved.History) + "\n" + usageChart(b.text(), saved.History, latest.At)
+	text := usageHourlyReport(b.text(), previous, latest, key)
 	if err := b.post(ctx, b.config.ApprovalChannelID, "", text); err != nil {
 		log.Printf("slackbot: post Codex usage report: %v", err)
 		// Report again at the next check.
@@ -199,102 +198,59 @@ func (b *Bot) reportUsage(ctx context.Context) {
 	}
 }
 
-func usageChart(text *messages, history []state.UsageSample, now time.Time) string {
-	current := localHour(now)
-	latest := history[len(history)-1]
-	var keys []string
-	header := text.usageChartTime + " "
+// The 5-hour window refills within the day, so only the longest window is
+// worth an hourly post.
+func usageReportedKey(sample state.UsageSample) (string, bool) {
+	best, bestMinutes := "", int64(0)
 	for _, key := range usageWindowKeys {
-		if _, ok := latest.Remaining[key]; ok {
-			keys = append(keys, key)
-			header += fmt.Sprintf("  %-17s", usageSampleLabel(text, latest, key))
-		}
-	}
-	lines := []string{"```" + strings.TrimRight(header, " ")}
-	for i := usageChartHours - 1; i >= 0; i-- {
-		hour := current.Add(-time.Duration(i) * time.Hour)
-		var sample *state.UsageSample
-		for j := range history {
-			if at := history[j].At.In(time.Local); !at.Before(hour) && at.Before(hour.Add(time.Hour)) {
-				sample = &history[j]
-			}
-		}
-		line := hour.Format(usageChartTimeLayout)
-		for _, key := range keys {
-			remaining, ok := 0.0, false
-			if sample != nil {
-				remaining, ok = sample.Remaining[key]
-			}
-			if !ok {
-				line += fmt.Sprintf("  %-15s", usageChartMissing)
-				continue
-			}
-			bar := strings.Repeat("█", int(math.Round(math.Min(remaining, 100)/100*usageChartBarWidth)))
-			line += fmt.Sprintf("  %5.1f%% %-*s", remaining, usageChartBarWidth, bar)
-		}
-		lines = append(lines, strings.TrimRight(line, " "))
-	}
-	return strings.Join(lines, "\n") + "```"
-}
-
-func usageHourlyReport(text *messages, previous *state.UsageSample, history []state.UsageSample) string {
-	latest := history[len(history)-1]
-	lines := []string{fmt.Sprintf(text.usageHourlyHeader, latest.At.In(time.Local).Format("1/2 15:04"))}
-	for _, key := range usageWindowKeys {
-		remaining, ok := latest.Remaining[key]
-		if !ok {
+		if _, ok := sample.Remaining[key]; !ok {
 			continue
 		}
-		line := fmt.Sprintf(text.usageHourlyLine, usageSampleLabel(text, latest, key), remaining)
-		resetsAt := latest.ResetsAt[key]
-		var notes []string
-		if previous != nil {
-			if before, ok := previous.Remaining[key]; ok {
-				if previous.ResetsAt[key] != resetsAt && remaining > before {
-					notes = append(notes, text.usageHourlyWasReset)
-				} else {
-					notes = append(notes, fmt.Sprintf(text.usageHourlyChange, remaining-before))
-				}
-			}
+		if minutes := usageSampleMinutes(sample, key); best == "" || minutes > bestMinutes {
+			best, bestMinutes = key, minutes
 		}
-		if empty, ok := usageEmptyAt(history, key); ok && (resetsAt <= 0 || empty.Before(time.Unix(resetsAt, 0))) {
-			notes = append(notes, fmt.Sprintf(text.usageHourlyEmptyAt, formatFollowUpTime(empty)))
-		}
-		if resetsAt > 0 {
-			notes = append(notes, fmt.Sprintf(text.usageHourlyResetAt, formatFollowUpTime(time.Unix(resetsAt, 0))))
-		}
-		if len(notes) > 0 {
-			line += fmt.Sprintf(text.usageNotes, strings.Join(notes, text.listSeparator))
-		}
-		lines = append(lines, line)
 	}
-	return strings.Join(lines, "\n")
+	return best, best != ""
 }
 
-// Codex reports whole percents, so a span shorter than usagePaceMinSpan is too
-// coarse to estimate from.
-func usageEmptyAt(history []state.UsageSample, key string) (time.Time, bool) {
-	latest := history[len(history)-1]
+func usageHourlyReport(text *messages, previous *state.UsageSample, latest state.UsageSample, key string) string {
 	remaining := latest.Remaining[key]
-	for _, sample := range history {
-		first, ok := sample.Remaining[key]
-		if !ok || sample.ResetsAt[key] != latest.ResetsAt[key] {
-			continue
+	line := fmt.Sprintf(text.usageHourlyLine, usageSampleLabel(text, latest, key), remaining)
+	resetsAt := latest.ResetsAt[key]
+	var notes []string
+	if previous != nil {
+		if before, ok := previous.Remaining[key]; ok {
+			if previous.ResetsAt[key] != resetsAt && remaining > before {
+				notes = append(notes, text.usageHourlyWasReset)
+			} else {
+				notes = append(notes, fmt.Sprintf(text.usageHourlyChange, remaining-before))
+			}
 		}
-		span := latest.At.Sub(sample.At)
-		used := first - remaining
-		if span < usagePaceMinSpan || used <= 0 || remaining <= 0 {
-			return time.Time{}, false
-		}
-		return latest.At.Add(time.Duration(float64(span) * remaining / used)), true
 	}
-	return time.Time{}, false
+	if resetsAt > 0 {
+		notes = append(notes, fmt.Sprintf(text.usageHourlyResetAt, formatFollowUpTime(time.Unix(resetsAt, 0))))
+	}
+	if len(notes) > 0 {
+		line += fmt.Sprintf(text.usageNotes, strings.Join(notes, text.listSeparator))
+	}
+	return line
+}
+
+func usageSampleLabel(text *messages, sample state.UsageSample, key string) string {
+	return usageWindowLabel(text, key, codex.RateLimitWindow{WindowMinutes: usageSampleMinutes(sample, key)})
 }
 
 // Falls back to Codex's usual 5-hour and weekly windows for checks that did not
 // keep the length.
-func usageSampleLabel(text *messages, sample state.UsageSample, key string) string {
-	return usageWindowLabel(text, key, codex.RateLimitWindow{WindowMinutes: sample.Minutes[key]})
+func usageSampleMinutes(sample state.UsageSample, key string) int64 {
+	switch minutes := sample.Minutes[key]; {
+	case minutes > 0:
+		return minutes
+	case key == "primary":
+		return 5 * 60
+	default:
+		return 7 * 24 * 60
+	}
 }
 
 func usageSample(at time.Time, windows map[string]codex.RateLimitWindow) state.UsageSample {
@@ -321,17 +277,10 @@ func appendUsageSample(history []state.UsageSample, sample state.UsageSample) []
 	return history[first:]
 }
 
-func usageSampleChanged(a, b state.UsageSample) bool {
-	if len(a.Remaining) != len(b.Remaining) {
-		return true
-	}
-	for key, remaining := range a.Remaining {
-		other, ok := b.Remaining[key]
-		if !ok || math.Round(remaining*10) != math.Round(other*10) || a.ResetsAt[key] != b.ResetsAt[key] {
-			return true
-		}
-	}
-	return false
+func usageSampleChanged(a, b state.UsageSample, key string) bool {
+	remaining, ok := a.Remaining[key]
+	other, otherOK := b.Remaining[key]
+	return ok != otherOK || math.Round(remaining*10) != math.Round(other*10) || a.ResetsAt[key] != b.ResetsAt[key]
 }
 
 func sameLocalHour(a, b time.Time) bool {

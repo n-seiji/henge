@@ -107,11 +107,9 @@ type messages struct {
 	usageUnavailableReply     string
 	usageDailyHeader          string
 	usageDailyLine            string
-	usageHourlyHeader         string
 	usageHourlyLine           string
 	usageHourlyChange         string
 	usageHourlyWasReset       string
-	usageHourlyEmptyAt        string
 	usageHourlyResetAt        string
 	usageLimitFailureMessage  string
 	usageLimitRetryAt         string
@@ -120,7 +118,6 @@ type messages struct {
 	usageResetsAt             string
 	usageReplyReset           string
 	usageNotes                string
-	usageChartTime            string
 	listSeparator             string
 	durationWeek              string
 	durationDays              string
@@ -312,11 +309,9 @@ var japanese = messages{
 	usageUnavailableReply:     "⚠️ Codex の利用枠を読み取れませんでした。",
 	usageDailyHeader:          "📊 %s の Codex の利用枠（%d回確認）",
 	usageDailyLine:            "- %s: %d%% → %d%%（最低 %d%%）",
-	usageHourlyHeader:         "📈 Codex の利用枠（%s 時点）",
-	usageHourlyLine:           "- %s: 残り %.1f%%",
+	usageHourlyLine:           "%s: 残り %.1f%%",
 	usageHourlyChange:         "前回から %+.1fpt",
 	usageHourlyWasReset:       "前回からリセット済み",
-	usageHourlyEmptyAt:        "このペースだと%sに使い切り",
 	usageHourlyResetAt:        "%sにリセット",
 	usageLimitFailureMessage:  "⚠️ Codex の利用上限に達したため、作業を完了できませんでした。%s%s、新しい mention で依頼し直してください。途中までの変更が作業領域に残っている場合があります。",
 	usageLimitRetryAt:         "%s以降に",
@@ -325,7 +320,6 @@ var japanese = messages{
 	usageResetsAt:             "%sにリセットされる",
 	usageReplyReset:           "（%sにリセット）",
 	usageNotes:                "（%s）",
-	usageChartTime:            "時刻",
 	listSeparator:             "・",
 	durationWeek:              "1週間",
 	durationDays:              "%d日",
@@ -531,11 +525,9 @@ var english = messages{
 	usageUnavailableReply:     "⚠️ I couldn't read the Codex usage limits.",
 	usageDailyHeader:          "📊 Codex usage on %s (checked %d times)",
 	usageDailyLine:            "- %s: %d%% → %d%% (lowest %d%%)",
-	usageHourlyHeader:         "📈 Codex usage (as of %s)",
-	usageHourlyLine:           "- %s: %.1f%% left",
+	usageHourlyLine:           "%s: %.1f%% left",
 	usageHourlyChange:         "%+.1fpt since last",
 	usageHourlyWasReset:       "reset since last",
-	usageHourlyEmptyAt:        "at this pace, used up at %s",
 	usageHourlyResetAt:        "resets at %s",
 	usageLimitFailureMessage:  "⚠️ The Codex usage limit was reached, so the work couldn't finish. %s%s, ask again in a new mention. Changes made so far may remain in the work area.",
 	usageLimitRetryAt:         "After %s",
@@ -544,7 +536,6 @@ var english = messages{
 	usageResetsAt:             "it resets at %s",
 	usageReplyReset:           " (resets at %s)",
 	usageNotes:                " (%s)",
-	usageChartTime:            "Time",
 	listSeparator:             ", ",
 	durationWeek:              "1 week",
 	durationDays:              "%d days",
