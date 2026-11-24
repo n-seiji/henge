@@ -108,8 +108,6 @@ type messages struct {
 	usageDailyHeader          string
 	usageDailyLine            string
 	usageHourlyLine           string
-	usageHourlyChange         string
-	usageHourlyWasReset       string
 	usageHourlyResetAt        string
 	usageLimitFailureMessage  string
 	usageLimitRetryAt         string
@@ -310,8 +308,6 @@ var japanese = messages{
 	usageDailyHeader:          "📊 %s の Codex の利用枠（%d回確認）",
 	usageDailyLine:            "- %s: %d%% → %d%%（最低 %d%%）",
 	usageHourlyLine:           "%s: 残り %.1f%%",
-	usageHourlyChange:         "前回から %+.1fpt",
-	usageHourlyWasReset:       "前回からリセット済み",
 	usageHourlyResetAt:        "%sにリセット",
 	usageLimitFailureMessage:  "⚠️ Codex の利用上限に達したため、作業を完了できませんでした。%s%s、新しい mention で依頼し直してください。途中までの変更が作業領域に残っている場合があります。",
 	usageLimitRetryAt:         "%s以降に",
@@ -526,8 +522,6 @@ var english = messages{
 	usageDailyHeader:          "📊 Codex usage on %s (checked %d times)",
 	usageDailyLine:            "- %s: %d%% → %d%% (lowest %d%%)",
 	usageHourlyLine:           "%s: %.1f%% left",
-	usageHourlyChange:         "%+.1fpt since last",
-	usageHourlyWasReset:       "reset since last",
 	usageHourlyResetAt:        "resets at %s",
 	usageLimitFailureMessage:  "⚠️ The Codex usage limit was reached, so the work couldn't finish. %s%s, ask again in a new mention. Changes made so far may remain in the work area.",
 	usageLimitRetryAt:         "After %s",

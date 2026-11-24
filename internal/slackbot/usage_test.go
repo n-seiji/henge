@@ -307,7 +307,7 @@ func TestReportUsagePostsWeeklyLineHourly(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 10, 20, 1, 5, 0, 0, time.Local)
 	bot.now = func() time.Time { return now }
-	reset := "・" + formatFollowUpTime(time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC)) + "にリセット）"
+	reset := "（" + formatFollowUpTime(time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC)) + "にリセット）"
 
 	check := func(primary, secondary float64) {
 		bot.recordUsage(ctx, usageLimits(primary, secondary))
@@ -321,7 +321,7 @@ func TestReportUsagePostsWeeklyLineHourly(t *testing.T) {
 	if first.channel != "CAPPROVAL" || first.threadTS != "" {
 		t.Fatalf("posted to %q/%q", first.channel, first.threadTS)
 	}
-	if want := "1週間: 残り 90.0%（" + strings.TrimPrefix(reset, "・"); first.text != want {
+	if want := "1週間: 残り 90.0%" + reset; first.text != want {
 		t.Fatalf("report = %q, want %q", first.text, want)
 	}
 
@@ -339,13 +339,13 @@ func TestReportUsagePostsWeeklyLineHourly(t *testing.T) {
 		t.Fatalf("posts = %d, want an hour without a weekly change skipped", len(api.posts))
 	}
 
-	// The change counts from the last report, across the quiet hour.
+	// The weekly window moving again is reported after the quiet hour.
 	now = now.Add(time.Hour)
 	check(70, 12.5)
 	if len(api.posts) != 2 {
 		t.Fatalf("posts = %d, want a report after the quiet hour", len(api.posts))
 	}
-	if want := "1週間: 残り 87.5%（前回から -2.5pt" + reset; api.posts[1].text != want {
+	if want := "1週間: 残り 87.5%" + reset; api.posts[1].text != want {
 		t.Fatalf("report = %q, want %q", api.posts[1].text, want)
 	}
 }
@@ -377,16 +377,6 @@ func TestReportUsageSkipsUnrecordedCheck(t *testing.T) {
 	bot.reportUsage(context.Background())
 	if len(api.posts) != 0 {
 		t.Fatalf("posted %q, want an old check not reported", api.posts[0].text)
-	}
-}
-
-func TestUsageHourlyReportNamesReset(t *testing.T) {
-	at := time.Date(2026, 10, 20, 1, 0, 0, 0, time.UTC)
-	previous := state.UsageSample{At: at, Remaining: map[string]float64{"primary": 5}, ResetsAt: map[string]int64{"primary": 100}}
-	latest := state.UsageSample{At: at.Add(time.Hour), Remaining: map[string]float64{"primary": 100}, ResetsAt: map[string]int64{"primary": 200}}
-	text := usageHourlyReport(&japanese, &previous, latest, "primary")
-	if !strings.Contains(text, "5時間: 残り 100.0%（"+japanese.usageHourlyWasReset) {
-		t.Fatalf("report %q does not name the reset", text)
 	}
 }
 

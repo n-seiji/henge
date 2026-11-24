@@ -181,11 +181,11 @@ func (b *Bot) reportUsage(ctx context.Context) {
 		return
 	}
 	if previous != nil && !usageSampleChanged(*previous, latest, key) {
-		// Keep the last report as the base, so its change is not lost
-		// across quiet hours.
+		// Compared with the last report, not the last check, so a change
+		// seen by a check that was not posted is not lost.
 		return
 	}
-	text := usageHourlyReport(b.text(), previous, latest, key)
+	text := usageHourlyReport(b.text(), latest, key)
 	if err := b.post(ctx, b.config.ApprovalChannelID, "", text); err != nil {
 		log.Printf("slackbot: post Codex usage report: %v", err)
 		// Report again at the next check.
@@ -213,25 +213,10 @@ func usageReportedKey(sample state.UsageSample) (string, bool) {
 	return best, best != ""
 }
 
-func usageHourlyReport(text *messages, previous *state.UsageSample, latest state.UsageSample, key string) string {
-	remaining := latest.Remaining[key]
-	line := fmt.Sprintf(text.usageHourlyLine, usageSampleLabel(text, latest, key), remaining)
-	resetsAt := latest.ResetsAt[key]
-	var notes []string
-	if previous != nil {
-		if before, ok := previous.Remaining[key]; ok {
-			if previous.ResetsAt[key] != resetsAt && remaining > before {
-				notes = append(notes, text.usageHourlyWasReset)
-			} else {
-				notes = append(notes, fmt.Sprintf(text.usageHourlyChange, remaining-before))
-			}
-		}
-	}
-	if resetsAt > 0 {
-		notes = append(notes, fmt.Sprintf(text.usageHourlyResetAt, formatFollowUpTime(time.Unix(resetsAt, 0))))
-	}
-	if len(notes) > 0 {
-		line += fmt.Sprintf(text.usageNotes, strings.Join(notes, text.listSeparator))
+func usageHourlyReport(text *messages, latest state.UsageSample, key string) string {
+	line := fmt.Sprintf(text.usageHourlyLine, usageSampleLabel(text, latest, key), latest.Remaining[key])
+	if resetsAt := latest.ResetsAt[key]; resetsAt > 0 {
+		line += fmt.Sprintf(text.usageNotes, fmt.Sprintf(text.usageHourlyResetAt, formatFollowUpTime(time.Unix(resetsAt, 0))))
 	}
 	return line
 }
