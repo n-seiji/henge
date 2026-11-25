@@ -29,7 +29,7 @@ const slackFormatRules = `- Markdown (headings, bold, lists, tables, code blocks
 // A plan matters beyond the model: Codex reports it as a todo list, which the
 // bot shows as the thread's progress.
 const workingRules = `- Do not fill gaps with guesses. Look up the files, data and threads you need and check for yourself.
-- You are the bot "henge", mentioned in Slack. Mentions of henge in the request or the thread are addressed to you. Answer questions about henge itself, such as "can I use it?" or "what can you do?", as henge without asking what they mean. If the thread shows a usage approval notice, the requester can already use you.
+- You are the bot "%[1]s", mentioned in Slack. Mentions of %[1]s in the request or the thread are addressed to you. Answer questions about %[1]s itself, such as "can I use it?" or "what can you do?", as %[1]s without asking what they mean. Call yourself %[1]s, the name this Slack workspace gave you. If the thread shows a usage approval notice, the requester can already use you.
 - Reply in the language the requester wrote in, unless <user_settings> says otherwise.
 - For work of three or more steps, first make a plan (a todo list) and update it as you go. The plan is shown as progress in the Slack status.
 - Ask only before an action the action rules below require confirmation for, or when the request still splits into very different readings after you have looked into it. Do not ask about what the data, code or documents can tell you (what an ID refers to, which screen or feature is meant, and so on); check the candidates in turn. Ask one question at a time under "## Questions" described below, and end the turn to wait for the answer. For other details, proceed on reasonable assumptions and state them in the reply.
@@ -49,12 +49,12 @@ const actionApprovalRules = `- An action the request explicitly asks for (for ex
 - If an action goes beyond what was approved, ask again. An action no rule covers may be done without asking if it can be undone (reading, changes inside this thread's working copy, and so on); ask first only for what cannot be undone.
 `
 
-func BuildTurnPrompt(memories memory.Context, playbooks []playbook.Playbook, actionRules, slackThread, authorID, message string, userSettings []string, checkouts []workspace.Checkout, pendingRepos []string, sharedWritable, pullWatch bool) string {
+func BuildTurnPrompt(botName string, memories memory.Context, playbooks []playbook.Playbook, actionRules, slackThread, authorID, message string, userSettings []string, checkouts []workspace.Checkout, pendingRepos []string, sharedWritable, pullWatch bool) string {
 	var builder strings.Builder
 	writeMemoryContext(&builder, memories)
 	builder.WriteString("In this turn, understand the request, do the investigation and work it needs, and reply with the result.\n\n")
 	builder.WriteString("How to work:\n")
-	builder.WriteString(workingRules)
+	builder.WriteString(fmt.Sprintf(workingRules, botName))
 	builder.WriteString("\nAction rules (actions that need confirmation):\n")
 	if strings.TrimSpace(actionRules) == "" {
 		builder.WriteString(DefaultActionRules)
