@@ -214,15 +214,11 @@ func usageReportedKey(sample state.UsageSample) (string, bool) {
 }
 
 func usageHourlyReport(text *messages, latest state.UsageSample, key string) string {
-	line := fmt.Sprintf(text.usageHourlyLine, usageSampleLabel(text, latest, key), latest.Remaining[key])
+	line := fmt.Sprintf(text.usageHourlyLine, latest.Remaining[key])
 	if resetsAt := latest.ResetsAt[key]; resetsAt > 0 {
 		line += fmt.Sprintf(text.usageNotes, fmt.Sprintf(text.usageHourlyResetAt, formatFollowUpTime(time.Unix(resetsAt, 0))))
 	}
 	return line
-}
-
-func usageSampleLabel(text *messages, sample state.UsageSample, key string) string {
-	return usageWindowLabel(text, key, codex.RateLimitWindow{WindowMinutes: usageSampleMinutes(sample, key)})
 }
 
 // Falls back to Codex's usual 5-hour and weekly windows for checks that did not

@@ -158,6 +158,8 @@ type Bot struct {
 	runner    Runner
 	config    Config
 	playbooks []playbook.Playbook
+	// Catalogs with the Slack name; nil until it is known.
+	japaneseText, englishText *messages
 
 	allowedUsers     map[string]struct{}
 	allowedChannels  map[string]struct{}
@@ -1066,11 +1068,11 @@ func mentionRequest(event *slackevents.AppMentionEvent, botUserID string) string
 	return text
 }
 
-// botName falls back to the product name so a prompt never names no one;
-// tests and a failed auth.test leave the Slack name empty.
+// Tests and a failed name lookup leave the Slack name empty; a prompt must
+// still name someone.
 func (b *Bot) botName() string {
 	if b.config.BotName == "" {
-		return "henge"
+		return defaultBotName
 	}
 	return b.config.BotName
 }
@@ -1320,6 +1322,22 @@ func (w *webAPI) UploadFile(ctx context.Context, channel, threadTS, filename str
 	return err
 }
 
+// The display name is what people see and type after @; auth.test only
+// knows the handle. users:read is optional, so its absence falls back.
+func slackBotName(ctx context.Context, client *slack.Client, auth *slack.AuthTestResponse) string {
+	user, err := client.GetUserInfoContext(ctx, auth.UserID)
+	if err != nil {
+		log.Printf("slackbot: look up the bot's display name: %v", err)
+		return auth.User
+	}
+	for _, name := range []string{user.Profile.DisplayName, user.Profile.RealName, user.RealName} {
+		if strings.TrimSpace(name) != "" {
+			return name
+		}
+	}
+	return auth.User
+}
+
 func RunSocketMode(acceptCtx, turnCtx context.Context, botToken, appToken string, bot *Bot, wg *sync.WaitGroup) error {
 	client := slack.New(botToken, slack.OptionAppLevelToken(appToken))
 	auth, err := client.AuthTestContext(acceptCtx)
@@ -1328,7 +1346,7 @@ func RunSocketMode(acceptCtx, turnCtx context.Context, botToken, appToken string
 	}
 	bot.api = &webAPI{client: client}
 	bot.config.BotUserID = auth.UserID
-	bot.config.BotName = auth.User
+	bot.setBotName(slackBotName(acceptCtx, client, auth))
 	// Follow-ups post to Slack, so they start once the client is ready.
 	// They stop when a restart begins; what is due is left for the next
 	// process.

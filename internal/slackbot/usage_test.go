@@ -168,7 +168,7 @@ func TestUsageWatchPostsNothingOnWeekends(t *testing.T) {
 		texts = append(texts, post.text)
 	}
 	joined := strings.Join(texts, "\n")
-	for _, want := range []string{"📊 10/25 の Codex の利用枠", "（5時間）の残りが 10% を下回りました", "1週間: 残り 50.0%"} {
+	for _, want := range []string{"📊 10/25 の Codex の利用枠", "（5時間）の残りが 10% を下回りました", "残：50.0%"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("Monday posts %q do not contain %q", texts, want)
 		}
@@ -307,7 +307,7 @@ func TestReportUsagePostsWeeklyLineHourly(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 10, 20, 1, 5, 0, 0, time.Local)
 	bot.now = func() time.Time { return now }
-	reset := "（" + formatFollowUpTime(time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC)) + "にリセット）"
+	reset := "（Reset at " + formatFollowUpTime(time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC)) + "）"
 
 	check := func(primary, secondary float64) {
 		bot.recordUsage(ctx, usageLimits(primary, secondary))
@@ -321,7 +321,7 @@ func TestReportUsagePostsWeeklyLineHourly(t *testing.T) {
 	if first.channel != "CAPPROVAL" || first.threadTS != "" {
 		t.Fatalf("posted to %q/%q", first.channel, first.threadTS)
 	}
-	if want := "1週間: 残り 90.0%" + reset; first.text != want {
+	if want := "残：90.0%" + reset; first.text != want {
 		t.Fatalf("report = %q, want %q", first.text, want)
 	}
 
@@ -345,12 +345,12 @@ func TestReportUsagePostsWeeklyLineHourly(t *testing.T) {
 	if len(api.posts) != 2 {
 		t.Fatalf("posts = %d, want a report after the quiet hour", len(api.posts))
 	}
-	if want := "1週間: 残り 87.5%" + reset; api.posts[1].text != want {
+	if want := "残：87.5%" + reset; api.posts[1].text != want {
 		t.Fatalf("report = %q, want %q", api.posts[1].text, want)
 	}
 }
 
-func TestReportUsageLabelsWindowsByLength(t *testing.T) {
+func TestReportUsageReportsAWeeklyPrimaryWindow(t *testing.T) {
 	api := &fakeSlack{}
 	store := &fakeStore{}
 	bot := newUsageBot(t, store, api, &fakeUsage{})
@@ -362,8 +362,8 @@ func TestReportUsageLabelsWindowsByLength(t *testing.T) {
 	if len(api.posts) != 1 {
 		t.Fatalf("posts = %d, want 1", len(api.posts))
 	}
-	if text := api.posts[0].text; text != "1週間: 残り 82.0%" {
-		t.Fatalf("report %q does not label the weekly window", text)
+	if text := api.posts[0].text; text != "残：82.0%" {
+		t.Fatalf("report %q does not show the weekly window", text)
 	}
 }
 

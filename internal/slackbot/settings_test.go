@@ -97,3 +97,22 @@ func TestEnglishMessagesTakeTheSameArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestMessagesCallTheBotByItsSlackName(t *testing.T) {
+	store := &fakeStore{}
+	bot := newTestBot(t, store, &fakeSlack{}, &fakeRunner{})
+	bot.setBotName("helper")
+
+	for _, language := range []string{"ja", "en"} {
+		bot.config.SettingsFile = writeChannelRules(t, "language: "+language+"\n")
+		text := reflect.ValueOf(*bot.text())
+		for i := range text.NumField() {
+			if field := text.Field(i); field.Kind() == reflect.String && strings.Contains(field.String(), defaultBotName) {
+				t.Errorf("%s %s still says %q: %q", language, text.Type().Field(i).Name, defaultBotName, field.String())
+			}
+		}
+		if !strings.Contains(bot.text().forbiddenMessage, "helper") {
+			t.Errorf("%s forbidden message = %q, want the Slack name", language, bot.text().forbiddenMessage)
+		}
+	}
+}
