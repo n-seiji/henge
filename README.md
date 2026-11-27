@@ -1,7 +1,7 @@
 <h1>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/wordmark-dark.svg">
-    <img src="assets/wordmark-light.svg" alt="henge." height="96">
+    <img src="assets/wordmark-light.svg" alt="henge." width="300">
   </picture>
 </h1>
 
