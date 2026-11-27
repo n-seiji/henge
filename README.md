@@ -1,6 +1,9 @@
-# henge
-
-<img src="assets/icon.png" alt="henge" width="128">
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/wordmark-dark.svg">
+    <img src="assets/wordmark-light.svg" alt="henge." width="300">
+  </picture>
+</h1>
 
 henge is a resident bot that hands work requested in Slack to Codex and posts the result back to the same thread.
 
