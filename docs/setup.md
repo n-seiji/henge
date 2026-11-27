@@ -176,7 +176,7 @@ The rules are instructions to the model. What can be written and which paths can
 
 ### Per-channel settings
 
-Write them per channel ID in `$HENGE_HOME/data/channel-rules/channels.yaml` (see `examples/channels.yaml`).
+Write them per channel ID in `$HENGE_HOME/data/channel-rules/channels.yaml` (see `examples/channels.yaml`). Ask in the approval channel, for example `@henge make C0123456789 read_only and allow only the henge repository`, and henge shows the change before rewriting the file. Writing it by hand is fine too. The file is read for every request, so a change applies from the next request.
 
 | Item | Contents |
 | --- | --- |
