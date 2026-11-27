@@ -41,6 +41,7 @@ On Slack's app creation screen, choose "From a manifest" and paste the `slack-ap
 | Agents & AI Apps | switch to Agent App (`features.agent_view` in the manifest) | the agent view in the sidebar and the Messages tab |
 
 - To use `@channel` with reaction watches ([usage.md](usage.md#reaction-watches)), add `channels:read` and `users:read` (plus `groups:read` for private channels), and for user groups such as `@dev_team`, also `usergroups:read`. The manifest includes them.
+- Fixed messages and the prompt call the bot by its Slack display name, read with `users:read`. Without that scope, they use the bot's username.
 - Private channels and Slack Connect channels need `groups:read`, `groups:history` and `message.groups` (included in the manifest).
 - Switching to an Agent App cannot be undone, and needs a paid Slack plan.
 - After changing scopes, reinstall the app in the workspace. If the Bot Token changes, update `.env` too.
@@ -129,7 +130,7 @@ Set `slack.approval_channel` and `slack.approvers` and invite the bot, and reque
             Please wait! Once approved, I'll start with this request automatically.
 
 #henge-approvals
-@henge    🔐 Request to use henge / Subject: channel #sales
+@henge    🔐 Request for access / Subject: channel #sales
   └ @admin   @henge 許可
   └ @henge  ✅ Channel #sales: approved by @admin.
 

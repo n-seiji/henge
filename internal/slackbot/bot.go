@@ -139,6 +139,7 @@ type Config struct {
 	ThreadSubscriptionReaction string
 	ThreadSubscriptionTTL      time.Duration
 	BotUserID                  string
+	BotName                    string
 	WritableRoots              []string
 	MaxParallelWork            int
 	GitHub                     GitHub
@@ -157,6 +158,8 @@ type Bot struct {
 	runner    Runner
 	config    Config
 	playbooks []playbook.Playbook
+	// Catalogs with the Slack name; nil until it is known.
+	japaneseText, englishText *messages
 
 	allowedUsers     map[string]struct{}
 	allowedChannels  map[string]struct{}
@@ -625,7 +628,7 @@ func (b *Bot) work(ctx, stopCtx context.Context, eventKey, channel, threadTS, th
 		if memErr != nil {
 			log.Printf("slackbot: read memory: %v", memErr)
 		}
-		turnPrompt = prompt.BuildTurnPrompt(memoryContext, currentPlaybooks, readActionRules(b.config.ActionRulesFile), slackThread, trigger.authorID, trigger.message, settings, lease.Checkouts, lease.PendingRepos, sharedWritable, b.pullWatchEnabled())
+		turnPrompt = prompt.BuildTurnPrompt(b.botName(), memoryContext, currentPlaybooks, readActionRules(b.config.ActionRulesFile), slackThread, trigger.authorID, trigger.message, settings, lease.Checkouts, lease.PendingRepos, sharedWritable, b.pullWatchEnabled())
 		if sharedWritable && b.config.SettingsFile != "" {
 			turnPrompt += prompt.SettingsRules(b.config.ChannelRulesFile, b.config.SettingsFile)
 		}
@@ -1065,6 +1068,15 @@ func mentionRequest(event *slackevents.AppMentionEvent, botUserID string) string
 	return text
 }
 
+// Tests and a failed name lookup leave the Slack name empty; a prompt must
+// still name someone.
+func (b *Bot) botName() string {
+	if b.config.BotName == "" {
+		return defaultBotName
+	}
+	return b.config.BotName
+}
+
 func stripBotMention(text, botUserID string) string {
 	if botUserID != "" {
 		text = strings.ReplaceAll(text, "<@"+botUserID+">", "")
@@ -1310,6 +1322,22 @@ func (w *webAPI) UploadFile(ctx context.Context, channel, threadTS, filename str
 	return err
 }
 
+// The display name is what people see and type after @; auth.test only
+// knows the handle. users:read is optional, so its absence falls back.
+func slackBotName(ctx context.Context, client *slack.Client, auth *slack.AuthTestResponse) string {
+	user, err := client.GetUserInfoContext(ctx, auth.UserID)
+	if err != nil {
+		log.Printf("slackbot: look up the bot's display name: %v", err)
+		return auth.User
+	}
+	for _, name := range []string{user.Profile.DisplayName, user.Profile.RealName, user.RealName} {
+		if strings.TrimSpace(name) != "" {
+			return name
+		}
+	}
+	return auth.User
+}
+
 func RunSocketMode(acceptCtx, turnCtx context.Context, botToken, appToken string, bot *Bot, wg *sync.WaitGroup) error {
 	client := slack.New(botToken, slack.OptionAppLevelToken(appToken))
 	auth, err := client.AuthTestContext(acceptCtx)
@@ -1318,6 +1346,7 @@ func RunSocketMode(acceptCtx, turnCtx context.Context, botToken, appToken string
 	}
 	bot.api = &webAPI{client: client}
 	bot.config.BotUserID = auth.UserID
+	bot.setBotName(slackBotName(acceptCtx, client, auth))
 	// Follow-ups post to Slack, so they start once the client is ready.
 	// They stop when a restart begins; what is due is left for the next
 	// process.

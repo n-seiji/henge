@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -72,7 +73,27 @@ func (s Settings) doneWatchHour() int {
 
 func (b *Bot) text() *messages {
 	if b.settings().Language == "en" {
+		if b.englishText != nil {
+			return b.englishText
+		}
 		return &english
 	}
+	if b.japaneseText != nil {
+		return b.japaneseText
+	}
 	return &japanese
+}
+
+// setBotName runs once before any loop or event handler reads the catalogs,
+// so the fields need no lock.
+func (b *Bot) setBotName(name string) {
+	// The name is spliced into format strings, where a stray % would eat
+	// an argument.
+	name = strings.TrimSpace(strings.ReplaceAll(name, "%", ""))
+	if name == "" {
+		return
+	}
+	b.config.BotName = name
+	ja, en := japaneseCatalog(name), englishCatalog(name)
+	b.japaneseText, b.englishText = &ja, &en
 }
