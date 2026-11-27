@@ -105,7 +105,6 @@ type messages struct {
 	usageUnknownReset         string
 	usageReplyPrefix          string
 	usageUnavailableReply     string
-	usageDailyHeader          string
 	usageDailyLine            string
 	usageHourlyLine           string
 	usageHourlyResetAt        string
@@ -314,10 +313,9 @@ func japaneseCatalog(bot string) messages {
 		usageUnknownReset:         "リセットされる",
 		usageReplyPrefix:          "Codex の利用枠の残り: ",
 		usageUnavailableReply:     "⚠️ Codex の利用枠を読み取れませんでした。",
-		usageDailyHeader:          "📊 %s の Codex の利用枠（%d回確認）",
-		usageDailyLine:            "- %s: %d%% → %d%%（最低 %d%%）",
-		usageHourlyLine:           "残：%.1f%%",
-		usageHourlyResetAt:        "Reset at %s",
+		usageDailyLine:            "📊 %s の Codex の利用枠 %d%% → %d%%（最低 %d%%）",
+		usageHourlyLine:           "残り %.1f%%",
+		usageHourlyResetAt:        "%sにリセット",
 		usageLimitFailureMessage:  "⚠️ Codex の利用上限に達したため、作業を完了できませんでした。%s%s、新しい mention で依頼し直してください。途中までの変更が作業領域に残っている場合があります。",
 		usageLimitRetryAt:         "%s以降に",
 		usageLimitRetryLater:      "利用枠がリセットされてから",
@@ -530,10 +528,9 @@ func englishCatalog(bot string) messages {
 		usageUnknownReset:         "it resets",
 		usageReplyPrefix:          "Codex usage left: ",
 		usageUnavailableReply:     "⚠️ I couldn't read the Codex usage limits.",
-		usageDailyHeader:          "📊 Codex usage on %s (checked %d times)",
-		usageDailyLine:            "- %s: %d%% → %d%% (lowest %d%%)",
-		usageHourlyLine:           "Left: %.1f%%",
-		usageHourlyResetAt:        "Reset at %s",
+		usageDailyLine:            "📊 Codex usage on %s: %d%% → %d%% (lowest %d%%)",
+		usageHourlyLine:           "%.1f%% left",
+		usageHourlyResetAt:        "resets at %s",
 		usageLimitFailureMessage:  "⚠️ The Codex usage limit was reached, so the work couldn't finish. %s%s, ask again in a new mention. Changes made so far may remain in the work area.",
 		usageLimitRetryAt:         "After %s",
 		usageLimitRetryLater:      "Once the limit resets",

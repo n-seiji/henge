@@ -309,21 +309,34 @@ func usageAlerts(text *messages, announced map[string]int, windows map[string]co
 
 func usageDailySummary(text *messages, usage state.Usage) string {
 	day, err := time.ParseInLocation(usageDayLayout, usage.Day, time.Local)
-	if err != nil || len(usage.Windows) == 0 {
+	if err != nil {
 		return ""
 	}
-	checks := 0
-	var lines []string
-	for _, key := range usageWindowKeys {
-		record, ok := usage.Windows[key]
-		if !ok {
-			continue
-		}
-		checks = max(checks, record.Checks)
-		lines = append(lines, fmt.Sprintf(text.usageDailyLine, record.Label, int(math.Floor(record.First)), int(math.Floor(record.Last)), int(math.Floor(record.Min))))
+	record, ok := usage.Windows[usageDailyKey(usage)]
+	if !ok {
+		return ""
 	}
-	header := fmt.Sprintf(text.usageDailyHeader, day.Format("1/2"), checks)
-	return header + "\n" + strings.Join(lines, "\n")
+	return fmt.Sprintf(text.usageDailyLine, day.Format("1/2"), int(math.Floor(record.First)), int(math.Floor(record.Last)), int(math.Floor(record.Min)))
+}
+
+// The day's records keep no window length, so the latest check decides, as
+// it does for the hourly post. Without one, the secondary slot is the longer
+// window on plans that have two.
+func usageDailyKey(usage state.Usage) string {
+	if n := len(usage.History); n > 0 {
+		if key, ok := usageReportedKey(usage.History[n-1]); ok {
+			if _, kept := usage.Windows[key]; kept {
+				return key
+			}
+		}
+	}
+	best := ""
+	for _, key := range usageWindowKeys {
+		if _, ok := usage.Windows[key]; ok {
+			best = key
+		}
+	}
+	return best
 }
 
 func (b *Bot) usageLimitFailure(ctx context.Context) string {
